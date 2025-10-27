@@ -60,28 +60,9 @@ const Portal = () => {
   const [showReasonPicker, setShowReasonPicker] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
+  const hasBootstrapped = useRef(false);
   useEffect(() => {
-    // Check authentication
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/login");
-      } else {
-        setUser(session.user);
-        // Check if this is a fresh login
-        const isFreshLogin = location.state?.freshLogin;
-        if (isFreshLogin) {
-          // Clear the state to prevent re-creating on refresh
-          navigate(location.pathname, { replace: true, state: {} });
-          // Always create a new conversation on fresh login
-          initializeNewConversation(session.user.id);
-        } else {
-          // Otherwise, load existing or create new
-          loadOrCreateConversation(session.user.id);
-        }
-      }
-    });
-
+    // Always set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/login");
@@ -90,8 +71,31 @@ const Portal = () => {
       }
     });
 
+    // Bootstrap only once (avoid double-run in React StrictMode)
+    if (!hasBootstrapped.current) {
+      hasBootstrapped.current = true;
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+          navigate("/login");
+        } else {
+          setUser(session.user);
+          // Check if this is a fresh login
+          const isFreshLogin = location.state?.freshLogin;
+          if (isFreshLogin) {
+            // Clear the state to prevent re-creating on refresh
+            navigate(location.pathname, { replace: true, state: {} });
+            // Always create a new conversation on fresh login
+            initializeNewConversation(session.user.id);
+          } else {
+            // Otherwise, load existing or create new
+            loadOrCreateConversation(session.user.id);
+          }
+        }
+      });
+    }
+
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location]);
 
   const loadOrCreateConversation = async (userId: string) => {
     try {
