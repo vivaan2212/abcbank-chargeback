@@ -315,20 +315,24 @@ const Portal = () => {
   const handleLogout = async () => {
     try {
       console.log('Attempting logout...');
-      const { error } = await supabase.auth.signOut();
+      
+      // Use local-only sign out to avoid server-side session errors
+      // This clears local storage without trying to invalidate the session on the server
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
       
       if (error) {
         console.error('Logout error:', error);
-        // Even if there's an error, clear local state and redirect
-        toast.error('Logout encountered an issue, but you will be redirected');
-      } else {
-        toast.success('Logged out successfully');
       }
+      
+      // Clear local state
+      setSession(null);
+      setUser(null);
+      
+      toast.success('Logged out successfully');
+      navigate("/login");
     } catch (error) {
       console.error('Logout failed:', error);
-      toast.error('Logout failed, but you will be redirected');
-    } finally {
-      // Always clear state and redirect, regardless of errors
+      // Even on error, clear state and redirect
       setSession(null);
       setUser(null);
       navigate("/login");
