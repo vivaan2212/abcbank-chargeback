@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,24 @@ const Signup = () => {
     phone: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Set up auth listener to handle session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && event === 'SIGNED_IN') {
+        navigate("/portal");
+      }
+    });
+
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/portal");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +55,7 @@ const Signup = () => {
 
       if (data.user) {
         toast.success("Account created successfully! Redirecting to portal...");
-        setTimeout(() => {
-          navigate("/portal");
-        }, 1000);
+        // The onAuthStateChange listener will handle the redirect
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");

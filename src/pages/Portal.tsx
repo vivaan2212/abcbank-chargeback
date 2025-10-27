@@ -13,6 +13,7 @@ import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import type { User, Session } from "@supabase/supabase-js";
 
 interface Message {
   id: string;
@@ -47,7 +48,8 @@ interface EligibilityResult {
 const Portal = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -61,41 +63,59 @@ const Portal = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
+  
   useEffect(() => {
-    // Always set up auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
+    // Set up auth listener FIRST to catch all auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      console.log('Auth event:', event, 'Session valid:', !!currentSession);
+      
+      // Update session and user state
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      // Handle logout event
+      if (event === 'SIGNED_OUT') {
         navigate("/login");
-      } else {
-        setUser(session.user);
+      }
+      
+      // Handle sign in event
+      if (event === 'SIGNED_IN' && currentSession?.user) {
+        // Defer initialization to avoid blocking
+        setTimeout(() => {
+          const isFreshLogin = location.state?.freshLogin;
+          if (isFreshLogin) {
+            navigate(location.pathname, { replace: true, state: {} });
+            initializeNewConversation(currentSession.user.id);
+          }
+        }, 0);
       }
     });
 
     // Bootstrap only once (avoid double-run in React StrictMode)
     if (!hasBootstrapped.current) {
       hasBootstrapped.current = true;
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
+      
+      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+        if (!currentSession) {
           navigate("/login");
         } else {
-          setUser(session.user);
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
           // Check if this is a fresh login
           const isFreshLogin = location.state?.freshLogin;
           if (isFreshLogin) {
-            // Clear the state to prevent re-creating on refresh
             navigate(location.pathname, { replace: true, state: {} });
-            // Always create a new conversation on fresh login
-            initializeNewConversation(session.user.id);
+            initializeNewConversation(currentSession.user.id);
           } else {
-            // Otherwise, load existing or create new
-            loadOrCreateConversation(session.user.id);
+            loadOrCreateConversation(currentSession.user.id);
           }
         }
       });
     }
 
     return () => subscription.unsubscribe();
-  }, [navigate, location]);
+  }, [navigate]);
 
   const loadOrCreateConversation = async (userId: string) => {
     try {
@@ -293,8 +313,26 @@ const Portal = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
+    try {
+      console.log('Attempting logout...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Logout error:', error);
+        // Even if there's an error, clear local state and redirect
+        toast.error('Logout encountered an issue, but you will be redirected');
+      } else {
+        toast.success('Logged out successfully');
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Logout failed, but you will be redirected');
+    } finally {
+      // Always clear state and redirect, regardless of errors
+      setSession(null);
+      setUser(null);
+      navigate("/login");
+    }
   };
 
   const handleEndSession = async () => {
