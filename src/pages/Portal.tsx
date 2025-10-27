@@ -12,6 +12,7 @@ import ChatHistory from "@/components/ChatHistory";
 import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument } from "@/components/DocumentUpload";
+import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
@@ -616,7 +617,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       <ResizableHandle withHandle />
       
       <ResizablePanel defaultSize={80}>
-        <div className="flex flex-col h-full bg-background">
+        <div className="relative flex flex-col h-full bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-center justify-between">
@@ -624,7 +625,10 @@ Let me check if this transaction is eligible for a chargeback...`;
               <h1 className="text-xl font-semibold">Chargeback Assistant</h1>
               <p className="text-sm text-muted-foreground">Powered by Pace</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {uploadedDocuments.length > 0 && (
+                <UploadedDocumentsViewer documents={uploadedDocuments} />
+              )}
               <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
                 End Session
               </Button>
@@ -644,8 +648,8 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         )}
 
-        {/* Messages */}
-        <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+        {/* Messages - with padding bottom for fixed input */}
+        <ScrollArea className="flex-1 px-6 py-4 pb-32" ref={scrollRef}>
           <div className="max-w-4xl mx-auto">
             {messages.map((message) => (
               <ChatMessage
@@ -708,8 +712,8 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         </ScrollArea>
 
-        {/* Input */}
-        <div className="border-t border-border bg-card px-6 py-4">
+        {/* Input - Fixed at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-4">
           <div className="max-w-4xl mx-auto flex gap-2">
             <Textarea
               placeholder={isReadOnly ? "This conversation is closed" : "Type your message..."}
