@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 
 export interface ChargebackReason {
   id: string;
   label: string;
+  customReason?: string;
 }
 
 interface ReasonPickerProps {
@@ -12,15 +14,16 @@ interface ReasonPickerProps {
 }
 
 const CHARGEBACK_REASONS: ChargebackReason[] = [
-  { id: "fraud_card_not_present", label: "Fraud – card not present" },
-  { id: "goods_not_received", label: "Goods not received" },
-  { id: "services_not_provided", label: "Services not provided" },
-  { id: "duplicate_charge", label: "Duplicate charge" },
-  { id: "incorrect_amount", label: "Incorrect amount" },
+  { id: "fraud", label: "Fraudulent or Unauthorized Transaction" },
+  { id: "not_received", label: "Goods or Services Not Received" },
+  { id: "duplicate", label: "Duplicate Charges" },
+  { id: "incorrect_amount", label: "Incorrect Transaction Amount" },
+  { id: "other", label: "Other (please describe)" },
 ];
 
 export const ReasonPicker = ({ onSelect }: ReasonPickerProps) => {
   const [selectedReason, setSelectedReason] = useState<ChargebackReason | null>(null);
+  const [customReason, setCustomReason] = useState("");
 
   const handleSelect = (reason: ChargebackReason) => {
     setSelectedReason(reason);
@@ -28,9 +31,15 @@ export const ReasonPicker = ({ onSelect }: ReasonPickerProps) => {
 
   const handleConfirm = () => {
     if (selectedReason) {
-      onSelect(selectedReason);
+      if (selectedReason.id === "other" && customReason.trim()) {
+        onSelect({ ...selectedReason, customReason: customReason.trim() });
+      } else if (selectedReason.id !== "other") {
+        onSelect(selectedReason);
+      }
     }
   };
+
+  const isConfirmDisabled = !selectedReason || (selectedReason.id === "other" && !customReason.trim());
 
   return (
     <Card className="p-6 space-y-4">
@@ -50,9 +59,21 @@ export const ReasonPicker = ({ onSelect }: ReasonPickerProps) => {
           </Button>
         ))}
       </div>
+      {selectedReason?.id === "other" && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Please describe your reason:</label>
+          <Textarea
+            placeholder="Enter your custom reason..."
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+      )}
       <Button
         onClick={handleConfirm}
-        disabled={!selectedReason}
+        disabled={isConfirmDisabled}
         className="w-full"
       >
         Confirm Reason

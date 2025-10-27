@@ -11,6 +11,7 @@ import ChatMessage from "@/components/ChatMessage";
 import ChatHistory from "@/components/ChatHistory";
 import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
+import { DocumentUpload, UploadedDocument } from "@/components/DocumentUpload";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
@@ -66,6 +67,9 @@ const Portal = () => {
   const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null);
   const [showReasonPicker, setShowReasonPicker] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedReason, setSelectedReason] = useState<ChargebackReason | null>(null);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -214,8 +218,11 @@ const Portal = () => {
       // Reset UI state for a fresh conversation
       setShowTransactions(true);
       setShowReasonPicker(false);
+      setShowDocumentUpload(false);
       setEligibilityResult(null);
       setSelectedTransaction(null);
+      setSelectedReason(null);
+      setIsCheckingDocuments(false);
 
       // Get user profile for personalized welcome
       const { data: profile } = await supabase
@@ -373,8 +380,10 @@ const Portal = () => {
     try {
       setShowTransactions(false);
       setShowReasonPicker(false);
+      setShowDocumentUpload(false);
       setEligibilityResult(null);
       setSelectedTransaction(transaction);
+      setSelectedReason(null);
 
       // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
@@ -497,9 +506,12 @@ Let me check if this transaction is eligible for a chargeback...`;
 
     try {
       setShowReasonPicker(false);
+      setSelectedReason(reason);
 
       // Add user's reason selection message
-      const reasonMessage = `Reason selected: ${reason.label}`;
+      const reasonMessage = reason.customReason 
+        ? `Reason selected: ${reason.label} - "${reason.customReason}"`
+        : `Reason selected: ${reason.label}`;
 
       await supabase
         .from("messages")
@@ -509,20 +521,66 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: reasonMessage,
         });
 
-      // Add confirmation message with delay
+      // Add document request message with delay
       setTimeout(async () => {
+        const documentRequestMessage = `Thank you for selecting the reason. To proceed with your chargeback, please upload the required supporting documents.`;
+
         await supabase
           .from("messages")
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: "Thank you for providing the reason. I'll now proceed with filing your chargeback request.",
+            content: documentRequestMessage,
           });
 
-        toast.success("Reason selected");
+        setTimeout(() => {
+          setShowDocumentUpload(true);
+        }, 500);
       }, 500);
     } catch (error: any) {
       toast.error("Failed to save reason");
+    }
+  };
+
+  const handleDocumentsComplete = async (documents: UploadedDocument[]) => {
+    if (!currentConversationId) return;
+
+    try {
+      setShowDocumentUpload(false);
+
+      // Add user message about documents uploaded
+      const docNames = documents.map(d => d.file.name).join(", ");
+      const userMessage = `Uploaded ${documents.length} documents: ${docNames}`;
+
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "user",
+          content: userMessage,
+        });
+
+      // Show checking message
+      setTimeout(async () => {
+        setIsCheckingDocuments(true);
+
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "Thank you for uploading the required documents. We are now checking if they are valid. Please wait while we verify the documents.",
+          });
+
+        toast.success("Documents submitted successfully");
+
+        // Simulate document validation (can be replaced with actual validation)
+        setTimeout(() => {
+          setIsCheckingDocuments(false);
+        }, 3000);
+      }, 500);
+    } catch (error: any) {
+      toast.error("Failed to process documents");
     }
   };
 
@@ -531,6 +589,8 @@ Let me check if this transaction is eligible for a chargeback...`;
     setEligibilityResult(null);
     setSelectedTransaction(null);
     setShowReasonPicker(false);
+    setShowDocumentUpload(false);
+    setSelectedReason(null);
   };
 
   return (
@@ -593,6 +653,14 @@ Let me check if this transaction is eligible for a chargeback...`;
                 </Card>
               </div>
             )}
+            {isCheckingDocuments && (
+              <div className="mt-6 flex items-center justify-center">
+                <Card className="p-6 flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Verifying documents...</span>
+                </Card>
+              </div>
+            )}
             {showTransactions && (
               <div className="mt-6">
                 <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
@@ -615,6 +683,16 @@ Let me check if this transaction is eligible for a chargeback...`;
             {showReasonPicker && (
               <div className="mt-6">
                 <ReasonPicker onSelect={handleReasonSelect} />
+              </div>
+            )}
+            {showDocumentUpload && selectedReason && (
+              <div className="mt-6">
+                <DocumentUpload
+                  reasonId={selectedReason.id}
+                  reasonLabel={selectedReason.label}
+                  customReason={selectedReason.customReason}
+                  onComplete={handleDocumentsComplete}
+                />
               </div>
             )}
           </div>
