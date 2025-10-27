@@ -132,7 +132,15 @@ Deno.serve(async (req) => {
       ineligibleReasons.push(`Transaction is older than ${MAX_AGE_DAYS} days and cannot be disputed.`);
     }
 
-    console.log(`Transaction age: ${transactionAge} days, Amount(local): ${tx.local_transaction_amount}, Ineligible reasons: ${ineligibleReasons.length}`);
+    // 4. Wallet transaction (Apple Pay/Google Pay) without OTP security
+    const isSecuredWallet = tx.is_wallet_transaction && 
+                            WALLET_TYPES.includes(tx.wallet_type || '') && 
+                            !SECURED_INDICATIONS.includes(tx.secured_indication);
+    if (isSecuredWallet) {
+      ineligibleReasons.push('This is a secured non-OTP transaction using a digital wallet and cannot be disputed.');
+    }
+
+    console.log(`Transaction age: ${transactionAge} days, Amount(local): ${tx.local_transaction_amount}, Wallet: ${tx.wallet_type}, Secured: ${tx.secured_indication}, Ineligible reasons: ${ineligibleReasons.length}`);
 
     // Return result
     if (ineligibleReasons.length > 0) {
