@@ -49,12 +49,21 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
   const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Immediately remove from UI
-    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    // Get remaining conversations after deletion
+    const remainingConversations = conversations.filter(conv => conv.id !== conversationId);
     
-    // If deleted conversation was the current one, trigger new chat
+    // Immediately remove from UI
+    setConversations(remainingConversations);
+    
+    // If deleted conversation was the current one
     if (currentConversationId === conversationId) {
-      onNewChat();
+      // Only create new chat if no other conversations exist
+      if (remainingConversations.length === 0) {
+        onNewChat();
+      } else {
+        // Select the first available conversation
+        onConversationSelect(remainingConversations[0].id);
+      }
     }
     
     try {
