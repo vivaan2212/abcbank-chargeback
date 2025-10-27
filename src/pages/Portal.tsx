@@ -292,7 +292,7 @@ const Portal = () => {
 
       if (userMsgError) throw userMsgError;
 
-      // Simulate assistant response (you can replace this with actual AI integration later)
+      // Simulate assistant response with delay
       setTimeout(async () => {
         const { error: assistantMsgError } = await supabase
           .from("messages")
@@ -303,7 +303,7 @@ const Portal = () => {
           });
 
         if (assistantMsgError) throw assistantMsgError;
-      }, 1000);
+      }, 500);
     } catch (error: any) {
       toast.error("Failed to send message");
     } finally {
@@ -404,8 +404,9 @@ const Portal = () => {
         .update({ title: newTitle })
         .eq("id", currentConversationId);
 
-      // Show transaction details in assistant message
-      const detailsMessage = `Thanks for choosing a transaction. Here are the details I have:
+      // Show transaction details in assistant message with delay
+      setTimeout(async () => {
+        const detailsMessage = `Thanks for choosing a transaction. Here are the details I have:
 
 • Merchant: ${transaction.merchant_name}
 • Amount: ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}
@@ -418,16 +419,19 @@ const Portal = () => {
 
 Let me check if this transaction is eligible for a chargeback...`;
 
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: detailsMessage,
-        });
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: detailsMessage,
+          });
 
-      // Check eligibility
-      await checkEligibility(transaction);
+        // Check eligibility after another delay
+        setTimeout(() => {
+          checkEligibility(transaction);
+        }, 500);
+      }, 500);
     } catch (error: any) {
       toast.error("Failed to select transaction");
     }
@@ -451,32 +455,37 @@ Let me check if this transaction is eligible for a chargeback...`;
       const result: EligibilityResult = response.data;
       setEligibilityResult(result);
 
-      if (result.status === "INELIGIBLE") {
-        // Show ineligibility message with reasons
-        const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
-        const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}\n\nYou can select another transaction or end the session.`;
+      // Add delay before showing eligibility result
+      setTimeout(async () => {
+        if (result.status === "INELIGIBLE") {
+          // Show ineligibility message with reasons
+          const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
+          const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}\n\nYou can select another transaction or end the session.`;
 
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: ineligibleMessage,
-          });
-      } else {
-        // Show eligibility message
-        const eligibleMessage = `This transaction is eligible to proceed!\nPlease choose the reason that best describes your dispute.`;
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: ineligibleMessage,
+            });
+        } else {
+          // Show eligibility message
+          const eligibleMessage = `This transaction is eligible to proceed!\nPlease choose the reason that best describes your dispute.`;
 
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: eligibleMessage,
-          });
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: eligibleMessage,
+            });
 
-        setShowReasonPicker(true);
-      }
+          setTimeout(() => {
+            setShowReasonPicker(true);
+          }, 500);
+        }
+      }, 500);
     } catch (error: any) {
       console.error("Eligibility check error:", error);
       toast.error("Failed to check eligibility");
@@ -502,16 +511,18 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: reasonMessage,
         });
 
-      // Add confirmation message
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: "Thank you for providing the reason. I'll now proceed with filing your chargeback request.",
-        });
+      // Add confirmation message with delay
+      setTimeout(async () => {
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "Thank you for providing the reason. I'll now proceed with filing your chargeback request.",
+          });
 
-      toast.success("Reason selected");
+        toast.success("Reason selected");
+      }, 500);
     } catch (error: any) {
       toast.error("Failed to save reason");
     }
