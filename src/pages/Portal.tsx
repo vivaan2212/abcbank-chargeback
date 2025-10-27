@@ -13,7 +13,6 @@ import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
-import { UploadedDocumentsInline } from "@/components/UploadedDocumentsInline";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
@@ -28,6 +27,7 @@ interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+  documents?: UploadedDocument[];
 }
 
 interface Transaction {
@@ -559,17 +559,28 @@ Let me check if this transaction is eligible for a chargeback...`;
       setShowTransactions(false);
       setShowReasonPicker(false);
 
-      // Add user message about documents uploaded
+      // Add user message about documents uploaded with document attachments
       const docNames = documents.map(d => d.file.name).join(", ");
       const userMessage = `Uploaded ${documents.length} documents: ${docNames}`;
 
-      await supabase
+      const { data: newMessage } = await supabase
         .from("messages")
         .insert({
           conversation_id: currentConversationId,
           role: "user",
           content: userMessage,
-        });
+        })
+        .select()
+        .single();
+
+      // Add message with documents to local state immediately
+      if (newMessage) {
+        setMessages(prev => [...prev, { 
+          ...newMessage, 
+          role: newMessage.role as "user" | "assistant" | "system",
+          documents 
+        }]);
+      }
 
       // Show checking message
       setTimeout(async () => {
@@ -660,6 +671,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   role={message.role as "user" | "assistant"}
                   content={message.content}
                   timestamp={new Date(message.created_at)}
+                  documents={message.documents}
                 />
               ))}
               {isCheckingEligibility && (
@@ -669,9 +681,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                     <span>Checking eligibility...</span>
                   </Card>
                 </div>
-              )}
-              {uploadedDocuments.length > 0 && (
-                <UploadedDocumentsInline documents={uploadedDocuments} />
               )}
               {isCheckingDocuments && (
                 <div className="mt-6 flex items-center justify-center">
