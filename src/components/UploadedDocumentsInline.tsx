@@ -34,40 +34,40 @@ export const UploadedDocumentsInline: React.FC<UploadedDocumentsInlineProps> = (
     document.body.removeChild(a);
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
   if (!documents.length) return null;
 
   return (
-    <div className="mt-6">
-      <Card className="p-4">
-        <p className="text-sm font-medium mb-3">Uploaded documents</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {previews.map((p, idx) => (
-            <Card key={idx} className="p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{p.requirementName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{p.file.name}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDownload(p.file, p.url)}>
-                  <Download className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="mt-3">
-                {p.isImage ? (
-                  <img src={p.url} alt={p.file.name} className="w-full h-48 object-contain rounded" />
-                ) : p.isPdf ? (
-                  <iframe title={p.file.name} src={p.url} className="w-full h-48 rounded border border-border" />
-                ) : (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <FileText className="w-4 h-4" />
-                    <span className="text-sm">No inline preview available</span>
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </Card>
+    <div className="mt-3 space-y-2">
+      {previews.map((p, idx) => (
+        <Card key={idx} className="p-3 flex items-center gap-3 hover:bg-accent/50 transition-colors">
+          <div className="shrink-0 w-12 h-12 bg-muted rounded flex items-center justify-center">
+            {p.isImage ? (
+              <img src={p.url} alt={p.file.name} className="w-full h-full object-cover rounded" />
+            ) : (
+              <FileText className="w-6 h-6 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{p.requirementName}</p>
+            <p className="text-xs text-muted-foreground truncate">{p.file.name}</p>
+            <p className="text-xs text-muted-foreground">{formatFileSize(p.file.size)}</p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleDownload(p.file, p.url)}
+            className="shrink-0"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+        </Card>
+      ))}
     </div>
   );
 };

@@ -670,6 +670,9 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
+              {uploadedDocuments.length > 0 && (
+                <UploadedDocumentsInline documents={uploadedDocuments} />
+              )}
               {isCheckingDocuments && (
                 <div className="mt-6 flex items-center justify-center">
                   <Card className="p-6 flex items-center gap-3">
@@ -677,9 +680,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                     <span>Verifying documents...</span>
                   </Card>
                 </div>
-              )}
-              {uploadedDocuments.length > 0 && (
-                <UploadedDocumentsInline documents={uploadedDocuments} />
               )}
               {showTransactions && (
                 <div className="mt-6">
