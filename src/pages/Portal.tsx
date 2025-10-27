@@ -617,7 +617,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       <ResizableHandle withHandle />
       
       <ResizablePanel defaultSize={80}>
-        <div className="relative flex flex-col h-full bg-background">
+        <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-center justify-between">
@@ -648,9 +648,9 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         )}
 
-        {/* Messages - with padding bottom for fixed input */}
-        <ScrollArea className="flex-1 px-6 py-4 pb-32" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto">
+        {/* Messages */}
+        <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+          <div className="max-w-4xl mx-auto min-h-full flex flex-col justify-end">
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
@@ -712,8 +712,8 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         </ScrollArea>
 
-        {/* Input - Fixed at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border bg-card px-6 py-4">
+        {/* Input */}
+        <div className="border-t border-border bg-card px-6 py-4">
           <div className="max-w-4xl mx-auto flex gap-2">
             <Textarea
               placeholder={isReadOnly ? "This conversation is closed" : "Type your message..."}
