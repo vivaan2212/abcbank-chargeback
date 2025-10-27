@@ -123,16 +123,7 @@ Deno.serve(async (req) => {
       ineligibleReasons.push(`Transaction amount below ${MIN_AMOUNT_AED} AED minimum threshold.`);
     }
 
-    // 3. Secured transaction (OTP, Chip, Wallet)
-    if (
-      SECURED_INDICATIONS.includes(tx.secured_indication) ||
-      SECURE_POS_ENTRY.includes(tx.pos_entry_mode) ||
-      (tx.is_wallet_transaction && tx.wallet_type && WALLET_TYPES.includes(tx.wallet_type))
-    ) {
-      ineligibleReasons.push('Secured / OTP / Wallet transactions are not eligible for automatic chargeback.');
-    }
-
-    // 4. Transaction older than allowed window
+    // 3. Transaction older than allowed window
     const transactionAge = daysSince(tx.transaction_time);
     if (transactionAge > MAX_AGE_DAYS) {
       ineligibleReasons.push(`Transaction is older than ${MAX_AGE_DAYS} days and cannot be disputed.`);
