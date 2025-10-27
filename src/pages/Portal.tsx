@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +46,7 @@ interface EligibilityResult {
 
 const Portal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,7 +68,17 @@ const Portal = () => {
         navigate("/login");
       } else {
         setUser(session.user);
-        loadOrCreateConversation(session.user.id);
+        // Check if this is a fresh login
+        const isFreshLogin = location.state?.freshLogin;
+        if (isFreshLogin) {
+          // Clear the state to prevent re-creating on refresh
+          navigate(location.pathname, { replace: true, state: {} });
+          // Always create a new conversation on fresh login
+          initializeNewConversation(session.user.id);
+        } else {
+          // Otherwise, load existing or create new
+          loadOrCreateConversation(session.user.id);
+        }
       }
     });
 

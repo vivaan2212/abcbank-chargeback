@@ -34,7 +34,7 @@ const Login = () => {
       if (error) throw error;
 
       if (data.session) {
-        navigate("/portal");
+        navigate("/portal", { state: { freshLogin: true } });
       }
     } catch (error: any) {
       toast.error(error.message || "Incorrect email or password");
