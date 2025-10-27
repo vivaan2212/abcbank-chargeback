@@ -67,7 +67,7 @@ const Portal = () => {
         navigate("/login");
       } else {
         setUser(session.user);
-        initializeNewConversation(session.user.id);
+        loadOrCreateConversation(session.user.id);
       }
     });
 
@@ -81,6 +81,35 @@ const Portal = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const loadOrCreateConversation = async (userId: string) => {
+    try {
+      // First, try to find the most recent active conversation
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (fetchError) throw fetchError;
+
+      if (existingConversations && existingConversations.length > 0) {
+        // Load existing conversation
+        const conversation = existingConversations[0];
+        setCurrentConversationId(conversation.id);
+        setIsReadOnly(false);
+        loadMessages(conversation.id);
+      } else {
+        // No active conversation, create a new one
+        await initializeNewConversation(userId);
+      }
+    } catch (error: any) {
+      console.error("Error loading conversation:", error);
+      toast.error("Failed to load conversation");
+    }
+  };
 
   useEffect(() => {
     if (currentConversationId) {
