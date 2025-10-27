@@ -49,6 +49,14 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
   const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
+    // Immediately remove from UI
+    setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+    
+    // If deleted conversation was the current one, trigger new chat
+    if (currentConversationId === conversationId) {
+      onNewChat();
+    }
+    
     try {
       const { error } = await supabase
         .from("conversations")
@@ -58,15 +66,10 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
       if (error) throw error;
 
       toast.success("Conversation deleted");
-      
-      // If deleted conversation was the current one, trigger new chat
-      if (currentConversationId === conversationId) {
-        onNewChat();
-      }
-      
-      loadConversations();
     } catch (error: any) {
       toast.error("Failed to delete conversation");
+      // Reload on error to restore accurate state
+      loadConversations();
     }
   };
 
