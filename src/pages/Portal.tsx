@@ -70,6 +70,7 @@ const Portal = () => {
   const [selectedReason, setSelectedReason] = useState<ChargebackReason | null>(null);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -223,6 +224,7 @@ const Portal = () => {
       setSelectedTransaction(null);
       setSelectedReason(null);
       setIsCheckingDocuments(false);
+      setUploadedDocuments([]);
 
       // Get user profile for personalized welcome
       const { data: profile } = await supabase
@@ -341,6 +343,7 @@ const Portal = () => {
       // Clear local state
       setSession(null);
       setUser(null);
+      setUploadedDocuments([]);
       
       toast.success('Logged out successfully');
       navigate("/login");
@@ -384,6 +387,7 @@ const Portal = () => {
       setEligibilityResult(null);
       setSelectedTransaction(transaction);
       setSelectedReason(null);
+      setUploadedDocuments([]);
 
       // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
@@ -546,6 +550,9 @@ Let me check if this transaction is eligible for a chargeback...`;
     if (!currentConversationId) return;
 
     try {
+      // Store uploaded documents in session state
+      setUploadedDocuments(documents);
+      
       setShowDocumentUpload(false);
       setShowTransactions(false);
       setShowReasonPicker(false);
@@ -593,6 +600,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     setShowReasonPicker(false);
     setShowDocumentUpload(false);
     setSelectedReason(null);
+    setUploadedDocuments([]);
   };
 
   return (
