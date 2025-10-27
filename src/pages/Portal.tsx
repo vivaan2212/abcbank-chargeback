@@ -14,6 +14,11 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 interface Message {
   id: string;
@@ -513,14 +518,19 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <ChatHistory
-        currentConversationId={currentConversationId || undefined}
-        onConversationSelect={handleConversationSelect}
-        onNewChat={handleNewChat}
-      />
-
-      <div className="flex-1 flex flex-col">
+    <ResizablePanelGroup direction="horizontal" className="h-screen bg-background">
+      <ResizablePanel defaultSize={20} minSize={15} maxSize={40}>
+        <ChatHistory
+          currentConversationId={currentConversationId || undefined}
+          onConversationSelect={handleConversationSelect}
+          onNewChat={handleNewChat}
+        />
+      </ResizablePanel>
+      
+      <ResizableHandle withHandle />
+      
+      <ResizablePanel defaultSize={80}>
+        <div className="flex flex-col h-full">
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-center justify-between">
@@ -621,8 +631,9 @@ Let me check if this transaction is eligible for a chargeback...`;
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 };
 

@@ -74,7 +74,7 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
   };
 
   return (
-    <div className="w-64 border-r border-border bg-card flex flex-col h-screen">
+    <div className="w-full border-r border-border bg-card flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-1">ABC Bank</h2>
