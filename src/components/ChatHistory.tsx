@@ -129,7 +129,13 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
                 </div>
               </button>
               
-              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div
+                className={`absolute right-2 top-2 transition-opacity ${
+                  currentConversationId === conversation.id
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                }`}
+             >
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -137,11 +143,15 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
                       size="icon"
                       className="h-8 w-8 hover:bg-background/50"
                       onClick={(e) => e.stopPropagation()}
+                      aria-label="Conversation actions"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent
+                    align="end"
+                    className="z-50 bg-popover text-popover-foreground border border-border shadow-md"
+                  >
                     <DropdownMenuItem
                       onClick={(e) => handleDeleteConversation(conversation.id, e)}
                       className="text-destructive focus:text-destructive cursor-pointer"
