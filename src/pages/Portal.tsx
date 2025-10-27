@@ -173,7 +173,13 @@ const Portal = () => {
             filter: `conversation_id=eq.${currentConversationId}`,
           },
           (payload) => {
-            setMessages((prev) => [...prev, payload.new as Message]);
+            const newMessage = payload.new as Message;
+            // Prevent duplicates - only add if message doesn't exist
+            setMessages((prev) => {
+              const exists = prev.some(msg => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
           }
         )
         .subscribe();
