@@ -75,11 +75,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get transaction ID from query params
-    const url = new URL(req.url);
-    const transactionId = url.searchParams.get('transactionId');
+    // Get transaction ID from request body
+    const { transactionId } = await req.json();
 
     if (!transactionId) {
+      console.error('Transaction ID is missing from request body');
       return new Response(
         JSON.stringify({ error: 'Transaction ID is required' }),
         {
