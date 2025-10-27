@@ -110,6 +110,8 @@ export type Database = {
           merchant_id: number
           merchant_name: string
           pos_entry_mode: number
+          refund_amount: number
+          refund_received: boolean
           secured_indication: number
           transaction_amount: number
           transaction_currency: string
@@ -129,6 +131,8 @@ export type Database = {
           merchant_id: number
           merchant_name: string
           pos_entry_mode: number
+          refund_amount?: number
+          refund_received?: boolean
           secured_indication: number
           transaction_amount: number
           transaction_currency: string
@@ -148,6 +152,8 @@ export type Database = {
           merchant_id?: number
           merchant_name?: string
           pos_entry_mode?: number
+          refund_amount?: number
+          refund_received?: boolean
           secured_indication?: number
           transaction_amount?: number
           transaction_currency?: string
