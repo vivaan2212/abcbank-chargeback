@@ -548,7 +548,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       <ResizableHandle withHandle />
       
       <ResizablePanel defaultSize={80}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-center justify-between">
