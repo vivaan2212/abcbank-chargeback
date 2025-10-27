@@ -6,14 +6,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LogOut, Send } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
 import ChatHistory from "@/components/ChatHistory";
+import TransactionList from "@/components/TransactionList";
 
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+}
+
+interface Transaction {
+  id: string;
+  transaction_id: number;
+  transaction_time: string;
+  transaction_amount: number;
+  transaction_currency: string;
+  merchant_name: string;
+  merchant_category_code: number;
+  acquirer_name: string;
+  is_wallet_transaction: boolean;
 }
 
 const Portal = () => {
@@ -24,6 +38,8 @@ const Portal = () => {
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [showTransactions, setShowTransactions] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,6 +126,7 @@ const Portal = () => {
 
       setCurrentConversationId(conversation.id);
       setIsReadOnly(false);
+      setShowTransactions(true);
 
       // Get user profile for personalized welcome
       const { data: profile } = await supabase
@@ -120,13 +137,28 @@ const Portal = () => {
 
       const firstName = profile?.full_name?.split(" ")[0] || "there";
 
+      // Fetch transactions from last 120 days
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 120);
+
+      const { data: txns, error: txnError } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("customer_id", userId)
+        .gte("transaction_time", cutoffDate.toISOString())
+        .order("transaction_time", { ascending: false })
+        .limit(20);
+
+      if (txnError) throw txnError;
+      setTransactions(txns || []);
+
       // Add welcome message
       const { error: msgError } = await supabase
         .from("messages")
         .insert({
           conversation_id: conversation.id,
           role: "assistant",
-          content: `Hi ${firstName}, I'll help you file a chargeback with ABC Bank. Let's get started! Can you tell me about the transaction you'd like to dispute?`,
+          content: `Hi ${firstName}, welcome to ABC Bank.\nI'm your chargeback filing assistant.\nThese are your transactions from the last 120 days — please select the transaction for which you'd like to proceed with filing a chargeback.`,
         });
 
       if (msgError) throw msgError;
@@ -224,6 +256,44 @@ const Portal = () => {
     }
   };
 
+  const handleTransactionSelect = async (transaction: Transaction) => {
+    if (!currentConversationId) return;
+
+    try {
+      setShowTransactions(false);
+
+      // Add user's selection message
+      const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
+        new Date(transaction.transaction_time),
+        "dd MMM yyyy"
+      )} for ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}.`;
+
+      const { error: userMsgError } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "user",
+          content: userMessage,
+        });
+
+      if (userMsgError) throw userMsgError;
+
+      // Update conversation title
+      const newTitle = `${transaction.merchant_name} • ${transaction.transaction_amount.toFixed(2)} ${
+        transaction.transaction_currency
+      } • ${format(new Date(transaction.transaction_time), "dd MMM")}`;
+
+      await supabase
+        .from("conversations")
+        .update({ title: newTitle })
+        .eq("id", currentConversationId);
+
+      toast.success("Transaction selected");
+    } catch (error: any) {
+      toast.error("Failed to select transaction");
+    }
+  };
+
   return (
     <div className="flex h-screen bg-background">
       <ChatHistory
@@ -271,6 +341,11 @@ const Portal = () => {
                 timestamp={new Date(message.created_at)}
               />
             ))}
+            {showTransactions && (
+              <div className="mt-6">
+                <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
+              </div>
+            )}
           </div>
         </ScrollArea>
 
