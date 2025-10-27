@@ -124,12 +124,11 @@ const Portal = () => {
 
   const loadOrCreateConversation = async (userId: string) => {
     try {
-      // First, try to find the most recent active conversation
+      // First, try to find the most recent conversation (any status)
       const { data: existingConversations, error: fetchError } = await supabase
         .from("conversations")
         .select("*")
         .eq("user_id", userId)
-        .eq("status", "active")
         .order("updated_at", { ascending: false })
         .limit(1);
 
@@ -139,12 +138,11 @@ const Portal = () => {
         // Load existing conversation
         const conversation = existingConversations[0];
         setCurrentConversationId(conversation.id);
-        setIsReadOnly(false);
+        setIsReadOnly(conversation.status === "closed");
         loadMessages(conversation.id);
-      } else {
-        // No active conversation, create a new one
-        await initializeNewConversation(userId);
       }
+      // If no conversations exist at all, don't create one automatically
+      // User needs to click "New Chat" button
     } catch (error: any) {
       console.error("Error loading conversation:", error);
       toast.error("Failed to load conversation");
