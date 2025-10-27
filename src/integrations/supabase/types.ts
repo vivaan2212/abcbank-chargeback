@@ -97,6 +97,74 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          acquirer_name: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_wallet_transaction: boolean
+          local_transaction_amount: number
+          local_transaction_currency: string
+          merchant_category_code: number
+          merchant_id: number
+          merchant_name: string
+          pos_entry_mode: number
+          secured_indication: number
+          transaction_amount: number
+          transaction_currency: string
+          transaction_id: number
+          transaction_time: string
+          wallet_type: string | null
+        }
+        Insert: {
+          acquirer_name: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_wallet_transaction?: boolean
+          local_transaction_amount: number
+          local_transaction_currency: string
+          merchant_category_code: number
+          merchant_id: number
+          merchant_name: string
+          pos_entry_mode: number
+          secured_indication: number
+          transaction_amount: number
+          transaction_currency: string
+          transaction_id: number
+          transaction_time: string
+          wallet_type?: string | null
+        }
+        Update: {
+          acquirer_name?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_wallet_transaction?: boolean
+          local_transaction_amount?: number
+          local_transaction_currency?: string
+          merchant_category_code?: number
+          merchant_id?: number
+          merchant_name?: string
+          pos_entry_mode?: number
+          secured_indication?: number
+          transaction_amount?: number
+          transaction_currency?: string
+          transaction_id?: number
+          transaction_time?: string
+          wallet_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
