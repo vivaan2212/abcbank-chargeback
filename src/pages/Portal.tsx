@@ -10,6 +10,9 @@ import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
 import ChatHistory from "@/components/ChatHistory";
 import TransactionList from "@/components/TransactionList";
+import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
+import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 interface Message {
   id: string;
@@ -28,6 +31,17 @@ interface Transaction {
   merchant_category_code: number;
   acquirer_name: string;
   is_wallet_transaction: boolean;
+  wallet_type: string | null;
+  secured_indication: number;
+  pos_entry_mode: number;
+  local_transaction_amount: number;
+  local_transaction_currency: string;
+}
+
+interface EligibilityResult {
+  transactionId: string;
+  status: "ELIGIBLE" | "INELIGIBLE";
+  ineligibleReasons?: string[];
 }
 
 const Portal = () => {
@@ -40,6 +54,10 @@ const Portal = () => {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showTransactions, setShowTransactions] = useState(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null);
+  const [showReasonPicker, setShowReasonPicker] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -261,6 +279,7 @@ const Portal = () => {
 
     try {
       setShowTransactions(false);
+      setSelectedTransaction(transaction);
 
       // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
@@ -288,10 +307,123 @@ const Portal = () => {
         .update({ title: newTitle })
         .eq("id", currentConversationId);
 
-      toast.success("Transaction selected");
+      // Show transaction details in assistant message
+      const detailsMessage = `Thanks for choosing a transaction. Here are the details I have:
+
+• Merchant: ${transaction.merchant_name}
+• Amount: ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}
+• Date: ${format(new Date(transaction.transaction_time), "dd MMM yyyy")}
+• MCC: ${transaction.merchant_category_code}
+• Acquirer: ${transaction.acquirer_name}
+• POS Entry Mode: ${transaction.pos_entry_mode}
+• Secured Indication: ${transaction.secured_indication}
+• Wallet: ${transaction.is_wallet_transaction ? `Yes${transaction.wallet_type ? ` (${transaction.wallet_type})` : ""}` : "No"}
+
+Let me check if this transaction is eligible for a chargeback...`;
+
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: detailsMessage,
+        });
+
+      // Check eligibility
+      await checkEligibility(transaction);
     } catch (error: any) {
       toast.error("Failed to select transaction");
     }
+  };
+
+  const checkEligibility = async (transaction: Transaction) => {
+    if (!currentConversationId) return;
+
+    setIsCheckingEligibility(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const response = await supabase.functions.invoke("check-eligibility", {
+        body: { transactionId: transaction.id },
+      });
+
+      if (response.error) throw response.error;
+
+      const result: EligibilityResult = response.data;
+      setEligibilityResult(result);
+
+      if (result.status === "INELIGIBLE") {
+        // Show ineligibility message with reasons
+        const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
+        const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}\n\nYou can select another transaction or end the session.`;
+
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: ineligibleMessage,
+          });
+      } else {
+        // Show eligibility message
+        const eligibleMessage = `This transaction is eligible to proceed!\nPlease choose the reason that best describes your dispute.`;
+
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: eligibleMessage,
+          });
+
+        setShowReasonPicker(true);
+      }
+    } catch (error: any) {
+      console.error("Eligibility check error:", error);
+      toast.error("Failed to check eligibility");
+    } finally {
+      setIsCheckingEligibility(false);
+    }
+  };
+
+  const handleReasonSelect = async (reason: ChargebackReason) => {
+    if (!currentConversationId) return;
+
+    try {
+      setShowReasonPicker(false);
+
+      // Add user's reason selection message
+      const reasonMessage = `Reason selected: ${reason.label}`;
+
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "user",
+          content: reasonMessage,
+        });
+
+      // Add confirmation message
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: "Thank you for providing the reason. I'll now proceed with filing your chargeback request.",
+        });
+
+      toast.success("Reason selected");
+    } catch (error: any) {
+      toast.error("Failed to save reason");
+    }
+  };
+
+  const handleSelectAnotherTransaction = () => {
+    setShowTransactions(true);
+    setEligibilityResult(null);
+    setSelectedTransaction(null);
   };
 
   return (
@@ -341,9 +473,36 @@ const Portal = () => {
                 timestamp={new Date(message.created_at)}
               />
             ))}
+            {isCheckingEligibility && (
+              <div className="mt-6 flex items-center justify-center">
+                <Card className="p-6 flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Checking eligibility...</span>
+                </Card>
+              </div>
+            )}
             {showTransactions && (
               <div className="mt-6">
                 <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
+              </div>
+            )}
+            {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
+              <div className="mt-6">
+                <Card className="p-6 space-y-4">
+                  <div className="flex gap-2">
+                    <Button onClick={handleSelectAnotherTransaction} variant="default">
+                      Select Another Transaction
+                    </Button>
+                    <Button onClick={handleEndSession} variant="outline">
+                      End Session
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+            {showReasonPicker && (
+              <div className="mt-6">
+                <ReasonPicker onSelect={handleReasonSelect} />
               </div>
             )}
           </div>
