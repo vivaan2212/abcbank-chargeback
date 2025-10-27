@@ -100,20 +100,20 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
           {conversations.map((conversation) => (
             <div
               key={conversation.id}
-              className={`w-full text-left p-3 rounded-lg mb-1 transition-colors flex items-start justify-between gap-2 ${
+              className={`group relative w-full rounded-lg mb-1 transition-all ${
                 currentConversationId === conversation.id
                   ? "bg-accent text-accent-foreground"
-                  : "hover:bg-muted"
+                  : "hover:bg-muted/50"
               }`}
             >
               <button
                 onClick={() => onConversationSelect(conversation.id)}
-                className="flex-1 min-w-0 text-left"
+                className="w-full text-left p-3 pr-12"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{conversation.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true })}
                     </p>
                   </div>
@@ -129,27 +129,29 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
                 </div>
               </button>
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 hover:bg-background/50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           ))}
         </div>
