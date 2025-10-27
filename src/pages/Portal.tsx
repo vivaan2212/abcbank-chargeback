@@ -498,8 +498,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     if (!currentConversationId) return;
 
     try {
-      // Don't hide the reason picker anymore - keep it visible
-      // setShowReasonPicker(false);
+      setShowReasonPicker(false);
 
       // Add user's reason selection message
       const reasonMessage = `Reason selected: ${reason.label}`;
