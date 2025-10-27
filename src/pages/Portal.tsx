@@ -13,6 +13,7 @@ import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
+import { UploadedDocumentsInline } from "@/components/UploadedDocumentsInline";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
@@ -648,67 +649,73 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         )}
 
-        {/* Messages */}
+        {/* Messages - bottom anchored layout */}
         <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
-          <div className="max-w-4xl mx-auto min-h-full flex flex-col justify-end">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                role={message.role as "user" | "assistant"}
-                content={message.content}
-                timestamp={new Date(message.created_at)}
-              />
-            ))}
-            {isCheckingEligibility && (
-              <div className="mt-6 flex items-center justify-center">
-                <Card className="p-6 flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Checking eligibility...</span>
-                </Card>
-              </div>
-            )}
-            {isCheckingDocuments && (
-              <div className="mt-6 flex items-center justify-center">
-                <Card className="p-6 flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Verifying documents...</span>
-                </Card>
-              </div>
-            )}
-            {showTransactions && (
-              <div className="mt-6">
-                <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
-              </div>
-            )}
-            {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
-              <div className="mt-6">
-                <Card className="p-6 space-y-4">
-                  <div className="flex gap-2">
-                    <Button onClick={handleSelectAnotherTransaction} variant="default">
-                      Select Another Transaction
-                    </Button>
-                    <Button onClick={handleEndSession} variant="outline">
-                      End Session
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            )}
-            {showReasonPicker && (
-              <div className="mt-6">
-                <ReasonPicker onSelect={handleReasonSelect} />
-              </div>
-            )}
-            {showDocumentUpload && selectedReason && (
-              <div className="mt-6">
-                <DocumentUpload
-                  reasonId={selectedReason.id}
-                  reasonLabel={selectedReason.label}
-                  customReason={selectedReason.customReason}
-                  onComplete={handleDocumentsComplete}
+          <div className="max-w-4xl mx-auto min-h-full grid grid-rows-[1fr_auto]">
+            <div />
+            <div>
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  role={message.role as "user" | "assistant"}
+                  content={message.content}
+                  timestamp={new Date(message.created_at)}
                 />
-              </div>
-            )}
+              ))}
+              {isCheckingEligibility && (
+                <div className="mt-6 flex items-center justify-center">
+                  <Card className="p-6 flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Checking eligibility...</span>
+                  </Card>
+                </div>
+              )}
+              {isCheckingDocuments && (
+                <div className="mt-6 flex items-center justify-center">
+                  <Card className="p-6 flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Verifying documents...</span>
+                  </Card>
+                </div>
+              )}
+              {uploadedDocuments.length > 0 && (
+                <UploadedDocumentsInline documents={uploadedDocuments} />
+              )}
+              {showTransactions && (
+                <div className="mt-6">
+                  <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
+                </div>
+              )}
+              {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
+                <div className="mt-6">
+                  <Card className="p-6 space-y-4">
+                    <div className="flex gap-2">
+                      <Button onClick={handleSelectAnotherTransaction} variant="default">
+                        Select Another Transaction
+                      </Button>
+                      <Button onClick={handleEndSession} variant="outline">
+                        End Session
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )}
+              {showReasonPicker && (
+                <div className="mt-6">
+                  <ReasonPicker onSelect={handleReasonSelect} />
+                </div>
+              )}
+              {showDocumentUpload && selectedReason && (
+                <div className="mt-6">
+                  <DocumentUpload
+                    reasonId={selectedReason.id}
+                    reasonLabel={selectedReason.label}
+                    customReason={selectedReason.customReason}
+                    onComplete={handleDocumentsComplete}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </ScrollArea>
 
