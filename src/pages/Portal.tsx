@@ -547,6 +547,8 @@ Let me check if this transaction is eligible for a chargeback...`;
 
     try {
       setShowDocumentUpload(false);
+      setShowTransactions(false);
+      setShowReasonPicker(false);
 
       // Add user message about documents uploaded
       const docNames = documents.map(d => d.file.name).join(", ");
