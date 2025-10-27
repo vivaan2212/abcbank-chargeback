@@ -118,8 +118,11 @@ Deno.serve(async (req) => {
       ineligibleReasons.push('Refund already received or transaction fully reversed.');
     }
 
-    // 2. Amount below threshold
-    if (tx.local_transaction_amount < MIN_AMOUNT_AED) {
+    // 2. Amount below threshold (use local or fallback to original)
+    const localAmount = Number(tx.local_transaction_amount ?? 0);
+    const origAmount = Number(tx.transaction_amount ?? 0);
+    const effectiveAmount = isNaN(localAmount) || localAmount <= 0 ? origAmount : localAmount;
+    if (effectiveAmount < MIN_AMOUNT_AED) {
       ineligibleReasons.push(`Transaction amount below ${MIN_AMOUNT_AED} AED minimum threshold.`);
     }
 
@@ -129,7 +132,7 @@ Deno.serve(async (req) => {
       ineligibleReasons.push(`Transaction is older than ${MAX_AGE_DAYS} days and cannot be disputed.`);
     }
 
-    console.log(`Transaction age: ${transactionAge} days, Ineligible reasons: ${ineligibleReasons.length}`);
+    console.log(`Transaction age: ${transactionAge} days, Amount(local): ${tx.local_transaction_amount}, Ineligible reasons: ${ineligibleReasons.length}`);
 
     // Return result
     if (ineligibleReasons.length > 0) {

@@ -213,7 +213,11 @@ const Portal = () => {
 
       setCurrentConversationId(conversation.id);
       setIsReadOnly(false);
+      // Reset UI state for a fresh conversation
       setShowTransactions(true);
+      setShowReasonPicker(false);
+      setEligibilityResult(null);
+      setSelectedTransaction(null);
 
       // Get user profile for personalized welcome
       const { data: profile } = await supabase
@@ -370,6 +374,8 @@ const Portal = () => {
 
     try {
       setShowTransactions(false);
+      setShowReasonPicker(false);
+      setEligibilityResult(null);
       setSelectedTransaction(transaction);
 
       // Add user's selection message
@@ -515,6 +521,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     setShowTransactions(true);
     setEligibilityResult(null);
     setSelectedTransaction(null);
+    setShowReasonPicker(false);
   };
 
   return (
