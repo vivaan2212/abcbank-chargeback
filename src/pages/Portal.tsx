@@ -722,7 +722,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: "Thank you for providing details. I'm analyzing your reason to determine the best way to proceed with your chargeback...",
+            content: "Thank you for providing details. Pace is analyzing your reason to determine the best way to proceed with your chargeback...",
           });
 
         try {
@@ -909,14 +909,7 @@ Let me check if this transaction is eligible for a chargeback...`;
         .select()
         .single();
 
-      // Add message with documents to local state immediately
-      if (newMessage) {
-        setMessages(prev => [...prev, { 
-          ...newMessage, 
-          role: newMessage.role as "user" | "assistant" | "system",
-          documents 
-        }]);
-      }
+      // Message will be added automatically by realtime subscription
 
       // Show checking message
       setTimeout(async () => {

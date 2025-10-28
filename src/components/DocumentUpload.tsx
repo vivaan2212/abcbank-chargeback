@@ -117,7 +117,7 @@ export const DocumentUpload = ({ reasonId, reasonLabel, customReason, aiClassifi
         )}
         {aiClassification && (
           <div className="mt-2 p-3 bg-muted/50 rounded-md">
-            <p className="text-sm font-medium mb-1">AI Analysis:</p>
+            <p className="text-sm font-medium mb-1">Pace Analysis:</p>
             <p className="text-sm text-muted-foreground">{aiClassification.explanation}</p>
           </div>
         )}

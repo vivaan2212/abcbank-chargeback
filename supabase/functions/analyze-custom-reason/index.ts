@@ -57,6 +57,7 @@ Based on the classification, provide the required documents. Return ONLY a valid
 
 Important: 
 - For not_eligible cases, return an empty documents array
+- For product-related issues (defective, damaged, wrong size, wrong color, not as described), ALWAYS include a document requirement for "Photo of the product showing the issue" with uploadTypes "Image"
 - Be precise and only classify as not_eligible if it truly doesn't qualify
 - Always return valid JSON, nothing else`
           },
