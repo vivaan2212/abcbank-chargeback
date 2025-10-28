@@ -37,10 +37,10 @@ const Dashboard = () => {
         done: 0
       };
       
-      // Filter out disputes without transactions, matching DisputesList behavior
-      const disputesWithTransactions = data?.filter(d => d.transaction_id !== null) || [];
+      // Count all disputes - data persists permanently in backend
+      const allDisputes = data || [];
       
-      disputesWithTransactions.forEach(dispute => {
+      allDisputes.forEach(dispute => {
         const status = dispute.status;
         
         // Map database statuses to display categories
