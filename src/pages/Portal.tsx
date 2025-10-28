@@ -428,18 +428,53 @@ const Portal = () => {
 
       if (userMsgError) throw userMsgError;
 
-      // Simulate assistant response with delay
-      setTimeout(async () => {
-        const { error: assistantMsgError } = await supabase
+      // Check if user is responding to not_eligible options
+      if (messageContent === '1') {
+        // User wants to select another transaction
+        await supabase
           .from("messages")
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: "Thank you for that information. I'm processing your chargeback request. Could you provide more details about the merchant and transaction date?",
+            content: "Please select another transaction from the list to proceed with filing a chargeback.",
+          });
+        
+        // Ensure transaction list is visible
+        setShowTransactions(true);
+        setShowReasonPicker(false);
+        setShowDocumentUpload(false);
+      } else if (messageContent === '2') {
+        // User wants to end the chat
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "Thank you for contacting ABC Bank. If you need further assistance, please feel free to start a new chat. Have a great day!",
           });
 
-        if (assistantMsgError) throw assistantMsgError;
-      }, 500);
+        // Close the conversation
+        await supabase
+          .from("conversations")
+          .update({ status: "closed" })
+          .eq("id", currentConversationId);
+
+        setIsReadOnly(true);
+        toast.success("Chat ended successfully");
+      } else {
+        // Default response for other messages
+        setTimeout(async () => {
+          const { error: assistantMsgError } = await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: "Thank you for that information. I'm processing your chargeback request. Could you provide more details about the merchant and transaction date?",
+            });
+
+          if (assistantMsgError) throw assistantMsgError;
+        }, 500);
+      }
     } catch (error: any) {
       toast.error("Failed to send message");
     } finally {
@@ -712,6 +747,7 @@ Let me check if this transaction is eligible for a chargeback...`;
               })
               .eq("id", currentDisputeId);
 
+            // Add AI message explaining why it's not eligible
             await supabase
               .from("messages")
               .insert({
@@ -720,8 +756,25 @@ Let me check if this transaction is eligible for a chargeback...`;
                 content: classification.userMessage,
               });
 
-            setIsReadOnly(true);
-            toast.error("This reason is not eligible for chargeback");
+            // Add follow-up message with options
+            await supabase
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: "Would you like to:\n1. Select another transaction to dispute\n2. End this chat\n\nPlease type '1' to select another transaction or '2' to end the chat.",
+              });
+
+            // Reset state to allow selecting another transaction
+            setSelectedTransaction(null);
+            setSelectedReason(null);
+            setAiClassification(null);
+            setUploadedDocuments([]);
+            setShowReasonPicker(false);
+            setShowDocumentUpload(false);
+            setShowTransactions(true);
+            
+            toast.info("This reason is not eligible for chargeback");
             return;
           }
 
