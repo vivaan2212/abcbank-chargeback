@@ -11,6 +11,8 @@ import {
 import { format } from "date-fns";
 import DisputeDetail from "./DisputeDetail";
 import { Button } from "@/components/ui/button";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import type { DisputeFiltersType } from "./DisputeFilters";
 
 interface Dispute {
   id: string;
@@ -51,12 +53,15 @@ interface Dispute {
 interface DisputesListProps {
   statusFilter: string;
   userId?: string;
+  filters?: DisputeFiltersType;
 }
 
-const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
+const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadDisputes();
@@ -83,7 +88,7 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [statusFilter, userId]);
+  }, [statusFilter, userId, filters, sortField, sortDirection]);
 
   const loadDisputes = async () => {
     try {
@@ -143,14 +148,145 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
 
       if (error) throw error;
       
-      // Filter out disputes without transactions for in_progress tab
-      const filteredData = data?.filter(d => d.transaction_id !== null) || [];
+      // Filter out disputes without transactions
+      let filteredData = data?.filter(d => d.transaction_id !== null) || [];
+
+      // Apply additional filters from filter panel
+      if (filters) {
+        filteredData = filteredData.filter((dispute) => {
+          // Current Status
+          if (filters.currentStatus && dispute.status !== filters.currentStatus) return false;
+
+          // Transaction fields
+          const txn = dispute.transaction;
+          if (!txn) return false;
+
+          // Acquirer Name
+          if (filters.acquirerName && !txn.acquirer_name?.toLowerCase().includes(filters.acquirerName.toLowerCase())) return false;
+
+          // Merchant Category Code
+          if (filters.merchantCategoryCode && !txn.merchant_category_code?.toString().includes(filters.merchantCategoryCode)) return false;
+
+          // Merchant ID
+          if (filters.merchantId && !txn.merchant_id?.toString().includes(filters.merchantId)) return false;
+
+          // Merchant Name
+          if (filters.merchantName && !txn.merchant_name?.toLowerCase().includes(filters.merchantName.toLowerCase())) return false;
+
+          // Reference Number (transaction_id)
+          if (filters.referenceNumber && !txn.transaction_id?.toString().includes(filters.referenceNumber)) return false;
+
+          // Tid
+          if (filters.tid && !dispute.transaction_id?.toString().includes(filters.tid)) return false;
+
+          // Transaction Amount Range
+          if (filters.transactionAmountMin !== undefined && txn.transaction_amount !== undefined && txn.transaction_amount < filters.transactionAmountMin) return false;
+          if (filters.transactionAmountMax !== undefined && txn.transaction_amount !== undefined && txn.transaction_amount > filters.transactionAmountMax) return false;
+
+          // Transaction Currency
+          if (filters.transactionCurrency && txn.transaction_currency !== filters.transactionCurrency) return false;
+
+          // Transaction Time Range
+          if (filters.transactionTimeFrom && txn.transaction_time) {
+            const txnDate = new Date(txn.transaction_time);
+            const fromDate = new Date(filters.transactionTimeFrom);
+            if (txnDate < fromDate) return false;
+          }
+          if (filters.transactionTimeTo && txn.transaction_time) {
+            const txnDate = new Date(txn.transaction_time);
+            const toDate = new Date(filters.transactionTimeTo);
+            toDate.setHours(23, 59, 59, 999);
+            if (txnDate > toDate) return false;
+          }
+
+          // Refund Amount Range
+          if (filters.refundAmountMin !== undefined && txn.refund_amount !== undefined && txn.refund_amount < filters.refundAmountMin) return false;
+          if (filters.refundAmountMax !== undefined && txn.refund_amount !== undefined && txn.refund_amount > filters.refundAmountMax) return false;
+
+          // Refund Received
+          if (filters.refundReceived === 'yes' && !txn.refund_received) return false;
+          if (filters.refundReceived === 'no' && txn.refund_received) return false;
+
+          // Settled
+          if (filters.settled === 'yes' && !txn.settled) return false;
+          if (filters.settled === 'no' && txn.settled) return false;
+
+          // Settlement Date Range
+          if (filters.settlementDateFrom && txn.settlement_date) {
+            const settlementDate = new Date(txn.settlement_date);
+            const fromDate = new Date(filters.settlementDateFrom);
+            if (settlementDate < fromDate) return false;
+          }
+          if (filters.settlementDateTo && txn.settlement_date) {
+            const settlementDate = new Date(txn.settlement_date);
+            const toDate = new Date(filters.settlementDateTo);
+            toDate.setHours(23, 59, 59, 999);
+            if (settlementDate > toDate) return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Apply sorting
+      if (sortField) {
+        filteredData.sort((a, b) => {
+          let aVal: any, bVal: any;
+
+          // Handle nested transaction fields
+          if (sortField.startsWith('transaction.')) {
+            const field = sortField.split('.')[1];
+            aVal = a.transaction?.[field as keyof typeof a.transaction];
+            bVal = b.transaction?.[field as keyof typeof b.transaction];
+          } else {
+            aVal = a[sortField as keyof typeof a];
+            bVal = b[sortField as keyof typeof b];
+          }
+
+          // Handle null/undefined values
+          if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1;
+          if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1;
+
+          // String comparison
+          if (typeof aVal === 'string' && typeof bVal === 'string') {
+            return sortDirection === 'asc'
+              ? aVal.localeCompare(bVal)
+              : bVal.localeCompare(aVal);
+          }
+
+          // Number/Date comparison
+          return sortDirection === 'asc'
+            ? aVal > bVal ? 1 : -1
+            : aVal < bVal ? 1 : -1;
+        });
+      }
+
       setDisputes(filteredData);
     } catch (error) {
       console.error("Error loading disputes:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
+    }
+    return sortDirection === 'asc'
+      ? <ArrowUp className="h-4 w-4 ml-1 inline" />
+      : <ArrowDown className="h-4 w-4 ml-1 inline" />;
   };
 
   const getStatusLabel = (status: string) => {
@@ -195,22 +331,102 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Current Status</TableHead>
-              <TableHead>Acquirer Name</TableHead>
-              <TableHead>Merchant Category Code</TableHead>
-              <TableHead>Merchant ID</TableHead>
-              <TableHead>Merchant Name</TableHead>
-              <TableHead>Reference Number</TableHead>
-              <TableHead>Tid</TableHead>
-              <TableHead>Transaction Amount</TableHead>
-              <TableHead>Transaction Currency</TableHead>
-              <TableHead>Transaction Time</TableHead>
-              <TableHead>Refund Amount</TableHead>
-              <TableHead>Refund Received</TableHead>
-              <TableHead>Settled</TableHead>
-              <TableHead>Settlement Date</TableHead>
-              <TableHead>Local Amount</TableHead>
-              <TableHead>Local Currency</TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('status')}
+              >
+                Current Status {getSortIcon('status')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.acquirer_name')}
+              >
+                Acquirer Name {getSortIcon('transaction.acquirer_name')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.merchant_category_code')}
+              >
+                Merchant Category Code {getSortIcon('transaction.merchant_category_code')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.merchant_id')}
+              >
+                Merchant ID {getSortIcon('transaction.merchant_id')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.merchant_name')}
+              >
+                Merchant Name {getSortIcon('transaction.merchant_name')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.transaction_id')}
+              >
+                Reference Number {getSortIcon('transaction.transaction_id')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction_id')}
+              >
+                Tid {getSortIcon('transaction_id')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.transaction_amount')}
+              >
+                Transaction Amount {getSortIcon('transaction.transaction_amount')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.transaction_currency')}
+              >
+                Transaction Currency {getSortIcon('transaction.transaction_currency')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.transaction_time')}
+              >
+                Transaction Time {getSortIcon('transaction.transaction_time')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.refund_amount')}
+              >
+                Refund Amount {getSortIcon('transaction.refund_amount')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.refund_received')}
+              >
+                Refund Received {getSortIcon('transaction.refund_received')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.settled')}
+              >
+                Settled {getSortIcon('transaction.settled')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.settlement_date')}
+              >
+                Settlement Date {getSortIcon('transaction.settlement_date')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.local_transaction_amount')}
+              >
+                Local Amount {getSortIcon('transaction.local_transaction_amount')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('transaction.local_transaction_currency')}
+              >
+                Local Currency {getSortIcon('transaction.local_transaction_currency')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

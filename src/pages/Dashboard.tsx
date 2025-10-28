@@ -3,15 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BookOpen, Share2, Filter } from "lucide-react";
+import { LogOut, BookOpen, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import DisputesList from "@/components/DisputesList";
 import { getUserRole } from "@/lib/auth";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import DisputeFilters, { DisputeFiltersType } from "@/components/DisputeFilters";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [filters, setFilters] = useState<DisputeFiltersType>({});
+  const [filterKey, setFilterKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -51,6 +54,11 @@ const Dashboard = () => {
     }
   };
 
+
+  const handleApplyFilters = () => {
+    // Force re-render with new filters
+    setFilterKey(prev => prev + 1);
+  };
 
   if (!user) return null;
 
@@ -123,26 +131,27 @@ const Dashboard = () => {
 
             <div className="flex-1 overflow-auto px-6 pt-4">
               <div className="mb-4">
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
+                <DisputeFilters
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onApply={handleApplyFilters}
+                />
               </div>
 
               <TabsContent value="needs-attention" className="mt-0">
-                <DisputesList statusFilter="needs_attention" />
+                <DisputesList key={`needs-attention-${filterKey}`} statusFilter="needs_attention" filters={filters} />
               </TabsContent>
 
               <TabsContent value="void" className="mt-0">
-                <DisputesList statusFilter="void" />
+                <DisputesList key={`void-${filterKey}`} statusFilter="void" filters={filters} />
               </TabsContent>
 
               <TabsContent value="in-progress" className="mt-0">
-                <DisputesList statusFilter="in_progress" />
+                <DisputesList key={`in-progress-${filterKey}`} statusFilter="in_progress" filters={filters} />
               </TabsContent>
 
               <TabsContent value="done" className="mt-0">
-                <DisputesList statusFilter="done" />
+                <DisputesList key={`done-${filterKey}`} statusFilter="done" filters={filters} />
               </TabsContent>
             </div>
           </Tabs>
