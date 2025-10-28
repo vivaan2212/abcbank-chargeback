@@ -87,7 +87,7 @@ const Dashboard = () => {
 
     // Subscribe to real-time updates for dispute counts
     const channel = supabase
-      .channel('dispute-counts')
+      .channel('dispute-dashboard-counts')
       .on(
         'postgres_changes',
         {
@@ -95,11 +95,14 @@ const Dashboard = () => {
           schema: 'public',
           table: 'disputes'
         },
-        () => {
+        (payload) => {
+          console.log('Count update triggered:', payload);
           loadCounts();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Counts subscription status:', status);
+      });
 
     return () => {
       subscription.unsubscribe();

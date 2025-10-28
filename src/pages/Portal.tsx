@@ -564,13 +564,15 @@ const Portal = () => {
       setShowOrderDetailsInput(false);
 
       // Update dispute with transaction selection
-      await supabase
+      const { error: updateError } = await supabase
         .from("disputes")
         .update({
           transaction_id: transaction.id,
           status: "transaction_selected"
         })
         .eq("id", currentDisputeId);
+
+      if (updateError) throw updateError;
 
       // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
@@ -796,7 +798,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           if (classification.category === "not_eligible" || classification.category === "mismatch") {
             const statusToSet = classification.category === "mismatch" ? "mismatch" : "not_eligible";
             
-            await supabase
+            const { error: updateError } = await supabase
               .from("disputes")
               .update({
                 reason_id: classification.category,
@@ -805,6 +807,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                 status: statusToSet
               })
               .eq("id", currentDisputeId);
+
+            if (updateError) {
+              console.error("Error updating dispute status:", updateError);
+            }
 
             // Add AI message explaining the issue
             await supabase
@@ -841,7 +847,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           }
 
           // Update dispute with AI-classified reason
-          await supabase
+          const { error: reasonUpdateError } = await supabase
             .from("disputes")
             .update({
               reason_id: classification.category,
@@ -850,6 +856,8 @@ Let me check if this transaction is eligible for a chargeback...`;
               status: "reason_selected"
             })
             .eq("id", currentDisputeId);
+
+          if (reasonUpdateError) throw reasonUpdateError;
 
           // Show AI analysis result
           await supabase
@@ -897,7 +905,7 @@ Let me check if this transaction is eligible for a chargeback...`;
         // Standard reason selection (non-custom) - clear AI classification
         setAiClassification(null);
         
-        await supabase
+        const { error: updateError } = await supabase
           .from("disputes")
           .update({
             reason_id: reason.id,
@@ -906,6 +914,10 @@ Let me check if this transaction is eligible for a chargeback...`;
             status: "reason_selected"
           })
           .eq("id", currentDisputeId);
+
+        if (updateError) {
+          console.error("Error updating dispute reason:", updateError);
+        }
 
         // Add document request message with delay
         setTimeout(async () => {

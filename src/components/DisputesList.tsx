@@ -67,24 +67,24 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
   useEffect(() => {
     loadDisputes();
 
-    // Subscribe to real-time updates
-    const subscribeConfig: any = {
-      event: '*',
-      schema: 'public',
-      table: 'disputes',
-    };
-    
-    // Only add customer filter if userId is provided
-    if (userId) {
-      subscribeConfig.filter = `customer_id=eq.${userId}`;
-    }
-
+    // Subscribe to real-time updates for disputes
     const channel = supabase
-      .channel('disputes-changes')
-      .on('postgres_changes', subscribeConfig, () => {
-        loadDisputes();
-      })
-      .subscribe();
+      .channel('disputes-dashboard-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'disputes',
+        },
+        (payload) => {
+          console.log('Dispute change detected:', payload);
+          loadDisputes();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Disputes subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
