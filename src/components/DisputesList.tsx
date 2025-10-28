@@ -148,8 +148,8 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
 
       if (error) throw error;
       
-      // Store all disputes permanently - no filtering by transaction_id
-      let filteredData = data || [];
+      // Only show disputes on dashboard after transaction selection
+      let filteredData = data?.filter(d => d.transaction_id !== null) || [];
 
       // Apply additional filters from filter panel
       if (filters) {
