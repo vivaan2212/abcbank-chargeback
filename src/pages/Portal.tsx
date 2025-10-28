@@ -560,6 +560,8 @@ const Portal = () => {
       setSelectedReason(null);
       setUploadedDocuments([]);
       setAiClassification(null);
+      setOrderDetails("");
+      setShowOrderDetailsInput(false);
 
       // Update dispute with transaction selection
       await supabase
@@ -1030,6 +1032,8 @@ Let me check if this transaction is eligible for a chargeback...`;
     setShowDocumentUpload(false);
     setSelectedReason(null);
     setUploadedDocuments([]);
+    setOrderDetails("");
+    setShowOrderDetailsInput(false);
   };
 
   // Show nothing while checking role to prevent flash
