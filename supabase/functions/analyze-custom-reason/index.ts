@@ -166,7 +166,77 @@ MANDATORY RULES:
     }
 
     const classification = JSON.parse(toolCall.function.arguments);
-    console.log('Classification result:', classification);
+    console.log('Classification result (raw):', classification);
+
+    // Enforce EXACTLY 3 documents (except not_eligible = 0) using deterministic templates
+    type Doc = { name: string; uploadTypes: string };
+
+    const TEMPLATES: Record<string, Doc[]> = {
+      defective: [
+        { name: "Photo of the product showing the issue", uploadTypes: "Image" },
+        { name: "Proof of purchase (e.g., invoice, receipt, order confirmation)", uploadTypes: "PDF, Image, Word" },
+        { name: "Communication with merchant (e.g., emails, chat transcripts, support tickets)", uploadTypes: "PDF, Image, Word, Text" },
+      ],
+      fraud: [
+        { name: "Police report or fraud affidavit", uploadTypes: "PDF, Image, Word" },
+        { name: "Bank or credit card statement showing the charge", uploadTypes: "PDF, Image" },
+        { name: "Any communication with the merchant about this charge", uploadTypes: "PDF, Image, Word, Text" },
+      ],
+      not_received: [
+        { name: "Proof of purchase (e.g., invoice, receipt, order confirmation)", uploadTypes: "PDF, Image, Word" },
+        { name: "Communication with merchant (e.g., emails, chat transcripts, support tickets)", uploadTypes: "PDF, Image, Word, Text" },
+        { name: "Bank or credit card statement showing the charge", uploadTypes: "PDF, Image" },
+      ],
+      duplicate: [
+        { name: "Bank or credit card statement highlighting duplicate charges", uploadTypes: "PDF, Image" },
+        { name: "Proof of purchase or receipt", uploadTypes: "PDF, Image, Word" },
+        { name: "Communication with merchant requesting a refund or correction", uploadTypes: "PDF, Image, Word, Text" },
+      ],
+      incorrect_amount: [
+        { name: "Proof of purchase showing expected amount", uploadTypes: "PDF, Image, Word" },
+        { name: "Bank or credit card statement showing charged amount", uploadTypes: "PDF, Image" },
+        { name: "Communication with merchant about the discrepancy", uploadTypes: "PDF, Image, Word, Text" },
+      ],
+      billing_error: [
+        { name: "Invoice or receipt showing correct details", uploadTypes: "PDF, Image, Word" },
+        { name: "Bank or credit card statement showing the error", uploadTypes: "PDF, Image" },
+        { name: "Communication with merchant/support about the error", uploadTypes: "PDF, Image, Word, Text" },
+      ],
+    };
+
+    function enforceThreeDocs(category: string, docs: Doc[] = []): Doc[] {
+      if (category === 'not_eligible') return [];
+      const template = TEMPLATES[category as keyof typeof TEMPLATES] ?? TEMPLATES.billing_error;
+
+      // Start with an ordered result; ensure 'defective' first doc rule
+      const result: Doc[] = [];
+      const pushIfMissing = (d: Doc) => {
+        if (!result.some(x => x.name.toLowerCase() === d.name.toLowerCase())) result.push(d);
+      };
+
+      if (category === 'defective') pushIfMissing(template[0]);
+
+      // Add provided docs
+      for (const d of docs) pushIfMissing({ name: d.name, uploadTypes: d.uploadTypes });
+      // Fill from template in order
+      for (const d of template) pushIfMissing(d);
+
+      return result.slice(0, 3);
+    }
+
+    // Apply enforcement and normalize user message
+    classification.documents = enforceThreeDocs(classification.category, classification.documents);
+
+    if (classification.category === 'not_eligible') {
+      classification.documents = [];
+      classification.userMessage = classification.userMessage || 'This case is not eligible for a chargeback at this time.';
+    } else {
+      if (!classification.userMessage || !/\b3\b/.test(classification.userMessage)) {
+        classification.userMessage = 'We understand your situation. Please upload 3 documents to help us process your chargeback.';
+      }
+    }
+
+    console.log('Classification result (post-processed):', classification);
 
     return new Response(
       JSON.stringify(classification),
