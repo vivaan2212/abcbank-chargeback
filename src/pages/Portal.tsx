@@ -146,6 +146,21 @@ const Portal = () => {
         const conversation = existingConversations[0];
         setCurrentConversationId(conversation.id);
         setIsReadOnly(conversation.status === "closed");
+        // Fetch recent transactions for the user so the list can render immediately
+        try {
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - 120);
+          const { data: txns } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("customer_id", userId)
+            .gte("transaction_time", cutoffDate.toISOString())
+            .order("transaction_time", { ascending: false })
+            .limit(20);
+          setTransactions(txns || []);
+        } catch (e) {
+          console.error("Failed loading transactions for existing conversation", e);
+        }
         loadMessages(conversation.id);
       }
       // If no conversations exist at all, don't create one automatically
@@ -282,7 +297,19 @@ const Portal = () => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setMessages((data || []) as Message[]);
+      const loaded = (data || []) as Message[];
+      setMessages(loaded);
+
+      // If this conversation hasn't progressed beyond the welcome, show transactions picker
+      const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
+      if (!hasUserSelection) {
+        setShowTransactions(true);
+        setShowReasonPicker(false);
+        setShowDocumentUpload(false);
+        setEligibilityResult(null);
+        setSelectedTransaction(null);
+        setSelectedReason(null);
+      }
     } catch (error: any) {
       toast.error("Failed to load messages");
     }
