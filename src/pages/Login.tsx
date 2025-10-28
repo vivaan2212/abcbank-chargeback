@@ -16,15 +16,17 @@ const Login = () => {
 
   useEffect(() => {
     // Set up auth listener to handle session changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Check role before redirecting
-        const role = await getUserRole(session.user.id);
-        if (role === 'bank_admin') {
-          navigate("/dashboard");
-        } else if (role === 'customer') {
-          navigate("/portal");
-        }
+        // Defer role check to prevent blocking auth state
+        setTimeout(async () => {
+          const role = await getUserRole(session.user.id);
+          if (role === 'bank_admin') {
+            navigate("/dashboard");
+          } else if (role === 'customer') {
+            navigate("/portal");
+          }
+        }, 0);
       }
     });
 
