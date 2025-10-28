@@ -41,31 +41,55 @@ serve(async (req) => {
 6. "billing_error" - Billing errors or processing issues
 7. "not_eligible" - Does not qualify for chargeback
 
-Based on the classification, provide the required documents. Return ONLY a valid JSON object with this exact structure:
+CRITICAL REQUIREMENT: You MUST return exactly 3 documents for ALL categories (except not_eligible which has 0 documents).
+
+Example responses:
+
+For "defective" category:
 {
-  "category": "fraud|not_received|duplicate|incorrect_amount|defective|billing_error|not_eligible",
-  "categoryLabel": "Human-readable category name",
-  "explanation": "Brief explanation of why this was classified this way",
+  "category": "defective",
+  "categoryLabel": "Defective or not as described goods",
+  "explanation": "Customer received damaged/defective product",
   "documents": [
-    {
-      "name": "Document Name",
-      "uploadTypes": "comma-separated file types like: PDF, Word, Image, Text"
-    }
+    {"name": "Photo of the product showing the issue", "uploadTypes": "Image"},
+    {"name": "Proof of purchase (e.g., invoice, receipt, order confirmation)", "uploadTypes": "PDF, Image, Word"},
+    {"name": "Communication with merchant (e.g., emails, chat transcripts, support tickets)", "uploadTypes": "PDF, Image, Word, Text"}
   ],
-  "userMessage": "Message to show the customer explaining what was detected and what's needed"
+  "userMessage": "We understand you received a defective product. Please upload 3 documents to help us process your chargeback."
 }
 
-Important: 
-- ALWAYS return exactly 3 documents (except for not_eligible which should have empty documents array)
-- For generic document types, provide helpful examples in the document name. Examples:
-  * "Proof of purchase (e.g., invoice, receipt, order confirmation)"
-  * "Communication with merchant (e.g., emails, chat transcripts, support tickets)"
-  * "Bank or credit card statement showing the charge"
-- For product-related issues (defective, damaged, wrong size, wrong color, not as described), ALWAYS include "Photo of the product showing the issue" with uploadTypes "Image"
-- Be specific and helpful with document names to guide the customer
-- For not_eligible cases, return an empty documents array
-- Be precise and only classify as not_eligible if it truly doesn't qualify
-- Always return valid JSON, nothing else`
+For "fraud" category:
+{
+  "category": "fraud",
+  "categoryLabel": "Fraudulent or unauthorized transaction",
+  "explanation": "Customer claims unauthorized charge",
+  "documents": [
+    {"name": "Police report or fraud affidavit", "uploadTypes": "PDF, Image, Word"},
+    {"name": "Bank or credit card statement showing the charge", "uploadTypes": "PDF, Image"},
+    {"name": "Any communication with the merchant about this charge", "uploadTypes": "PDF, Image, Word, Text"}
+  ],
+  "userMessage": "We understand this was an unauthorized charge. Please upload 3 documents to help us process your chargeback."
+}
+
+For "not_received" category:
+{
+  "category": "not_received",
+  "categoryLabel": "Goods or services not received",
+  "explanation": "Customer didn't receive what they paid for",
+  "documents": [
+    {"name": "Proof of purchase (e.g., invoice, receipt, order confirmation)", "uploadTypes": "PDF, Image, Word"},
+    {"name": "Communication with merchant (e.g., emails, chat transcripts, support tickets)", "uploadTypes": "PDF, Image, Word, Text"},
+    {"name": "Bank or credit card statement showing the charge", "uploadTypes": "PDF, Image"}
+  ],
+  "userMessage": "We understand you didn't receive your order. Please upload 3 documents to help us process your chargeback."
+}
+
+MANDATORY RULES:
+- ALWAYS return EXACTLY 3 documents (except not_eligible = 0 documents)
+- For product issues (defective, damaged, wrong item, etc.), document #1 MUST be "Photo of the product showing the issue" with uploadTypes "Image"
+- For generic documents, include helpful examples in parentheses (e.g., "Proof of purchase (e.g., invoice, receipt, order confirmation)")
+- Never return fewer than 3 documents unless category is not_eligible
+- Be specific and actionable with document names`
           },
           {
             role: 'user',
