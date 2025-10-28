@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut } from "lucide-react";
+import { LogOut, BookOpen, Share2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import DisputesList from "@/components/DisputesList";
 import { getUserRole } from "@/lib/auth";
+import DashboardSidebar from "@/components/DashboardSidebar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -54,49 +55,98 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <div className="border-b">
-        <div className="flex items-center justify-between px-6 py-4">
-          <h1 className="text-2xl font-semibold">ABC Bank - Chargebacks Dashboard</h1>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
+    <div className="flex h-screen bg-background">
+      {/* Left Sidebar */}
+      <DashboardSidebar activeSection="chargebacks" />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Bar */}
+        <div className="border-b px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">Chargebacks</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Knowledge Base
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <Tabs defaultValue="in-progress" className="w-full">
-          <TabsList>
-            <TabsTrigger value="needs-attention">
-              Needs attention
-            </TabsTrigger>
-            <TabsTrigger value="void">
-              Void
-            </TabsTrigger>
-            <TabsTrigger value="in-progress">
-              In progress
-            </TabsTrigger>
-            <TabsTrigger value="done">
-              Done
-            </TabsTrigger>
-          </TabsList>
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto">
+          <Tabs defaultValue="in-progress" className="h-full flex flex-col">
+            <div className="border-b px-6">
+              <TabsList className="h-12 bg-transparent">
+                <TabsTrigger 
+                  value="needs-attention" 
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  <span className="flex items-center gap-2">
+                    ⚠ Needs attention <span className="text-muted-foreground">0</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="void"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  <span className="flex items-center gap-2">
+                    ⊘ Void <span className="text-muted-foreground">0</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="in-progress"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  <span className="flex items-center gap-2">
+                    ◷ In progress <span className="text-muted-foreground">0</span>
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="done"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  <span className="flex items-center gap-2">
+                    ✓ Done <span className="text-muted-foreground">0</span>
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-          <TabsContent value="needs-attention" className="mt-6">
-            <DisputesList statusFilter="needs_attention" />
-          </TabsContent>
+            <div className="flex-1 overflow-auto px-6 pt-4">
+              <div className="mb-4">
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+              </div>
 
-          <TabsContent value="void" className="mt-6">
-            <DisputesList statusFilter="void" />
-          </TabsContent>
+              <TabsContent value="needs-attention" className="mt-0">
+                <DisputesList statusFilter="needs_attention" />
+              </TabsContent>
 
-          <TabsContent value="in-progress" className="mt-6">
-            <DisputesList statusFilter="in_progress" />
-          </TabsContent>
+              <TabsContent value="void" className="mt-0">
+                <DisputesList statusFilter="void" />
+              </TabsContent>
 
-          <TabsContent value="done" className="mt-6">
-            <DisputesList statusFilter="done" />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="in-progress" className="mt-0">
+                <DisputesList statusFilter="in_progress" />
+              </TabsContent>
+
+              <TabsContent value="done" className="mt-0">
+                <DisputesList statusFilter="done" />
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

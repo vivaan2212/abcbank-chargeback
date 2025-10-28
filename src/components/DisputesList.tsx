@@ -9,7 +9,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
-import { ChevronRight } from "lucide-react";
 import DisputeDetail from "./DisputeDetail";
 import { Button } from "@/components/ui/button";
 
@@ -171,49 +170,86 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
   }
 
   if (disputes.length === 0) {
-    return <div className="text-muted-foreground">No disputes found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="rounded-full bg-muted p-4 mb-4">
+          <svg className="h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold mb-1">No records yet</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Get started by importing your data or connecting a data source
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">Import</Button>
+          <Button variant="outline" size="sm">Connect</Button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Current Status</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Acquirer Name</TableHead>
-            <TableHead>Merchant Category Code</TableHead>
-            <TableHead>Merchant Id</TableHead>
-            <TableHead>Merchant Name</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {disputes.map((dispute) => (
-            <TableRow
-              key={dispute.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => setSelectedDispute(dispute)}
-            >
-              <TableCell>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </TableCell>
-              <TableCell className="font-medium">
-                {getStatusLabel(dispute.status)}
-              </TableCell>
-              <TableCell>
-                {dispute.transaction?.transaction_time
-                  ? format(new Date(dispute.transaction.transaction_time), "dd MMM")
-                  : "-"}
-              </TableCell>
-              <TableCell>{dispute.transaction?.acquirer_name || "-"}</TableCell>
-              <TableCell>{dispute.transaction?.merchant_category_code || "-"}</TableCell>
-              <TableCell>{dispute.transaction?.merchant_id || "-"}</TableCell>
-              <TableCell>{dispute.transaction?.merchant_name || "-"}</TableCell>
+    <div className="space-y-4">
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Current Status</TableHead>
+              <TableHead>Acquirer Name</TableHead>
+              <TableHead>Merchant Category Code</TableHead>
+              <TableHead>Merchant ID</TableHead>
+              <TableHead>Merchant Name</TableHead>
+              <TableHead>Reference Number</TableHead>
+              <TableHead>Tid</TableHead>
+              <TableHead>Transaction Amount</TableHead>
+              <TableHead>Transaction Currency</TableHead>
+              <TableHead>Transaction Time</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {disputes.map((dispute) => (
+              <TableRow
+                key={dispute.id}
+                className="cursor-pointer hover:bg-muted/30"
+                onClick={() => setSelectedDispute(dispute)}
+              >
+                <TableCell className="font-medium">
+                  {getStatusLabel(dispute.status)}
+                </TableCell>
+                <TableCell>{dispute.transaction?.acquirer_name || "-"}</TableCell>
+                <TableCell>{dispute.transaction?.merchant_category_code || "-"}</TableCell>
+                <TableCell>{dispute.transaction?.merchant_id || "-"}</TableCell>
+                <TableCell>{dispute.transaction?.merchant_name || "-"}</TableCell>
+                <TableCell>{dispute.transaction?.transaction_id || "-"}</TableCell>
+                <TableCell>{dispute.transaction_id ? dispute.transaction_id.toString().slice(-6) : "-"}</TableCell>
+                <TableCell>{dispute.transaction?.transaction_amount || "-"}</TableCell>
+                <TableCell>{dispute.transaction?.transaction_currency || "-"}</TableCell>
+                <TableCell>
+                  {dispute.transaction?.transaction_time
+                    ? format(new Date(dispute.transaction.transaction_time), "MMM dd, yyyy HH:mm")
+                    : "-"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {disputes.length} of {disputes.length} results
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" disabled>
+            Previous
+          </Button>
+          <Button variant="outline" size="sm" disabled>
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
