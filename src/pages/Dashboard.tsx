@@ -26,7 +26,7 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('disputes')
-        .select('status');
+        .select('status, transaction_id');
       
       if (error) throw error;
       
@@ -37,17 +37,20 @@ const Dashboard = () => {
         done: 0
       };
       
-      data?.forEach(dispute => {
+      // Filter out disputes without transactions, matching DisputesList behavior
+      const disputesWithTransactions = data?.filter(d => d.transaction_id !== null) || [];
+      
+      disputesWithTransactions.forEach(dispute => {
         const status = dispute.status;
         
         // Map database statuses to display categories
         if (['started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 'documents_uploaded', 'under_review'].includes(status)) {
           newCounts.in_progress++;
-        } else if (status === 'needs_attention') {
+        } else if (status === 'needs_attention' || status === 'requires_action') {
           newCounts.needs_attention++;
-        } else if (status === 'void') {
+        } else if (status === 'void' || status === 'rejected' || status === 'cancelled') {
           newCounts.void++;
-        } else if (status === 'done' || status === 'completed' || status === 'resolved') {
+        } else if (status === 'done' || status === 'completed' || status === 'approved') {
           newCounts.done++;
         }
       });
