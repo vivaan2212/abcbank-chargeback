@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import DisputesList from "@/components/DisputesList";
+import { getUserRole } from "@/lib/auth";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -16,7 +17,14 @@ const Dashboard = () => {
       if (!session) {
         navigate("/login");
       } else {
-        setUser(session.user);
+        // Check if user is bank_admin
+        getUserRole(session.user.id).then(role => {
+          if (role !== 'bank_admin') {
+            navigate("/portal");
+            return;
+          }
+          setUser(session.user);
+        });
       }
     });
 
@@ -42,9 +50,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleBackToPortal = () => {
-    navigate("/portal");
-  };
 
   if (!user) return null;
 
@@ -52,12 +57,7 @@ const Dashboard = () => {
     <div className="flex flex-col h-screen bg-background">
       <div className="border-b">
         <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold">Chargebacks Dashboard</h1>
-            <Button variant="outline" size="sm" onClick={handleBackToPortal}>
-              Back to Portal
-            </Button>
-          </div>
+          <h1 className="text-2xl font-semibold">ABC Bank - Chargebacks Dashboard</h1>
           <Button variant="ghost" size="icon" onClick={handleLogout}>
             <LogOut className="h-5 w-5" />
           </Button>
@@ -82,19 +82,19 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="needs-attention" className="mt-6">
-            <DisputesList statusFilter="needs_attention" userId={user.id} />
+            <DisputesList statusFilter="needs_attention" />
           </TabsContent>
 
           <TabsContent value="void" className="mt-6">
-            <DisputesList statusFilter="void" userId={user.id} />
+            <DisputesList statusFilter="void" />
           </TabsContent>
 
           <TabsContent value="in-progress" className="mt-6">
-            <DisputesList statusFilter="in_progress" userId={user.id} />
+            <DisputesList statusFilter="in_progress" />
           </TabsContent>
 
           <TabsContent value="done" className="mt-6">
-            <DisputesList statusFilter="done" userId={user.id} />
+            <DisputesList statusFilter="done" />
           </TabsContent>
         </Tabs>
       </div>

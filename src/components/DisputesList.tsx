@@ -41,7 +41,7 @@ interface Dispute {
 
 interface DisputesListProps {
   statusFilter: string;
-  userId: string;
+  userId?: string;
 }
 
 const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
@@ -53,20 +53,22 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
     loadDisputes();
 
     // Subscribe to real-time updates
+    const subscribeConfig: any = {
+      event: '*',
+      schema: 'public',
+      table: 'disputes',
+    };
+    
+    // Only add customer filter if userId is provided
+    if (userId) {
+      subscribeConfig.filter = `customer_id=eq.${userId}`;
+    }
+
     const channel = supabase
       .channel('disputes-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'disputes',
-          filter: `customer_id=eq.${userId}`,
-        },
-        () => {
-          loadDisputes();
-        }
-      )
+      .on('postgres_changes', subscribeConfig, () => {
+        loadDisputes();
+      })
       .subscribe();
 
     return () => {
@@ -93,8 +95,12 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
             acquirer_name
           )
         `)
-        .eq("customer_id", userId)
         .order("updated_at", { ascending: false });
+      
+      // Only filter by customer_id if userId is provided (customer view)
+      if (userId) {
+        query = query.eq("customer_id", userId);
+      }
 
       // Filter by status category
       if (statusFilter === "in_progress") {

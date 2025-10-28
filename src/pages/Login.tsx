@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
+import { getUserRole } from "@/lib/auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -43,8 +44,18 @@ const Login = () => {
 
       if (error) throw error;
 
-      if (data.session) {
-        navigate("/portal", { state: { freshLogin: true } });
+      if (data.session && data.user) {
+        // Check user role to determine redirect
+        const role = await getUserRole(data.user.id);
+        
+        if (role === 'bank_admin') {
+          navigate("/dashboard");
+        } else if (role === 'customer') {
+          navigate("/portal", { state: { freshLogin: true } });
+        } else {
+          toast.error("No role assigned to this account");
+          await supabase.auth.signOut();
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Incorrect email or password");

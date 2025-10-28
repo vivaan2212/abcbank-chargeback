@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getUserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,10 +109,17 @@ const Portal = () => {
     if (!hasBootstrapped.current) {
       hasBootstrapped.current = true;
       
-      supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
         if (!currentSession) {
           navigate("/login");
         } else {
+          // Check if user is bank_admin and redirect to dashboard
+          const role = await getUserRole(currentSession.user.id);
+          if (role === 'bank_admin') {
+            navigate("/dashboard");
+            return;
+          }
+          
           setSession(currentSession);
           setUser(currentSession.user);
           
@@ -765,9 +773,6 @@ Let me check if this transaction is eligible for a chargeback...`;
               {uploadedDocuments.length > 0 && (
                 <UploadedDocumentsViewer documents={uploadedDocuments} />
               )}
-              <Button variant="outline" onClick={() => navigate("/dashboard")}>
-                Dashboard
-              </Button>
               <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
                 End Session
               </Button>
