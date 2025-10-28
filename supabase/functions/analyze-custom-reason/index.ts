@@ -84,11 +84,21 @@ For "not_received" category:
   "userMessage": "We understand you didn't receive your order. Please upload 3 documents to help us process your chargeback."
 }
 
+For "not_eligible" category:
+{
+  "category": "not_eligible",
+  "categoryLabel": "Not eligible for chargeback",
+  "explanation": "Reason does not meet chargeback eligibility criteria",
+  "documents": [],
+  "userMessage": "We cannot process a chargeback with the reason \"[reason]\". This does not meet our eligibility criteria for chargebacks."
+}
+
 MANDATORY RULES:
 - ALWAYS return EXACTLY 3 documents (except not_eligible = 0 documents)
 - For product issues (defective, damaged, wrong item, etc.), document #1 MUST be "Photo of the product showing the issue" with uploadTypes "Image"
 - For generic documents, include helpful examples in parentheses (e.g., "Proof of purchase (e.g., invoice, receipt, order confirmation)")
 - Never return fewer than 3 documents unless category is not_eligible
+- For not_eligible: NEVER ask for more details or information. Simply state the reason is not eligible and STOP.
 - Be specific and actionable with document names`
           },
           {
@@ -240,7 +250,10 @@ MANDATORY RULES:
 
     if (classification.category === 'not_eligible') {
       classification.documents = [];
-      classification.userMessage = classification.userMessage || 'This case is not eligible for a chargeback at this time.';
+      // Ensure the message never asks for more details - just state it's not eligible
+      if (!classification.userMessage || classification.userMessage.toLowerCase().includes('provide more')) {
+        classification.userMessage = `We cannot process a chargeback with the reason "${customReason}". This does not meet our eligibility criteria for chargebacks.`;
+      }
     } else {
       if (!classification.userMessage || !/\b3\b/.test(classification.userMessage)) {
         classification.userMessage = 'We understand your situation. Please upload 3 documents to help us process your chargeback.';
