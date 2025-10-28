@@ -113,6 +113,8 @@ export type Database = {
           refund_amount: number
           refund_received: boolean
           secured_indication: number
+          settled: boolean
+          settlement_date: string | null
           transaction_amount: number
           transaction_currency: string
           transaction_id: number
@@ -134,6 +136,8 @@ export type Database = {
           refund_amount?: number
           refund_received?: boolean
           secured_indication: number
+          settled?: boolean
+          settlement_date?: string | null
           transaction_amount: number
           transaction_currency: string
           transaction_id: number
@@ -155,6 +159,8 @@ export type Database = {
           refund_amount?: number
           refund_received?: boolean
           secured_indication?: number
+          settled?: boolean
+          settlement_date?: string | null
           transaction_amount?: number
           transaction_currency?: string
           transaction_id?: number
