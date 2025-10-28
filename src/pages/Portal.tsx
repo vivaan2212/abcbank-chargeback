@@ -70,6 +70,7 @@ const Portal = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentDisputeId, setCurrentDisputeId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isSwitchingConversation, setIsSwitchingConversation] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -361,6 +362,8 @@ const Portal = () => {
 
   const loadMessages = async (conversationId: string) => {
     try {
+      setIsSwitchingConversation(true);
+      
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -499,6 +502,8 @@ const Portal = () => {
       }
     } catch (error: any) {
       toast.error("Failed to load messages");
+    } finally {
+      setIsSwitchingConversation(false);
     }
   };
 
@@ -576,7 +581,9 @@ const Portal = () => {
   };
 
   const handleConversationSelect = (conversationId: string) => {
-    // Immediately clear all UI states to prevent visual delay
+    // Show loading state and clear everything immediately
+    setIsSwitchingConversation(true);
+    setMessages([]);
     setShowTransactions(false);
     setShowReasonPicker(false);
     setShowDocumentUpload(false);
@@ -1292,15 +1299,24 @@ Let me check if this transaction is eligible for a chargeback...`;
           <div className="max-w-4xl mx-auto min-h-full grid grid-rows-[1fr_auto]">
             <div />
             <div>
-              {messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  role={message.role as "user" | "assistant"}
-                  content={message.content}
-                  timestamp={new Date(message.created_at)}
-                  documents={message.documents}
-                />
-              ))}
+              {isSwitchingConversation ? (
+                <div className="flex items-center justify-center py-20">
+                  <Card className="p-6 flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Loading conversation...</span>
+                  </Card>
+                </div>
+              ) : (
+                <>
+                  {messages.map((message) => (
+                    <ChatMessage
+                      key={message.id}
+                      role={message.role as "user" | "assistant"}
+                      content={message.content}
+                      timestamp={new Date(message.created_at)}
+                      documents={message.documents}
+                    />
+                  ))}
               {isCheckingEligibility && (
                 <div className="mt-6 flex items-center justify-center">
                   <Card className="p-6 flex items-center gap-3">
@@ -1413,6 +1429,8 @@ Let me check if this transaction is eligible for a chargeback...`;
                     onComplete={handleDocumentsComplete}
                   />
                 </div>
+              )}
+                </>
               )}
             </div>
           </div>
