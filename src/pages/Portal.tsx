@@ -298,6 +298,7 @@ const Portal = () => {
       setSelectedReason(null);
       setIsCheckingDocuments(false);
       setUploadedDocuments([]);
+      setAiClassification(null);
 
       // Create dispute record for dashboard tracking
       const { data: newDispute, error: disputeError } = await supabase
@@ -517,6 +518,7 @@ const Portal = () => {
       setSelectedTransaction(transaction);
       setSelectedReason(null);
       setUploadedDocuments([]);
+      setAiClassification(null);
 
       // Update dispute with transaction selection
       await supabase
@@ -777,7 +779,9 @@ Let me check if this transaction is eligible for a chargeback...`;
           setIsAnalyzingReason(false);
         }
       } else {
-        // Standard reason selection (non-custom)
+        // Standard reason selection (non-custom) - clear AI classification
+        setAiClassification(null);
+        
         await supabase
           .from("disputes")
           .update({
