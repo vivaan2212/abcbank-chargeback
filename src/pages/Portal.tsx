@@ -1069,7 +1069,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <p className="text-sm">Analyzing your reason with AI...</p>
+                      <p className="text-sm">Pace is analyzing your reason...</p>
                     </div>
                   </Card>
                 </div>
