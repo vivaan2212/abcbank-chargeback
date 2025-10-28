@@ -15,8 +15,10 @@ serve(async (req) => {
     const formData = await req.formData();
     const requirementsJson = formData.get('requirements') as string;
     const requirements = JSON.parse(requirementsJson);
+    const disputeContextJson = formData.get('disputeContext') as string;
+    const disputeContext = disputeContextJson ? JSON.parse(disputeContextJson) : null;
 
-    console.log('Verifying documents:', { requirements });
+    console.log('Verifying documents:', { requirements, disputeContext });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -63,18 +65,32 @@ serve(async (req) => {
       let content;
       if (isImage) {
         // For images, use vision capabilities
+        const disputeInfo = disputeContext 
+          ? `\nDISPUTE CONTEXT:
+- Reason: ${disputeContext.reasonLabel}
+- Customer's explanation: ${disputeContext.customReason || disputeContext.aiExplanation || 'Not provided'}
+
+IMPORTANT: Understand the dispute context. For example:
+- If the issue is "received wrong/different item", then a photo of the received item IS valid evidence
+- If the issue is "damaged/defective", look for visible damage or defects
+- If the issue is "not as described", the photo should show how it differs from description
+`
+          : '';
+
         content = [
           {
             type: "text",
             text: `You are verifying a document for a chargeback dispute. 
-
+${disputeInfo}
 The document should be: "${requirement.name}"
 Expected types: ${requirement.uploadType.join(', ')}
 
 Please analyze this image and determine:
 1. Is this document relevant to the requirement "${requirement.name}"?
-2. Does it contain the expected information?
+2. Does it contain the expected information given the dispute context?
 3. Is the image clear and readable?
+
+Be context-aware: If the customer claims they received the wrong item, a clear photo of what they actually received IS valid evidence, even if it doesn't show physical damage.
 
 Respond with JSON only:
 {

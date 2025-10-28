@@ -1010,7 +1010,15 @@ Let me check if this transaction is eligible for a chargeback...`;
             uploadType: doc.uploadTypes.split(',').map((t: string) => t.trim().toLowerCase())
           })) || selectedReason?.id && DOCUMENT_REQUIREMENTS[selectedReason.id] || DOCUMENT_REQUIREMENTS.other;
 
+          // Add dispute context to help AI understand what the issue is
+          const disputeContext = {
+            reasonLabel: selectedReason?.label || 'Other',
+            customReason: selectedReason?.customReason || '',
+            aiExplanation: aiClassification?.explanation || ''
+          };
+
           formData.append('requirements', JSON.stringify(requirements));
+          formData.append('disputeContext', JSON.stringify(disputeContext));
           
           // Add each document file
           documents.forEach(doc => {
