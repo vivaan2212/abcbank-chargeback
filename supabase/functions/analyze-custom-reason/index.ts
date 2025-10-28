@@ -208,10 +208,21 @@ MANDATORY RULES:
       if (category === 'not_eligible') return [];
       const template = TEMPLATES[category as keyof typeof TEMPLATES] ?? TEMPLATES.billing_error;
 
+      // Normalize document name by removing examples in parentheses and trimming
+      const normalizeDocName = (name: string): string => {
+        return name.replace(/\s*\(.*?\)\s*/g, '').trim().toLowerCase();
+      };
+
       // Start with an ordered result; ensure 'defective' first doc rule
       const result: Doc[] = [];
+      const seenNormalized = new Set<string>();
+      
       const pushIfMissing = (d: Doc) => {
-        if (!result.some(x => x.name.toLowerCase() === d.name.toLowerCase())) result.push(d);
+        const normalized = normalizeDocName(d.name);
+        if (!seenNormalized.has(normalized)) {
+          seenNormalized.add(normalized);
+          result.push(d);
+        }
       };
 
       if (category === 'defective') pushIfMissing(template[0]);
