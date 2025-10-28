@@ -3,15 +3,26 @@ import { CheckCircle2, Circle, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Message {
+  id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
 
 interface DisputeDetailProps {
   dispute: {
     id: string;
+    conversation_id: string;
     status: string;
     eligibility_status: string | null;
     reason_label: string | null;
     custom_reason: string | null;
+    order_details: string | null;
     documents: any;
     eligibility_reasons: string[] | null;
     created_at: string;
@@ -40,9 +51,54 @@ interface DisputeDetailProps {
 
 const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  useEffect(() => {
+    loadMessages();
+
+    // Subscribe to real-time message updates
+    const channel = supabase
+      .channel(`messages-${dispute.conversation_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${dispute.conversation_id}`
+        },
+        () => {
+          loadMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dispute.conversation_id]);
+
+  const loadMessages = async () => {
+    try {
+      setLoadingMessages(true);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', dispute.conversation_id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
   };
 
   const getActivitySteps = () => {
@@ -168,8 +224,47 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Activity Log */}
-      <div className="lg:col-span-2">
+      {/* Conversation Logs */}
+      <div className="lg:col-span-2 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Conversation Logs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingMessages ? (
+              <div className="text-sm text-muted-foreground">Loading conversation...</div>
+            ) : messages.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No conversation messages found</div>
+            ) : (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <div className="text-xs opacity-70 mb-1">
+                          {message.role === 'user' ? 'Customer' : 'Assistant'} •{' '}
+                          {format(new Date(message.created_at), 'MMM dd, yyyy HH:mm')}
+                        </div>
+                        <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Activity Log */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -257,7 +352,7 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
       </div>
 
       {/* Key Details Sidebar */}
-      <div className="lg:col-span-1">
+      <div className="lg:col-span-1 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Key Details</CardTitle>
@@ -317,6 +412,20 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
                 )}
               </div>
             </div>
+
+            {dispute.order_details && (
+              <>
+                <Separator />
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">
+                    Order Details
+                  </div>
+                  <div className="text-sm bg-muted/30 p-3 rounded-md">
+                    {dispute.order_details}
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

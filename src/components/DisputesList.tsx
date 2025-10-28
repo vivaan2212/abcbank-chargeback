@@ -24,6 +24,7 @@ interface Dispute {
   reason_id: string | null;
   reason_label: string | null;
   custom_reason: string | null;
+  order_details: string | null;
   documents: any;
   eligibility_reasons: string[] | null;
   created_at: string;
