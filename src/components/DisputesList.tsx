@@ -271,8 +271,13 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
 
   const handleSort = (field: string) => {
     if (sortField === field) {
-      // Toggle direction
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else if (sortDirection === 'desc') {
+        // Third click: reset to default (no sorting)
+        setSortField(null);
+        setSortDirection('asc');
+      }
     } else {
       // New field, default to ascending
       setSortField(field);
