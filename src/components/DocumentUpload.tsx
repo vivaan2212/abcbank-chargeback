@@ -30,7 +30,7 @@ export interface UploadedDocument {
   file: File;
 }
 
-const DOCUMENT_REQUIREMENTS: Record<string, DocumentRequirement[]> = {
+export const DOCUMENT_REQUIREMENTS: Record<string, DocumentRequirement[]> = {
   fraud: [
     { name: "Police report or fraud claim", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Bank statement showing unauthorized charge(s)", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },

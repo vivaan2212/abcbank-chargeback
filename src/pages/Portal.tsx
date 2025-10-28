@@ -12,7 +12,7 @@ import ChatMessage from "@/components/ChatMessage";
 import ChatHistory from "@/components/ChatHistory";
 import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
-import { DocumentUpload, UploadedDocument } from "@/components/DocumentUpload";
+import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -994,32 +994,108 @@ Let me check if this transaction is eligible for a chargeback...`;
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: "Thank you for uploading the required documents. We are now checking if they are valid. Please wait while we verify the documents.",
+            content: "Thank you for uploading the required documents. We are now verifying them using AI to ensure they meet the requirements. Please wait...",
           });
 
         toast.success("Documents submitted successfully");
 
-        // Simulate document validation (can be replaced with actual validation)
-        setTimeout(async () => {
+        // Verify documents using AI
+        try {
+          // Prepare FormData with documents and requirements
+          const formData = new FormData();
+          
+          // Get the requirements that were used
+          const requirements = aiClassification?.documents?.map(doc => ({
+            name: doc.name,
+            uploadType: doc.uploadTypes.split(',').map((t: string) => t.trim().toLowerCase())
+          })) || selectedReason?.id && DOCUMENT_REQUIREMENTS[selectedReason.id] || DOCUMENT_REQUIREMENTS.other;
+
+          formData.append('requirements', JSON.stringify(requirements));
+          
+          // Add each document file
+          documents.forEach(doc => {
+            formData.append(doc.requirementName, doc.file);
+          });
+
+          const { data: verificationData, error: verificationError } = await supabase.functions.invoke(
+            'verify-documents',
+            {
+              body: formData
+            }
+          );
+
+          setIsCheckingDocuments(false);
+
+          if (verificationError) {
+            throw verificationError;
+          }
+
+          console.log('Verification result:', verificationData);
+
+          if (verificationData.success) {
+            // All documents are valid
+            if (currentDisputeId) {
+              await supabase
+                .from("disputes")
+                .update({ status: "under_review" })
+                .eq("id", currentDisputeId);
+
+              await supabase
+                .from("messages")
+                .insert({
+                  conversation_id: currentConversationId,
+                  role: "assistant",
+                  content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. Would you like to select another transaction to dispute or end this chat?",
+                });
+
+              // Reset state to allow selecting another transaction
+              setSelectedTransaction(null);
+              setSelectedReason(null);
+              setAiClassification(null);
+              setUploadedDocuments([]);
+              setShowReasonPicker(false);
+              setShowDocumentUpload(false);
+              setShowTransactions(false);
+              setShowContinueOrEndButtons(true);
+            }
+          } else {
+            // Some documents failed verification
+            const invalidDocs = verificationData.invalidDocs;
+            const errorMessage = `❌ Document verification failed. The following documents need to be corrected:\n\n${invalidDocs.map((doc: any) => 
+              `• ${doc.requirement}\n  File: ${doc.fileName}\n  Issue: ${doc.reason}`
+            ).join('\n\n')}\n\nPlease re-upload the correct documents.`;
+
+            await supabase
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: errorMessage,
+              });
+
+            // Keep the document upload UI open for re-upload
+            setShowDocumentUpload(true);
+            toast.error("Some documents failed verification");
+          }
+        } catch (error: any) {
+          console.error('Document verification error:', error);
           setIsCheckingDocuments(false);
           
-          // Mark dispute as under review
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: "⚠️ We encountered an error while verifying your documents. Your dispute has been submitted for manual review. We'll get back to you soon.",
+            });
+
+          // Fallback: proceed without verification
           if (currentDisputeId) {
             await supabase
               .from("disputes")
               .update({ status: "under_review" })
               .eq("id", currentDisputeId);
 
-            // Add completion message with continue options
-            await supabase
-              .from("messages")
-              .insert({
-                conversation_id: currentConversationId,
-                role: "assistant",
-                content: "Your dispute has been submitted successfully! Would you like to select another transaction to dispute or end this chat?",
-              });
-
-            // Reset state to allow selecting another transaction
             setSelectedTransaction(null);
             setSelectedReason(null);
             setAiClassification(null);
@@ -1029,7 +1105,9 @@ Let me check if this transaction is eligible for a chargeback...`;
             setShowTransactions(false);
             setShowContinueOrEndButtons(true);
           }
-        }, 3000);
+          
+          toast.error("Document verification failed, proceeding with manual review");
+        }
       }, 500);
     } catch (error: any) {
       toast.error("Failed to process documents");
