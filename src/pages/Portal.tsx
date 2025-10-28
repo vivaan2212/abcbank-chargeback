@@ -54,6 +54,14 @@ interface EligibilityResult {
   ineligibleReasons?: string[];
 }
 
+interface AIClassification {
+  category: string;
+  categoryLabel: string;
+  explanation: string;
+  documents: { name: string; uploadTypes: string }[];
+  userMessage: string;
+}
+
 const Portal = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,6 +84,8 @@ const Portal = () => {
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const [aiClassification, setAiClassification] = useState<AIClassification | null>(null);
+  const [isAnalyzingReason, setIsAnalyzingReason] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -652,17 +662,6 @@ Let me check if this transaction is eligible for a chargeback...`;
       setShowReasonPicker(false);
       setSelectedReason(reason);
 
-      // Update dispute with reason selection
-      await supabase
-        .from("disputes")
-        .update({
-          reason_id: reason.id,
-          reason_label: reason.label,
-          custom_reason: reason.customReason || null,
-          status: "reason_selected"
-        })
-        .eq("id", currentDisputeId);
-
       // Add user's reason selection message
       const reasonMessage = reason.customReason 
         ? `Reason selected: ${reason.label} - "${reason.customReason}"`
@@ -676,24 +675,139 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: reasonMessage,
         });
 
-      // Add document request message with delay
-      setTimeout(async () => {
-        const documentRequestMessage = `Thank you for selecting the reason. To proceed with your chargeback, please upload the required supporting documents.`;
-
+      // If "Other" reason with custom text, analyze with AI
+      if (reason.id === "other" && reason.customReason) {
+        setIsAnalyzingReason(true);
+        
+        // Show analyzing message
         await supabase
           .from("messages")
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: documentRequestMessage,
+            content: "Thank you for providing details. I'm analyzing your reason to determine the best way to proceed with your chargeback...",
           });
 
-        setTimeout(() => {
-          setShowDocumentUpload(true);
+        try {
+          const { data: classification, error: aiError } = await supabase.functions.invoke(
+            'analyze-custom-reason',
+            { body: { customReason: reason.customReason } }
+          );
+
+          if (aiError) throw aiError;
+          
+          setAiClassification(classification);
+
+          // Check if not eligible
+          if (classification.category === "not_eligible") {
+            await supabase
+              .from("disputes")
+              .update({
+                reason_id: "not_eligible",
+                reason_label: classification.categoryLabel,
+                custom_reason: reason.customReason,
+                status: "not_eligible"
+              })
+              .eq("id", currentDisputeId);
+
+            await supabase
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: classification.userMessage,
+              });
+
+            setIsReadOnly(true);
+            toast.error("This reason is not eligible for chargeback");
+            return;
+          }
+
+          // Update dispute with AI-classified reason
+          await supabase
+            .from("disputes")
+            .update({
+              reason_id: classification.category,
+              reason_label: classification.categoryLabel,
+              custom_reason: reason.customReason,
+              status: "reason_selected"
+            })
+            .eq("id", currentDisputeId);
+
+          // Show AI analysis result
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: classification.userMessage,
+            });
+
+          setTimeout(() => {
+            setShowDocumentUpload(true);
+          }, 500);
+
+        } catch (error: any) {
+          console.error("AI analysis error:", error);
+          toast.error("Failed to analyze reason. Using default document requirements.");
+          
+          // Fallback to standard "other" documents
+          await supabase
+            .from("disputes")
+            .update({
+              reason_id: reason.id,
+              reason_label: reason.label,
+              custom_reason: reason.customReason,
+              status: "reason_selected"
+            })
+            .eq("id", currentDisputeId);
+
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: "Thank you for selecting the reason. To proceed with your chargeback, please upload the required supporting documents.",
+            });
+
+          setTimeout(() => {
+            setShowDocumentUpload(true);
+          }, 500);
+        } finally {
+          setIsAnalyzingReason(false);
+        }
+      } else {
+        // Standard reason selection (non-custom)
+        await supabase
+          .from("disputes")
+          .update({
+            reason_id: reason.id,
+            reason_label: reason.label,
+            custom_reason: reason.customReason || null,
+            status: "reason_selected"
+          })
+          .eq("id", currentDisputeId);
+
+        // Add document request message with delay
+        setTimeout(async () => {
+          const documentRequestMessage = `Thank you for selecting the reason. To proceed with your chargeback, please upload the required supporting documents.`;
+
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: documentRequestMessage,
+            });
+
+          setTimeout(() => {
+            setShowDocumentUpload(true);
+          }, 500);
         }, 500);
-      }, 500);
+      }
     } catch (error: any) {
       toast.error("Failed to save reason");
+      setIsAnalyzingReason(false);
     }
   };
 
@@ -900,12 +1014,23 @@ Let me check if this transaction is eligible for a chargeback...`;
                   <ReasonPicker onSelect={handleReasonSelect} />
                 </div>
               )}
+              {isAnalyzingReason && (
+                <div className="mt-6">
+                  <Card className="p-6">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <p className="text-sm">Analyzing your reason with AI...</p>
+                    </div>
+                  </Card>
+                </div>
+              )}
               {showDocumentUpload && selectedReason && (
                 <div className="mt-6">
                   <DocumentUpload
                     reasonId={selectedReason.id}
                     reasonLabel={selectedReason.label}
                     customReason={selectedReason.customReason}
+                    aiClassification={aiClassification}
                     onComplete={handleDocumentsComplete}
                   />
                 </div>

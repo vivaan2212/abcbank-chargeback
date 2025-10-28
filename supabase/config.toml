@@ -1,1 +1,7 @@
 project_id = "sneahvpzwjbmjsqbducw"
+
+[functions.check-eligibility]
+verify_jwt = true
+
+[functions.analyze-custom-reason]
+verify_jwt = true

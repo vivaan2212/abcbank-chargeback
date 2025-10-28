@@ -9,10 +9,19 @@ export interface DocumentRequirement {
   uploadType: string[];
 }
 
+interface AIClassification {
+  category: string;
+  categoryLabel: string;
+  explanation: string;
+  documents: { name: string; uploadTypes: string }[];
+  userMessage: string;
+}
+
 interface DocumentUploadProps {
   reasonId: string;
   reasonLabel: string;
   customReason?: string;
+  aiClassification?: AIClassification | null;
   onComplete: (documents: UploadedDocument[]) => void;
 }
 
@@ -49,8 +58,14 @@ const DOCUMENT_REQUIREMENTS: Record<string, DocumentRequirement[]> = {
   ],
 };
 
-export const DocumentUpload = ({ reasonId, reasonLabel, customReason, onComplete }: DocumentUploadProps) => {
-  const requirements = DOCUMENT_REQUIREMENTS[reasonId] || DOCUMENT_REQUIREMENTS.other;
+export const DocumentUpload = ({ reasonId, reasonLabel, customReason, aiClassification, onComplete }: DocumentUploadProps) => {
+  // Use AI-provided requirements if available, otherwise use predefined
+  const aiRequirements: DocumentRequirement[] | null = aiClassification?.documents?.map(doc => ({
+    name: doc.name,
+    uploadType: doc.uploadTypes.split(',').map(t => t.trim().toLowerCase())
+  })) || null;
+  
+  const requirements = aiRequirements || DOCUMENT_REQUIREMENTS[reasonId] || DOCUMENT_REQUIREMENTS.other;
   const [uploadedDocs, setUploadedDocs] = useState<Map<string, File>>(new Map());
 
   const handleFileChange = (requirementName: string, file: File | null) => {
@@ -95,10 +110,16 @@ export const DocumentUpload = ({ reasonId, reasonLabel, customReason, onComplete
     <Card className="p-6 space-y-4">
       <div>
         <h3 className="text-lg font-semibold">
-          {customReason ? "Other - Custom Reason" : reasonLabel}
+          {aiClassification ? aiClassification.categoryLabel : (customReason ? "Other - Custom Reason" : reasonLabel)}
         </h3>
         {customReason && (
           <p className="text-sm text-muted-foreground mt-1">"{customReason}"</p>
+        )}
+        {aiClassification && (
+          <div className="mt-2 p-3 bg-muted/50 rounded-md">
+            <p className="text-sm font-medium mb-1">AI Analysis:</p>
+            <p className="text-sm text-muted-foreground">{aiClassification.explanation}</p>
+          </div>
         )}
       </div>
       
