@@ -50,7 +50,7 @@ const Dashboard = () => {
           newCounts.needs_attention++;
         } else if (status === 'void' || status === 'rejected' || status === 'cancelled') {
           newCounts.void++;
-        } else if (status === 'done' || status === 'completed' || status === 'approved') {
+        } else if (status === 'done' || status === 'completed' || status === 'approved' || status === 'ineligible') {
           newCounts.done++;
         }
       });

@@ -137,7 +137,7 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
           "under_review"
         ]);
       } else if (statusFilter === "done") {
-        query = query.in("status", ["approved", "completed"]);
+        query = query.in("status", ["approved", "completed", "ineligible"]);
       } else if (statusFilter === "needs_attention") {
         query = query.in("status", ["requires_action"]);
       } else if (statusFilter === "void") {
@@ -306,7 +306,8 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
       completed: "Completed",
       rejected: "Rejected",
       cancelled: "Cancelled",
-      requires_action: "Requires action"
+      requires_action: "Requires action",
+      ineligible: "Ineligible"
     };
     return statusMap[status] || status;
   };

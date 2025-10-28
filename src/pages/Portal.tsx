@@ -601,7 +601,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           .update({
             eligibility_status: result.status,
             eligibility_reasons: result.ineligibleReasons || [],
-            status: "eligibility_checked"
+            status: result.status === "INELIGIBLE" ? "ineligible" : "eligibility_checked"
           })
           .eq("id", currentDisputeId);
       }
@@ -609,7 +609,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       // Add delay before showing eligibility result
       setTimeout(async () => {
         if (result.status === "INELIGIBLE") {
-          // Show ineligibility message with reasons
+          // Show ineligibility message with reasons (no settlement log needed)
           const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
           const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}\n\nYou can select another transaction or end the session.`;
 
