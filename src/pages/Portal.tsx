@@ -777,9 +777,9 @@ Let me check if this transaction is eligible for a chargeback...`;
       // Add delay before showing eligibility result
       setTimeout(async () => {
         if (result.status === "INELIGIBLE") {
-          // Show ineligibility message with reasons (no settlement log needed)
+          // Show ineligibility message with reasons - this should be the final message
           const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
-          const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}\n\nYou can select another transaction or end the session.`;
+          const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}`;
 
           await supabase
             .from("messages")
@@ -788,6 +788,10 @@ Let me check if this transaction is eligible for a chargeback...`;
               role: "assistant",
               content: ineligibleMessage,
             });
+          
+          // Do NOT show any UI elements or allow any further interaction
+          // The dispute is now in terminal "ineligible" state
+          // No transaction list, no buttons - conversation ends here for this dispute
         } else {
           // Show eligibility message with request for order details
           const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please provide more details about your order? This will help us better understand the issue and process your request.`;
