@@ -82,7 +82,7 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
       // Add transaction security analysis if we have eligibility data
       if (dispute.eligibility_status && dispute.transaction.is_wallet_transaction !== undefined) {
         steps.push({
-          label: "Transaction is unsecured",
+          label: "Transaction is secured",
           description: "See reasoning",
           completed: true,
           timestamp: dispute.created_at,
