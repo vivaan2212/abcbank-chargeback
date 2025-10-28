@@ -87,6 +87,8 @@ const Portal = () => {
   const [aiClassification, setAiClassification] = useState<AIClassification | null>(null);
   const [isAnalyzingReason, setIsAnalyzingReason] = useState(false);
   const [showContinueOrEndButtons, setShowContinueOrEndButtons] = useState(false);
+  const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
+  const [orderDetails, setOrderDetails] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -301,6 +303,8 @@ const Portal = () => {
       setUploadedDocuments([]);
       setAiClassification(null);
       setShowContinueOrEndButtons(false);
+      setShowOrderDetailsInput(false);
+      setOrderDetails("");
 
       // Create dispute record for dashboard tracking
       const { data: newDispute, error: disputeError } = await supabase
@@ -670,8 +674,8 @@ Let me check if this transaction is eligible for a chargeback...`;
               content: ineligibleMessage,
             });
         } else {
-          // Show eligibility message
-          const eligibleMessage = `This transaction is eligible to proceed!\nPlease choose the reason that best describes your dispute.`;
+          // Show eligibility message with request for order details
+          const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please provide more details about your order? This will help us better understand the issue and process your request.`;
 
           await supabase
             .from("messages")
@@ -682,7 +686,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             });
 
           setTimeout(() => {
-            setShowReasonPicker(true);
+            setShowOrderDetailsInput(true);
           }, 500);
         }
       }, 500);
@@ -691,6 +695,49 @@ Let me check if this transaction is eligible for a chargeback...`;
       toast.error("Failed to check eligibility");
     } finally {
       setIsCheckingEligibility(false);
+    }
+  };
+
+  const handleOrderDetailsSubmit = async () => {
+    if (!currentConversationId || !currentDisputeId || !orderDetails.trim()) return;
+
+    try {
+      // Add user's order details message
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "user",
+          content: orderDetails,
+        });
+
+      // Update dispute with order details
+      await supabase
+        .from("disputes")
+        .update({
+          order_details: orderDetails,
+        })
+        .eq("id", currentDisputeId);
+
+      // Hide order details input
+      setShowOrderDetailsInput(false);
+
+      // Show acknowledgment message
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: "Thank you for providing those details. Now, please choose the reason that best describes your dispute.",
+        });
+
+      // Show reason picker after a delay
+      setTimeout(() => {
+        setShowReasonPicker(true);
+      }, 500);
+    } catch (error: any) {
+      console.error("Failed to submit order details:", error);
+      toast.error("Failed to submit order details");
     }
   };
 
@@ -714,7 +761,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: reasonMessage,
         });
 
-      // If "Other" reason with custom text, analyze with AI
+  // If "Other" reason with custom text, analyze with AI
       if (reason.id === "other" && reason.customReason) {
         setIsAnalyzingReason(true);
         
@@ -730,26 +777,34 @@ Let me check if this transaction is eligible for a chargeback...`;
         try {
           const { data: classification, error: aiError } = await supabase.functions.invoke(
             'analyze-custom-reason',
-            { body: { customReason: reason.customReason } }
+            { 
+              body: { 
+                customReason: reason.customReason,
+                orderDetails: orderDetails,
+                merchantName: selectedTransaction?.merchant_name 
+              } 
+            }
           );
 
           if (aiError) throw aiError;
           
           setAiClassification(classification);
 
-          // Check if not eligible
-          if (classification.category === "not_eligible") {
+          // Check if not eligible or details don't match
+          if (classification.category === "not_eligible" || classification.category === "mismatch") {
+            const statusToSet = classification.category === "mismatch" ? "mismatch" : "not_eligible";
+            
             await supabase
               .from("disputes")
               .update({
-                reason_id: "not_eligible",
+                reason_id: classification.category,
                 reason_label: classification.categoryLabel,
                 custom_reason: reason.customReason,
-                status: "not_eligible"
+                status: statusToSet
               })
               .eq("id", currentDisputeId);
 
-            // Add AI message explaining why it's not eligible
+            // Add AI message explaining the issue
             await supabase
               .from("messages")
               .insert({
@@ -777,7 +832,9 @@ Let me check if this transaction is eligible for a chargeback...`;
             setShowTransactions(false);
             setShowContinueOrEndButtons(true);
             
-            toast.info("This reason is not eligible for chargeback");
+            toast.info(classification.category === "mismatch" 
+              ? "The details don't match the selected reason" 
+              : "This reason is not eligible for chargeback");
             return;
           }
 
@@ -1091,6 +1148,37 @@ Let me check if this transaction is eligible for a chargeback...`;
                         End Session
                       </Button>
                     </div>
+                  </Card>
+                </div>
+              )}
+              {showOrderDetailsInput && (
+                <div className="mt-6">
+                  <Card className="p-6 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        Please describe more about your order
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        For example, you can share:
+                        • The product you ordered
+                        • The issue you are facing (e.g., incorrect product, damaged goods, unauthorized charge)
+                        • Any additional information that will help us understand the situation better
+                      </p>
+                      <Textarea
+                        placeholder="Describe your order and the issue..."
+                        value={orderDetails}
+                        onChange={(e) => setOrderDetails(e.target.value)}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleOrderDetailsSubmit}
+                      disabled={!orderDetails.trim()}
+                      className="w-full"
+                    >
+                      Continue
+                    </Button>
                   </Card>
                 </div>
               )}

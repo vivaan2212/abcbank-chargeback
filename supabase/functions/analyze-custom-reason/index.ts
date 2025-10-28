@@ -12,8 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const { customReason } = await req.json();
+    const { customReason, orderDetails, merchantName } = await req.json();
     console.log('Analyzing custom reason:', customReason);
+    console.log('Order details:', orderDetails);
+    console.log('Merchant name:', merchantName);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -31,7 +33,19 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a chargeback classification expert. Analyze the customer's dispute reason and classify it into one of these categories:
+            content: `You are a chargeback classification expert. The customer is filing a chargeback and has provided:
+
+MERCHANT NAME: ${merchantName || 'Unknown'}
+ORDER DETAILS (provided earlier): ${orderDetails || 'Not provided'}
+CHARGEBACK REASON (just provided): ${customReason}
+
+Your task is to:
+1. Compare the ORDER DETAILS with the CHARGEBACK REASON to check if they match
+2. If they don't match (e.g., customer said "damaged TV" but reason is "never received"), return category "mismatch"
+3. If the reason is not eligible for chargeback, return category "not_eligible"
+4. If they match and are eligible, classify into the appropriate chargeback category
+
+Available categories:
             
 1. "fraud" - Fraudulent or unauthorized transactions
 2. "not_received" - Goods or services not received
@@ -39,9 +53,10 @@ serve(async (req) => {
 4. "incorrect_amount" - Incorrect transaction amount
 5. "defective" - Defective or not as described goods
 6. "billing_error" - Billing errors or processing issues
-7. "not_eligible" - Does not qualify for chargeback
+7. "mismatch" - Order details don't match the chargeback reason
+8. "not_eligible" - Does not qualify for chargeback
 
-CRITICAL REQUIREMENT: You MUST return exactly 3 documents for ALL categories (except not_eligible which has 0 documents).
+CRITICAL REQUIREMENT: You MUST return exactly 3 documents for ALL categories (except not_eligible and mismatch which have 0 documents).
 
 Example responses:
 
@@ -93,12 +108,22 @@ For "not_eligible" category:
   "userMessage": "We cannot process a chargeback with the reason \"[reason]\". This does not meet our eligibility criteria for chargebacks."
 }
 
+For "mismatch" category (when order details don't match the reason):
+{
+  "category": "mismatch",
+  "categoryLabel": "Details don't match",
+  "explanation": "The chargeback reason doesn't match the order details provided earlier",
+  "documents": [],
+  "userMessage": "It seems that the information you provided earlier doesn't match with the chargeback reason you've selected. Here's what we found:\n- Merchant: [merchantName]\n- Description: [orderDetails]\n\nSince the details don't match, we cannot proceed with the chargeback for this reason."
+}
+
 MANDATORY RULES:
-- ALWAYS return EXACTLY 3 documents (except not_eligible = 0 documents)
+- FIRST, check if order details match the chargeback reason. If not, return "mismatch"
+- ALWAYS return EXACTLY 3 documents (except not_eligible or mismatch = 0 documents)
 - For product issues (defective, damaged, wrong item, etc.), document #1 MUST be "Photo of the product showing the issue" with uploadTypes "Image"
 - For generic documents, include helpful examples in parentheses (e.g., "Proof of purchase (e.g., invoice, receipt, order confirmation)")
-- Never return fewer than 3 documents unless category is not_eligible
-- For not_eligible: NEVER ask for more details or information. Simply state the reason is not eligible and STOP.
+- Never return fewer than 3 documents unless category is not_eligible or mismatch
+- For not_eligible or mismatch: NEVER ask for more details or information. Simply state the reason is not eligible/mismatched and STOP.
 - Be specific and actionable with document names`
           },
           {
@@ -117,7 +142,7 @@ MANDATORY RULES:
                 properties: {
                   category: {
                     type: "string",
-                    enum: ["fraud", "not_received", "duplicate", "incorrect_amount", "defective", "billing_error", "not_eligible"]
+                    enum: ["fraud", "not_received", "duplicate", "incorrect_amount", "defective", "billing_error", "mismatch", "not_eligible"]
                   },
                   categoryLabel: { type: "string" },
                   explanation: { type: "string" },
@@ -215,7 +240,7 @@ MANDATORY RULES:
     };
 
     function enforceThreeDocs(category: string, docs: Doc[] = []): Doc[] {
-      if (category === 'not_eligible') return [];
+      if (category === 'not_eligible' || category === 'mismatch') return [];
       const template = TEMPLATES[category as keyof typeof TEMPLATES] ?? TEMPLATES.billing_error;
 
       // Normalize document name by removing examples in parentheses and trimming
@@ -247,6 +272,14 @@ MANDATORY RULES:
 
     // Apply enforcement and normalize user message
     classification.documents = enforceThreeDocs(classification.category, classification.documents);
+
+    // Handle mismatch category
+    if (classification.category === 'mismatch') {
+      classification.documents = [];
+      if (!classification.userMessage) {
+        classification.userMessage = `It seems that the information you provided earlier doesn't match with the chargeback reason you've selected.\n\nHere's what we found:\n- Merchant: ${merchantName || 'Unknown'}\n- Description: ${orderDetails || 'Not provided'}\n\nSince the details don't match, we cannot proceed with the chargeback for this reason.`;
+      }
+    }
 
     if (classification.category === 'not_eligible') {
       classification.documents = [];

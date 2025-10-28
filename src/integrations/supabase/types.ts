@@ -51,6 +51,7 @@ export type Database = {
           eligibility_reasons: string[] | null
           eligibility_status: string | null
           id: string
+          order_details: string | null
           reason_id: string | null
           reason_label: string | null
           status: string
@@ -66,6 +67,7 @@ export type Database = {
           eligibility_reasons?: string[] | null
           eligibility_status?: string | null
           id?: string
+          order_details?: string | null
           reason_id?: string | null
           reason_label?: string | null
           status?: string
@@ -81,6 +83,7 @@ export type Database = {
           eligibility_reasons?: string[] | null
           eligibility_status?: string | null
           id?: string
+          order_details?: string | null
           reason_id?: string | null
           reason_label?: string | null
           status?: string
