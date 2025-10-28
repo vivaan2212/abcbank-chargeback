@@ -115,13 +115,8 @@ const Portal = () => {
           navigate("/login");
           setIsCheckingRole(false);
         } else {
-          // Check if user is bank_admin and redirect to dashboard
-          const role = await getUserRole(currentSession.user.id);
-          if (role === 'bank_admin') {
-            navigate("/dashboard");
-            return;
-          }
-          
+          // Allow both bank_admin and customer to access Portal
+          // Bank admins can view customer experience, customers can use it normally
           setIsCheckingRole(false);
           setSession(currentSession);
           setUser(currentSession.user);
