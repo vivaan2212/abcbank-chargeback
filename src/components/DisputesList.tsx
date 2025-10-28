@@ -282,11 +282,11 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
 
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
+      return <ArrowUpDown className="h-4 w-4 opacity-50" />;
     }
     return sortDirection === 'asc'
-      ? <ArrowUp className="h-4 w-4 ml-1 inline" />
-      : <ArrowDown className="h-4 w-4 ml-1 inline" />;
+      ? <ArrowUp className="h-4 w-4" />
+      : <ArrowDown className="h-4 w-4" />;
   };
 
   const getStatusLabel = (status: string) => {
@@ -335,97 +335,145 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('status')}
               >
-                Current Status {getSortIcon('status')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Current Status</span>
+                  {getSortIcon('status')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.acquirer_name')}
               >
-                Acquirer Name {getSortIcon('transaction.acquirer_name')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Acquirer Name</span>
+                  {getSortIcon('transaction.acquirer_name')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.merchant_category_code')}
               >
-                Merchant Category Code {getSortIcon('transaction.merchant_category_code')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Merchant Category Code</span>
+                  {getSortIcon('transaction.merchant_category_code')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.merchant_id')}
               >
-                Merchant ID {getSortIcon('transaction.merchant_id')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Merchant ID</span>
+                  {getSortIcon('transaction.merchant_id')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.merchant_name')}
               >
-                Merchant Name {getSortIcon('transaction.merchant_name')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Merchant Name</span>
+                  {getSortIcon('transaction.merchant_name')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.transaction_id')}
               >
-                Reference Number {getSortIcon('transaction.transaction_id')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Reference Number</span>
+                  {getSortIcon('transaction.transaction_id')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction_id')}
               >
-                Tid {getSortIcon('transaction_id')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Tid</span>
+                  {getSortIcon('transaction_id')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.transaction_amount')}
               >
-                Transaction Amount {getSortIcon('transaction.transaction_amount')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Transaction Amount</span>
+                  {getSortIcon('transaction.transaction_amount')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.transaction_currency')}
               >
-                Transaction Currency {getSortIcon('transaction.transaction_currency')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Transaction Currency</span>
+                  {getSortIcon('transaction.transaction_currency')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.transaction_time')}
               >
-                Transaction Time {getSortIcon('transaction.transaction_time')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Transaction Time</span>
+                  {getSortIcon('transaction.transaction_time')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.refund_amount')}
               >
-                Refund Amount {getSortIcon('transaction.refund_amount')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Refund Amount</span>
+                  {getSortIcon('transaction.refund_amount')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.refund_received')}
               >
-                Refund Received {getSortIcon('transaction.refund_received')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Refund Received</span>
+                  {getSortIcon('transaction.refund_received')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.settled')}
               >
-                Settled {getSortIcon('transaction.settled')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Settled</span>
+                  {getSortIcon('transaction.settled')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.settlement_date')}
               >
-                Settlement Date {getSortIcon('transaction.settlement_date')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Settlement Date</span>
+                  {getSortIcon('transaction.settlement_date')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.local_transaction_amount')}
               >
-                Local Amount {getSortIcon('transaction.local_transaction_amount')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Local Amount</span>
+                  {getSortIcon('transaction.local_transaction_amount')}
+                </div>
               </TableHead>
               <TableHead 
                 className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
                 onClick={() => handleSort('transaction.local_transaction_currency')}
               >
-                Local Currency {getSortIcon('transaction.local_transaction_currency')}
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span>Local Currency</span>
+                  {getSortIcon('transaction.local_transaction_currency')}
+                </div>
               </TableHead>
             </TableRow>
           </TableHeader>
