@@ -41,6 +41,69 @@ export type Database = {
         }
         Relationships: []
       }
+      disputes: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          custom_reason: string | null
+          customer_id: string
+          documents: Json | null
+          eligibility_reasons: string[] | null
+          eligibility_status: string | null
+          id: string
+          reason_id: string | null
+          reason_label: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          custom_reason?: string | null
+          customer_id: string
+          documents?: Json | null
+          eligibility_reasons?: string[] | null
+          eligibility_status?: string | null
+          id?: string
+          reason_id?: string | null
+          reason_label?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          custom_reason?: string | null
+          customer_id?: string
+          documents?: Json | null
+          eligibility_reasons?: string[] | null
+          eligibility_status?: string | null
+          id?: string
+          reason_id?: string | null
+          reason_label?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disputes_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

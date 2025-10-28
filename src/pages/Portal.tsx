@@ -59,6 +59,7 @@ const Portal = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentDisputeId, setCurrentDisputeId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -146,7 +147,7 @@ const Portal = () => {
         const conversation = existingConversations[0];
         setCurrentConversationId(conversation.id);
         setIsReadOnly(conversation.status === "closed");
-        // Fetch recent transactions for the user so the list can render immediately
+      // Fetch recent transactions for the user so the list can render immediately
         try {
           const cutoffDate = new Date();
           cutoffDate.setDate(cutoffDate.getDate() - 120);
@@ -161,6 +162,18 @@ const Portal = () => {
         } catch (e) {
           console.error("Failed loading transactions for existing conversation", e);
         }
+        
+        // Load existing dispute if any
+        const { data: existingDispute } = await supabase
+          .from("disputes")
+          .select("*")
+          .eq("conversation_id", conversation.id)
+          .maybeSingle();
+        
+        if (existingDispute) {
+          setCurrentDisputeId(existingDispute.id);
+        }
+        
         loadMessages(conversation.id);
       }
       // If no conversations exist at all, don't create one automatically
@@ -248,6 +261,20 @@ const Portal = () => {
       setSelectedReason(null);
       setIsCheckingDocuments(false);
       setUploadedDocuments([]);
+
+      // Create dispute record for dashboard tracking
+      const { data: newDispute, error: disputeError } = await supabase
+        .from("disputes")
+        .insert({
+          conversation_id: conversation.id,
+          customer_id: userId,
+          status: "started"
+        })
+        .select()
+        .single();
+
+      if (disputeError) throw disputeError;
+      setCurrentDisputeId(newDispute.id);
 
       // Get user profile for personalized welcome
       const { data: profile } = await supabase
@@ -413,7 +440,7 @@ const Portal = () => {
   };
 
   const handleTransactionSelect = async (transaction: Transaction) => {
-    if (!currentConversationId) return;
+    if (!currentConversationId || !currentDisputeId) return;
 
     try {
       setShowTransactions(false);
@@ -423,6 +450,15 @@ const Portal = () => {
       setSelectedTransaction(transaction);
       setSelectedReason(null);
       setUploadedDocuments([]);
+
+      // Update dispute with transaction selection
+      await supabase
+        .from("disputes")
+        .update({
+          transaction_id: transaction.id,
+          status: "transaction_selected"
+        })
+        .eq("id", currentDisputeId);
 
       // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
@@ -501,6 +537,18 @@ Let me check if this transaction is eligible for a chargeback...`;
       const result: EligibilityResult = response.data;
       setEligibilityResult(result);
 
+      // Update dispute with eligibility check results
+      if (currentDisputeId) {
+        await supabase
+          .from("disputes")
+          .update({
+            eligibility_status: result.status,
+            eligibility_reasons: result.ineligibleReasons || [],
+            status: "eligibility_checked"
+          })
+          .eq("id", currentDisputeId);
+      }
+
       // Add delay before showing eligibility result
       setTimeout(async () => {
         if (result.status === "INELIGIBLE") {
@@ -541,11 +589,22 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleReasonSelect = async (reason: ChargebackReason) => {
-    if (!currentConversationId) return;
+    if (!currentConversationId || !currentDisputeId) return;
 
     try {
       setShowReasonPicker(false);
       setSelectedReason(reason);
+
+      // Update dispute with reason selection
+      await supabase
+        .from("disputes")
+        .update({
+          reason_id: reason.id,
+          reason_label: reason.label,
+          custom_reason: reason.customReason || null,
+          status: "reason_selected"
+        })
+        .eq("id", currentDisputeId);
 
       // Add user's reason selection message
       const reasonMessage = reason.customReason 
@@ -582,7 +641,7 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleDocumentsComplete = async (documents: UploadedDocument[]) => {
-    if (!currentConversationId) return;
+    if (!currentConversationId || !currentDisputeId) return;
 
     try {
       // Store uploaded documents in session state
@@ -591,6 +650,22 @@ Let me check if this transaction is eligible for a chargeback...`;
       setShowDocumentUpload(false);
       setShowTransactions(false);
       setShowReasonPicker(false);
+
+      // Update dispute with documents
+      const documentsData = documents.map(d => ({
+        name: d.file.name,
+        size: d.file.size,
+        type: d.file.type,
+        requirementName: d.requirementName
+      }));
+
+      await supabase
+        .from("disputes")
+        .update({
+          documents: documentsData,
+          status: "documents_uploaded"
+        })
+        .eq("id", currentDisputeId);
 
       // Add user message about documents uploaded with document attachments
       const docNames = documents.map(d => d.file.name).join(", ");
@@ -630,8 +705,24 @@ Let me check if this transaction is eligible for a chargeback...`;
         toast.success("Documents submitted successfully");
 
         // Simulate document validation (can be replaced with actual validation)
-        setTimeout(() => {
+        setTimeout(async () => {
           setIsCheckingDocuments(false);
+          
+          // Mark dispute as under review
+          if (currentDisputeId) {
+            await supabase
+              .from("disputes")
+              .update({ status: "under_review" })
+              .eq("id", currentDisputeId);
+
+            // Close the conversation
+            await supabase
+              .from("conversations")
+              .update({ status: "closed" })
+              .eq("id", currentConversationId);
+
+            setIsReadOnly(true);
+          }
         }, 3000);
       }, 500);
     } catch (error: any) {
