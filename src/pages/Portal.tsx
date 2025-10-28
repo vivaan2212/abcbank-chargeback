@@ -788,11 +788,6 @@ Let me check if this transaction is eligible for a chargeback...`;
               role: "assistant",
               content: ineligibleMessage,
             });
-
-          // Show transaction list again after another delay so user can select another transaction
-          setTimeout(() => {
-            setShowTransactions(true);
-          }, 500);
         } else {
           // Show eligibility message with request for order details
           const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please provide more details about your order? This will help us better understand the issue and process your request.`;
