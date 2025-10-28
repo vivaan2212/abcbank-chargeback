@@ -16,16 +16,28 @@ const Login = () => {
 
   useEffect(() => {
     // Set up auth listener to handle session changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        navigate("/portal");
+        // Check role before redirecting
+        const role = await getUserRole(session.user.id);
+        if (role === 'bank_admin') {
+          navigate("/dashboard");
+        } else if (role === 'customer') {
+          navigate("/portal");
+        }
       }
     });
 
     // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        navigate("/portal");
+        // Check role before redirecting
+        const role = await getUserRole(session.user.id);
+        if (role === 'bank_admin') {
+          navigate("/dashboard");
+        } else if (role === 'customer') {
+          navigate("/portal");
+        }
       }
     });
 

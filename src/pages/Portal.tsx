@@ -75,6 +75,7 @@ const Portal = () => {
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -112,6 +113,7 @@ const Portal = () => {
       supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
         if (!currentSession) {
           navigate("/login");
+          setIsCheckingRole(false);
         } else {
           // Check if user is bank_admin and redirect to dashboard
           const role = await getUserRole(currentSession.user.id);
@@ -120,6 +122,7 @@ const Portal = () => {
             return;
           }
           
+          setIsCheckingRole(false);
           setSession(currentSession);
           setUser(currentSession.user);
           
@@ -747,6 +750,11 @@ Let me check if this transaction is eligible for a chargeback...`;
     setSelectedReason(null);
     setUploadedDocuments([]);
   };
+
+  // Show nothing while checking role to prevent flash
+  if (isCheckingRole) {
+    return null;
+  }
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-screen bg-background">
