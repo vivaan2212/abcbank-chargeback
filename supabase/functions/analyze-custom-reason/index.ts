@@ -277,17 +277,16 @@ MANDATORY RULES:
     if (classification.category === 'mismatch') {
       classification.documents = [];
       if (!classification.userMessage) {
-        classification.userMessage = `It seems that the information you provided earlier doesn't match with the chargeback reason you've selected.\n\nHere's what we found:\n- Merchant: ${merchantName || 'Unknown'}\n- Description: ${orderDetails || 'Not provided'}\n\nSince the details don't match, we cannot proceed with the chargeback for this reason.`;
+        classification.userMessage = `Sorry, the product description does not match your chargeback reason.\n\nHere's what we found:\n- Merchant: ${merchantName || 'Unknown'}\n- Description: ${orderDetails || 'Not provided'}\n\nSince the details don't match, we cannot proceed with the chargeback for this reason.`;
       }
-    }
-
-    if (classification.category === 'not_eligible') {
+    } else if (classification.category === 'not_eligible') {
       classification.documents = [];
       // Ensure the message never asks for more details - just state it's not eligible
       if (!classification.userMessage || classification.userMessage.toLowerCase().includes('provide more')) {
         classification.userMessage = `We cannot process a chargeback with the reason "${customReason}". This does not meet our eligibility criteria for chargebacks.`;
       }
     } else {
+      // Only for valid categories that need documents
       if (!classification.userMessage || !/\b3\b/.test(classification.userMessage)) {
         classification.userMessage = 'We understand your situation. Please upload 3 documents to help us process your chargeback.';
       }
