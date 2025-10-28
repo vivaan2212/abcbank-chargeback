@@ -56,8 +56,14 @@ Based on the classification, provide the required documents. Return ONLY a valid
 }
 
 Important: 
+- ALWAYS return exactly 3 documents (except for not_eligible which should have empty documents array)
+- For generic document types, provide helpful examples in the document name. Examples:
+  * "Proof of purchase (e.g., invoice, receipt, order confirmation)"
+  * "Communication with merchant (e.g., emails, chat transcripts, support tickets)"
+  * "Bank or credit card statement showing the charge"
+- For product-related issues (defective, damaged, wrong size, wrong color, not as described), ALWAYS include "Photo of the product showing the issue" with uploadTypes "Image"
+- Be specific and helpful with document names to guide the customer
 - For not_eligible cases, return an empty documents array
-- For product-related issues (defective, damaged, wrong size, wrong color, not as described), ALWAYS include a document requirement for "Photo of the product showing the issue" with uploadTypes "Image"
 - Be precise and only classify as not_eligible if it truly doesn't qualify
 - Always return valid JSON, nothing else`
           },
