@@ -300,6 +300,7 @@ const Portal = () => {
       setIsCheckingDocuments(false);
       setUploadedDocuments([]);
       setAiClassification(null);
+      setShowContinueOrEndButtons(false);
 
       // Create dispute record for dashboard tracking
       const { data: newDispute, error: disputeError } = await supabase
