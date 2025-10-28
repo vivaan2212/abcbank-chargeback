@@ -13,38 +13,47 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [existingSession, setExistingSession] = useState<Session | null>(null);
 
   useEffect(() => {
+    // Check if user is already logged in but don't auto-redirect
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setExistingSession(session);
+    });
+
     // Set up auth listener to handle session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        // Defer role check to prevent blocking auth state
+      setExistingSession(session);
+      
+      if (session && event === 'SIGNED_IN') {
+        // Only redirect on new sign-in, not on existing session
         setTimeout(async () => {
           const role = await getUserRole(session.user.id);
           if (role === 'bank_admin') {
             navigate("/dashboard");
           } else if (role === 'customer') {
-            navigate("/portal");
+            navigate("/portal", { state: { freshLogin: true } });
           }
         }, 0);
       }
     });
 
-    // Check if user is already logged in
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        // Check role before redirecting
-        const role = await getUserRole(session.user.id);
-        if (role === 'bank_admin') {
-          navigate("/dashboard");
-        } else if (role === 'customer') {
-          navigate("/portal");
-        }
-      }
-    });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handleLogout = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      setExistingSession(null);
+      toast.success('Logged out successfully');
+    } catch (error: any) {
+      toast.error('Failed to log out');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,41 +96,77 @@ const Login = () => {
             <p className="text-sm text-muted-foreground">powered by Pace</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+          {existingSession ? (
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  You are already logged in as
+                </p>
+                <p className="font-medium">{existingSession.user.email}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Logging out..." : "Log out to sign in with different account"}
+                </Button>
+                
+                <Button
+                  onClick={async () => {
+                    const role = await getUserRole(existingSession.user.id);
+                    if (role === 'bank_admin') {
+                      navigate("/dashboard");
+                    } else if (role === 'customer') {
+                      navigate("/portal");
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Continue to {existingSession.user.email?.includes('bank') ? 'Dashboard' : 'Portal'}
+                </Button>
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isLoading}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
+              >
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
+          )}
 
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Need an account? </span>
