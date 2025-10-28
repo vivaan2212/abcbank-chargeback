@@ -38,8 +38,17 @@ const Dashboard = () => {
       };
       
       data?.forEach(dispute => {
-        if (dispute.status in newCounts) {
-          newCounts[dispute.status as keyof typeof newCounts]++;
+        const status = dispute.status;
+        
+        // Map database statuses to display categories
+        if (['started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 'documents_uploaded', 'under_review'].includes(status)) {
+          newCounts.in_progress++;
+        } else if (status === 'needs_attention') {
+          newCounts.needs_attention++;
+        } else if (status === 'void') {
+          newCounts.void++;
+        } else if (status === 'done' || status === 'completed' || status === 'resolved') {
+          newCounts.done++;
         }
       });
       
