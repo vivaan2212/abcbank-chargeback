@@ -371,31 +371,106 @@ const Portal = () => {
       const loaded = (data || []) as Message[];
       setMessages(loaded);
 
+      // Load transactions for this conversation's user
+      const { data: conversation } = await supabase
+        .from("conversations")
+        .select("user_id")
+        .eq("id", conversationId)
+        .maybeSingle();
+      
+      if (conversation) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 120);
+        const { data: txns } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("customer_id", conversation.user_id)
+          .gte("transaction_time", cutoffDate.toISOString())
+          .order("transaction_time", { ascending: false })
+          .limit(20);
+        setTransactions(txns || []);
+      }
+
       // Check dispute status for this conversation to determine which UI elements to show
       const { data: dispute } = await supabase
         .from("disputes")
-        .select("status")
+        .select("*")
         .eq("conversation_id", conversationId)
         .maybeSingle();
 
       if (dispute) {
-        // Only show transactions if dispute is in the initial stage
+        setCurrentDisputeId(dispute.id);
+        
+        // Restore transaction if exists
+        if (dispute.transaction_id) {
+          const { data: txn } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("id", dispute.transaction_id)
+            .maybeSingle();
+          
+          if (txn) {
+            setSelectedTransaction(txn as Transaction);
+          }
+        } else {
+          setSelectedTransaction(null);
+        }
+        
+        // Restore eligibility result if exists
+        if (dispute.eligibility_status) {
+          setEligibilityResult({
+            transactionId: dispute.transaction_id || "",
+            status: dispute.eligibility_status as "ELIGIBLE" | "INELIGIBLE",
+            ineligibleReasons: dispute.eligibility_reasons || undefined
+          });
+        } else {
+          setEligibilityResult(null);
+        }
+        
+        // Restore selected reason if exists
+        if (dispute.reason_id || dispute.reason_label) {
+          setSelectedReason({
+            id: dispute.reason_id || "other",
+            label: dispute.reason_label || "Other",
+            customReason: dispute.custom_reason || undefined
+          });
+        } else {
+          setSelectedReason(null);
+        }
+        
+        // Restore order details if exists
+        if (dispute.order_details) {
+          setOrderDetails(dispute.order_details);
+        } else {
+          setOrderDetails("");
+        }
+        
+        // Restore uploaded documents from dispute if exists
+        if (dispute.documents) {
+          // Documents are stored as JSON, but we can't fully restore File objects
+          // So we'll just clear the documents state - user will see them in messages
+          setUploadedDocuments([]);
+        } else {
+          setUploadedDocuments([]);
+        }
+        
+        // Determine which UI elements to show based on status
         const shouldShowTransactions = dispute.status === "started";
         const shouldShowReasonPicker = dispute.status === "eligibility_checked";
         const shouldShowDocumentUpload = dispute.status === "reason_selected";
+        const shouldShowOrderInput = dispute.status === "awaiting_order_details";
+        const shouldShowContinueButtons = dispute.status === "under_review" || dispute.status === "documents_uploaded";
 
         setShowTransactions(shouldShowTransactions);
         setShowReasonPicker(shouldShowReasonPicker);
         setShowDocumentUpload(shouldShowDocumentUpload);
-
-        // Reset states for completed stages
-        if (!shouldShowTransactions) {
-          setEligibilityResult(null);
-          setSelectedTransaction(null);
-        }
-        if (!shouldShowDocumentUpload && dispute.status !== "documents_uploaded") {
-          setSelectedReason(null);
-        }
+        setShowOrderDetailsInput(shouldShowOrderInput);
+        setShowContinueOrEndButtons(shouldShowContinueButtons);
+        
+        // Reset analyzing state
+        setIsAnalyzingReason(false);
+        setIsCheckingDocuments(false);
+        setIsCheckingEligibility(false);
       } else {
         // If no dispute found but conversation exists, check if it needs transaction selection
         const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
@@ -403,12 +478,24 @@ const Portal = () => {
           setShowTransactions(true);
           setShowReasonPicker(false);
           setShowDocumentUpload(false);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(false);
         } else {
           // Has user selection but no dispute - hide everything
           setShowTransactions(false);
           setShowReasonPicker(false);
           setShowDocumentUpload(false);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(false);
         }
+        
+        // Reset all states
+        setSelectedTransaction(null);
+        setEligibilityResult(null);
+        setSelectedReason(null);
+        setUploadedDocuments([]);
+        setOrderDetails("");
+        setAiClassification(null);
       }
     } catch (error: any) {
       toast.error("Failed to load messages");
