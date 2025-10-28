@@ -15,13 +15,23 @@ interface DisputeDetailProps {
     created_at: string;
     updated_at: string;
     transaction?: {
-      transaction_id: number;
-      transaction_time: string;
-      transaction_amount: number;
-      transaction_currency: string;
-      merchant_name: string;
-      merchant_category_code: number;
-      acquirer_name: string;
+      transaction_id?: number;
+      transaction_time?: string;
+      transaction_amount?: number;
+      transaction_currency?: string;
+      merchant_name?: string;
+      merchant_category_code?: number;
+      acquirer_name?: string;
+      refund_amount?: number;
+      refund_received?: boolean;
+      settled?: boolean;
+      settlement_date?: string | null;
+      local_transaction_amount?: number;
+      local_transaction_currency?: string;
+      is_wallet_transaction?: boolean;
+      wallet_type?: string | null;
+      pos_entry_mode?: number;
+      secured_indication?: number;
     };
   };
 }

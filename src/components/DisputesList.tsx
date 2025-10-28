@@ -27,14 +27,24 @@ interface Dispute {
   created_at: string;
   updated_at: string;
   transaction?: {
-    transaction_id: number;
-    transaction_time: string;
-    transaction_amount: number;
-    transaction_currency: string;
-    merchant_name: string;
-    merchant_id: number;
-    merchant_category_code: number;
-    acquirer_name: string;
+    transaction_id?: number;
+    transaction_time?: string;
+    transaction_amount?: number;
+    transaction_currency?: string;
+    merchant_name?: string;
+    merchant_id?: number;
+    merchant_category_code?: number;
+    acquirer_name?: string;
+    refund_amount?: number;
+    refund_received?: boolean;
+    settled?: boolean;
+    settlement_date?: string | null;
+    local_transaction_amount?: number;
+    local_transaction_currency?: string;
+    is_wallet_transaction?: boolean;
+    wallet_type?: string | null;
+    pos_entry_mode?: number;
+    secured_indication?: number;
   };
 }
 
@@ -91,7 +101,17 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
             merchant_name,
             merchant_id,
             merchant_category_code,
-            acquirer_name
+            acquirer_name,
+            refund_amount,
+            refund_received,
+            settled,
+            settlement_date,
+            local_transaction_amount,
+            local_transaction_currency,
+            is_wallet_transaction,
+            wallet_type,
+            pos_entry_mode,
+            secured_indication
           )
         `)
         .order("updated_at", { ascending: false });
@@ -171,7 +191,7 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -185,12 +205,18 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
               <TableHead>Transaction Amount</TableHead>
               <TableHead>Transaction Currency</TableHead>
               <TableHead>Transaction Time</TableHead>
+              <TableHead>Refund Amount</TableHead>
+              <TableHead>Refund Received</TableHead>
+              <TableHead>Settled</TableHead>
+              <TableHead>Settlement Date</TableHead>
+              <TableHead>Local Amount</TableHead>
+              <TableHead>Local Currency</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {disputes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-64">
+                <TableCell colSpan={16} className="h-64">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="rounded-full bg-muted p-4 mb-4">
                       <svg className="h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -218,19 +244,29 @@ const DisputesList = ({ statusFilter, userId }: DisputesListProps) => {
                   <TableCell className="font-medium">
                     {getStatusLabel(dispute.status)}
                   </TableCell>
-                  <TableCell>{dispute.transaction?.acquirer_name || "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.merchant_category_code || "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.merchant_id || "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.merchant_name || "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.transaction_id || "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.acquirer_name ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.merchant_category_code ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.merchant_id ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.merchant_name ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.transaction_id ?? "-"}</TableCell>
                   <TableCell>{dispute.transaction_id ? dispute.transaction_id.toString().slice(-6) : "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.transaction_amount || "-"}</TableCell>
-                  <TableCell>{dispute.transaction?.transaction_currency || "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.transaction_amount ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.transaction_currency ?? "-"}</TableCell>
                   <TableCell>
                     {dispute.transaction?.transaction_time
                       ? format(new Date(dispute.transaction.transaction_time), "MMM dd, yyyy HH:mm")
                       : "-"}
                   </TableCell>
+                  <TableCell>{dispute.transaction?.refund_amount ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.refund_received ? "Yes" : "No"}</TableCell>
+                  <TableCell>{dispute.transaction?.settled ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {dispute.transaction?.settlement_date
+                      ? format(new Date(dispute.transaction.settlement_date), "MMM dd, yyyy")
+                      : "-"}
+                  </TableCell>
+                  <TableCell>{dispute.transaction?.local_transaction_amount ?? "-"}</TableCell>
+                  <TableCell>{dispute.transaction?.local_transaction_currency ?? "-"}</TableCell>
                 </TableRow>
               ))
             )}
