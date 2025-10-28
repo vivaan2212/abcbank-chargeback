@@ -765,6 +765,9 @@ Let me check if this transaction is eligible for a chargeback...`;
               {uploadedDocuments.length > 0 && (
                 <UploadedDocumentsViewer documents={uploadedDocuments} />
               )}
+              <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                Dashboard
+              </Button>
               <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
                 End Session
               </Button>
