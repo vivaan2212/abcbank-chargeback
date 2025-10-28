@@ -32,7 +32,8 @@ const Login = () => {
           if (role === 'bank_admin') {
             navigate("/dashboard");
           } else if (role === 'customer') {
-            navigate("/portal", { state: { freshLogin: true } });
+            sessionStorage.setItem('portal:freshLogin', '1');
+            navigate("/portal");
           }
         }, 0);
       }
@@ -74,7 +75,8 @@ const Login = () => {
         if (role === 'bank_admin') {
           navigate("/dashboard");
         } else if (role === 'customer') {
-          navigate("/portal", { state: { freshLogin: true } });
+          sessionStorage.setItem('portal:freshLogin', '1');
+          navigate("/portal");
         } else {
           toast.error("No role assigned to this account");
           await supabase.auth.signOut();

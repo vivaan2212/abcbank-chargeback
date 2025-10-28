@@ -95,11 +95,11 @@ const Portal = () => {
       
       // Handle sign in event
       if (event === 'SIGNED_IN' && currentSession?.user) {
-        // Defer initialization to avoid blocking
+        // Defer to avoid race conditions; only create new chat if marked as fresh login via sessionStorage
         setTimeout(() => {
-          const isFreshLogin = location.state?.freshLogin;
-          if (isFreshLogin) {
-            navigate(location.pathname, { replace: true, state: {} });
+          const fresh = sessionStorage.getItem('portal:freshLogin') === '1';
+          if (fresh) {
+            sessionStorage.removeItem('portal:freshLogin');
             initializeNewConversation(currentSession.user.id);
           }
         }, 0);
@@ -121,13 +121,32 @@ const Portal = () => {
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Check if this is a fresh login
-          const isFreshLogin = location.state?.freshLogin;
-          if (isFreshLogin) {
-            navigate(location.pathname, { replace: true, state: {} });
+          // Fresh login should be indicated via sessionStorage to survive navigation reliably
+          const fresh = sessionStorage.getItem('portal:freshLogin') === '1';
+          if (fresh) {
+            sessionStorage.removeItem('portal:freshLogin');
             initializeNewConversation(currentSession.user.id);
           } else {
-            loadOrCreateConversation(currentSession.user.id);
+            // Try to restore last opened conversation if available and owned by user
+            const savedId = localStorage.getItem('portal:currentConversationId');
+            if (savedId) {
+              const { data: conv } = await supabase
+                .from("conversations")
+                .select("id,status,user_id")
+                .eq("id", savedId)
+                .eq("user_id", currentSession.user.id)
+                .maybeSingle();
+              if (conv) {
+                setCurrentConversationId(conv.id);
+                setIsReadOnly(conv.status === "closed");
+                loadMessages(conv.id);
+              } else {
+                localStorage.removeItem('portal:currentConversationId');
+                loadOrCreateConversation(currentSession.user.id);
+              }
+            } else {
+              loadOrCreateConversation(currentSession.user.id);
+            }
           }
         }
       });
@@ -152,6 +171,7 @@ const Portal = () => {
         // Load existing conversation
         const conversation = existingConversations[0];
         setCurrentConversationId(conversation.id);
+        localStorage.setItem('portal:currentConversationId', conversation.id);
         setIsReadOnly(conversation.status === "closed");
       // Fetch recent transactions for the user so the list can render immediately
         try {
@@ -257,6 +277,7 @@ const Portal = () => {
       if (convError) throw convError;
 
       setCurrentConversationId(conversation.id);
+      localStorage.setItem('portal:currentConversationId', conversation.id);
       setIsReadOnly(false);
       // Reset UI state for a fresh conversation
       setShowTransactions(true);
@@ -388,6 +409,7 @@ const Portal = () => {
 
   const handleConversationSelect = (conversationId: string) => {
     setCurrentConversationId(conversationId);
+    localStorage.setItem('portal:currentConversationId', conversationId);
   };
 
   const handleNewChat = () => {
