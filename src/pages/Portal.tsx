@@ -576,6 +576,23 @@ const Portal = () => {
   };
 
   const handleConversationSelect = (conversationId: string) => {
+    // Immediately clear all UI states to prevent visual delay
+    setShowTransactions(false);
+    setShowReasonPicker(false);
+    setShowDocumentUpload(false);
+    setShowOrderDetailsInput(false);
+    setShowContinueOrEndButtons(false);
+    setSelectedTransaction(null);
+    setEligibilityResult(null);
+    setSelectedReason(null);
+    setUploadedDocuments([]);
+    setOrderDetails("");
+    setAiClassification(null);
+    setIsAnalyzingReason(false);
+    setIsCheckingDocuments(false);
+    setIsCheckingEligibility(false);
+    
+    // Then update conversation and load new data
     setCurrentConversationId(conversationId);
     localStorage.setItem('portal:currentConversationId', conversationId);
   };
