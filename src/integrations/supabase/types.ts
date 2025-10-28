@@ -43,7 +43,7 @@ export type Database = {
       }
       disputes: {
         Row: {
-          conversation_id: string
+          conversation_id: string | null
           created_at: string
           custom_reason: string | null
           customer_id: string
@@ -58,7 +58,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          conversation_id: string
+          conversation_id?: string | null
           created_at?: string
           custom_reason?: string | null
           customer_id: string
@@ -73,7 +73,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          conversation_id?: string
+          conversation_id?: string | null
           created_at?: string
           custom_reason?: string | null
           customer_id?: string

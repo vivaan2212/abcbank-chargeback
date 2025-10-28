@@ -157,42 +157,61 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
           // Current Status
           if (filters.currentStatus && dispute.status !== filters.currentStatus) return false;
 
-          // Transaction fields
+          // Transaction fields - only check if transaction exists AND filter is set
           const txn = dispute.transaction;
-          if (!txn) return false;
 
           // Acquirer Name
-          if (filters.acquirerName && !txn.acquirer_name?.toLowerCase().includes(filters.acquirerName.toLowerCase())) return false;
+          if (filters.acquirerName) {
+            if (!txn || !txn.acquirer_name?.toLowerCase().includes(filters.acquirerName.toLowerCase())) return false;
+          }
 
           // Merchant Category Code
-          if (filters.merchantCategoryCode && !txn.merchant_category_code?.toString().includes(filters.merchantCategoryCode)) return false;
+          if (filters.merchantCategoryCode) {
+            if (!txn || !txn.merchant_category_code?.toString().includes(filters.merchantCategoryCode)) return false;
+          }
 
           // Merchant ID
-          if (filters.merchantId && !txn.merchant_id?.toString().includes(filters.merchantId)) return false;
+          if (filters.merchantId) {
+            if (!txn || !txn.merchant_id?.toString().includes(filters.merchantId)) return false;
+          }
 
           // Merchant Name
-          if (filters.merchantName && !txn.merchant_name?.toLowerCase().includes(filters.merchantName.toLowerCase())) return false;
+          if (filters.merchantName) {
+            if (!txn || !txn.merchant_name?.toLowerCase().includes(filters.merchantName.toLowerCase())) return false;
+          }
 
           // Reference Number (transaction_id)
-          if (filters.referenceNumber && !txn.transaction_id?.toString().includes(filters.referenceNumber)) return false;
+          if (filters.referenceNumber) {
+            if (!txn || !txn.transaction_id?.toString().includes(filters.referenceNumber)) return false;
+          }
 
           // Tid
-          if (filters.tid && !dispute.transaction_id?.toString().includes(filters.tid)) return false;
+          if (filters.tid) {
+            if (!dispute.transaction_id?.toString().includes(filters.tid)) return false;
+          }
 
           // Transaction Amount Range
-          if (filters.transactionAmountMin !== undefined && txn.transaction_amount !== undefined && txn.transaction_amount < filters.transactionAmountMin) return false;
-          if (filters.transactionAmountMax !== undefined && txn.transaction_amount !== undefined && txn.transaction_amount > filters.transactionAmountMax) return false;
+          if (filters.transactionAmountMin !== undefined) {
+            if (!txn || txn.transaction_amount === undefined || txn.transaction_amount < filters.transactionAmountMin) return false;
+          }
+          if (filters.transactionAmountMax !== undefined) {
+            if (!txn || txn.transaction_amount === undefined || txn.transaction_amount > filters.transactionAmountMax) return false;
+          }
 
           // Transaction Currency
-          if (filters.transactionCurrency && txn.transaction_currency !== filters.transactionCurrency) return false;
+          if (filters.transactionCurrency) {
+            if (!txn || txn.transaction_currency !== filters.transactionCurrency) return false;
+          }
 
           // Transaction Time Range
-          if (filters.transactionTimeFrom && txn.transaction_time) {
+          if (filters.transactionTimeFrom) {
+            if (!txn || !txn.transaction_time) return false;
             const txnDate = new Date(txn.transaction_time);
             const fromDate = new Date(filters.transactionTimeFrom);
             if (txnDate < fromDate) return false;
           }
-          if (filters.transactionTimeTo && txn.transaction_time) {
+          if (filters.transactionTimeTo) {
+            if (!txn || !txn.transaction_time) return false;
             const txnDate = new Date(txn.transaction_time);
             const toDate = new Date(filters.transactionTimeTo);
             toDate.setHours(23, 59, 59, 999);
@@ -200,24 +219,38 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
           }
 
           // Refund Amount Range
-          if (filters.refundAmountMin !== undefined && txn.refund_amount !== undefined && txn.refund_amount < filters.refundAmountMin) return false;
-          if (filters.refundAmountMax !== undefined && txn.refund_amount !== undefined && txn.refund_amount > filters.refundAmountMax) return false;
+          if (filters.refundAmountMin !== undefined) {
+            if (!txn || txn.refund_amount === undefined || txn.refund_amount < filters.refundAmountMin) return false;
+          }
+          if (filters.refundAmountMax !== undefined) {
+            if (!txn || txn.refund_amount === undefined || txn.refund_amount > filters.refundAmountMax) return false;
+          }
 
           // Refund Received
-          if (filters.refundReceived === 'yes' && !txn.refund_received) return false;
-          if (filters.refundReceived === 'no' && txn.refund_received) return false;
+          if (filters.refundReceived === 'yes') {
+            if (!txn || !txn.refund_received) return false;
+          }
+          if (filters.refundReceived === 'no') {
+            if (!txn || txn.refund_received) return false;
+          }
 
           // Settled
-          if (filters.settled === 'yes' && !txn.settled) return false;
-          if (filters.settled === 'no' && txn.settled) return false;
+          if (filters.settled === 'yes') {
+            if (!txn || !txn.settled) return false;
+          }
+          if (filters.settled === 'no') {
+            if (!txn || txn.settled) return false;
+          }
 
           // Settlement Date Range
-          if (filters.settlementDateFrom && txn.settlement_date) {
+          if (filters.settlementDateFrom) {
+            if (!txn || !txn.settlement_date) return false;
             const settlementDate = new Date(txn.settlement_date);
             const fromDate = new Date(filters.settlementDateFrom);
             if (settlementDate < fromDate) return false;
           }
-          if (filters.settlementDateTo && txn.settlement_date) {
+          if (filters.settlementDateTo) {
+            if (!txn || !txn.settlement_date) return false;
             const settlementDate = new Date(txn.settlement_date);
             const toDate = new Date(filters.settlementDateTo);
             toDate.setHours(23, 59, 59, 999);
