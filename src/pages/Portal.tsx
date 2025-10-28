@@ -354,15 +354,44 @@ const Portal = () => {
       const loaded = (data || []) as Message[];
       setMessages(loaded);
 
-      // If this conversation hasn't progressed beyond the welcome, show transactions picker
-      const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
-      if (!hasUserSelection) {
-        setShowTransactions(true);
-        setShowReasonPicker(false);
-        setShowDocumentUpload(false);
-        setEligibilityResult(null);
-        setSelectedTransaction(null);
-        setSelectedReason(null);
+      // Check dispute status for this conversation to determine which UI elements to show
+      const { data: dispute } = await supabase
+        .from("disputes")
+        .select("status")
+        .eq("conversation_id", conversationId)
+        .maybeSingle();
+
+      if (dispute) {
+        // Only show transactions if dispute is in the initial stage
+        const shouldShowTransactions = dispute.status === "started";
+        const shouldShowReasonPicker = dispute.status === "eligibility_checked";
+        const shouldShowDocumentUpload = dispute.status === "reason_selected";
+
+        setShowTransactions(shouldShowTransactions);
+        setShowReasonPicker(shouldShowReasonPicker);
+        setShowDocumentUpload(shouldShowDocumentUpload);
+
+        // Reset states for completed stages
+        if (!shouldShowTransactions) {
+          setEligibilityResult(null);
+          setSelectedTransaction(null);
+        }
+        if (!shouldShowDocumentUpload && dispute.status !== "documents_uploaded") {
+          setSelectedReason(null);
+        }
+      } else {
+        // If no dispute found but conversation exists, check if it needs transaction selection
+        const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
+        if (!hasUserSelection) {
+          setShowTransactions(true);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(false);
+        } else {
+          // Has user selection but no dispute - hide everything
+          setShowTransactions(false);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(false);
+        }
       }
     } catch (error: any) {
       toast.error("Failed to load messages");

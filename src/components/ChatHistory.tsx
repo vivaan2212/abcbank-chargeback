@@ -126,15 +126,6 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
                       {formatDistanceToNow(new Date(conversation.updated_at), { addSuffix: true })}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      conversation.status === "active"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {conversation.status}
-                  </span>
                 </div>
               </button>
               
