@@ -15,6 +15,39 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [filters, setFilters] = useState<DisputeFiltersType>({});
   const [filterKey, setFilterKey] = useState(0);
+  const [counts, setCounts] = useState({
+    needs_attention: 0,
+    void: 0,
+    in_progress: 0,
+    done: 0
+  });
+
+  const loadCounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('disputes')
+        .select('status');
+      
+      if (error) throw error;
+      
+      const newCounts = {
+        needs_attention: 0,
+        void: 0,
+        in_progress: 0,
+        done: 0
+      };
+      
+      data?.forEach(dispute => {
+        if (dispute.status in newCounts) {
+          newCounts[dispute.status as keyof typeof newCounts]++;
+        }
+      });
+      
+      setCounts(newCounts);
+    } catch (error) {
+      console.error('Error loading counts:', error);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,6 +61,7 @@ const Dashboard = () => {
             return;
           }
           setUser(session.user);
+          loadCounts();
         });
       }
     });
@@ -39,7 +73,26 @@ const Dashboard = () => {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    // Subscribe to real-time updates for dispute counts
+    const channel = supabase
+      .channel('dispute-counts')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'disputes'
+        },
+        () => {
+          loadCounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -99,7 +152,7 @@ const Dashboard = () => {
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <span className="flex items-center gap-2">
-                    ⚠ Needs attention <span className="text-muted-foreground">0</span>
+                    ⚠ Needs attention <span className="text-muted-foreground">{counts.needs_attention}</span>
                   </span>
                 </TabsTrigger>
                 <TabsTrigger 
@@ -107,7 +160,7 @@ const Dashboard = () => {
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <span className="flex items-center gap-2">
-                    ⊘ Void <span className="text-muted-foreground">0</span>
+                    ⊘ Void <span className="text-muted-foreground">{counts.void}</span>
                   </span>
                 </TabsTrigger>
                 <TabsTrigger 
@@ -115,7 +168,7 @@ const Dashboard = () => {
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <span className="flex items-center gap-2">
-                    ◷ In progress <span className="text-muted-foreground">0</span>
+                    ◷ In progress <span className="text-muted-foreground">{counts.in_progress}</span>
                   </span>
                 </TabsTrigger>
                 <TabsTrigger 
@@ -123,7 +176,7 @@ const Dashboard = () => {
                   className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <span className="flex items-center gap-2">
-                    ✓ Done <span className="text-muted-foreground">0</span>
+                    ✓ Done <span className="text-muted-foreground">{counts.done}</span>
                   </span>
                 </TabsTrigger>
               </TabsList>
