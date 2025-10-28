@@ -1,7 +1,9 @@
 import { format } from "date-fns";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface DisputeDetailProps {
   dispute: {
@@ -37,13 +39,34 @@ interface DisputeDetailProps {
 }
 
 const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
+  const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
+
+  const toggleSection = (index: number) => {
+    setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   const getActivitySteps = () => {
-    const steps = [
+    const steps: Array<{
+      label: string;
+      description: string;
+      completed: boolean;
+      timestamp: string;
+      hasDetails: boolean;
+      details?: {
+        items: Array<{ label: string; icon?: string; value?: string }>;
+      };
+    }> = [
       {
         label: "Received a disputed transaction",
         description: "Disputed transaction",
         completed: true,
         timestamp: dispute.created_at,
+        hasDetails: true,
+        details: {
+          items: [
+            { label: "Disputed transaction", icon: "📄" }
+          ]
+        }
       },
     ];
 
@@ -53,24 +76,53 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
         description: `Selected ${dispute.transaction.merchant_name} transaction`,
         completed: ["transaction_selected", "eligibility_checked", "reason_selected", "documents_uploaded", "under_review"].includes(dispute.status),
         timestamp: dispute.created_at,
+        hasDetails: false,
       });
+
+      // Add transaction security analysis if we have eligibility data
+      if (dispute.eligibility_status && dispute.transaction.is_wallet_transaction !== undefined) {
+        steps.push({
+          label: "Transaction is unsecured",
+          description: "See reasoning",
+          completed: true,
+          timestamp: dispute.created_at,
+          hasDetails: true,
+          details: {
+            items: [
+              { label: "POS entry mode", value: dispute.transaction.pos_entry_mode?.toString().padStart(2, '0') || "N/A" },
+              { label: "Wallet type", value: dispute.transaction.wallet_type || "None" },
+              { label: "Secured indication", value: dispute.transaction.secured_indication !== undefined ? dispute.transaction.secured_indication.toString() : "None" }
+            ]
+          }
+        });
+      }
     }
 
     if (dispute.eligibility_status) {
+      const isEligible = dispute.eligibility_status === "ELIGIBLE";
+      const reasons = dispute.eligibility_reasons || [];
+      
       steps.push({
-        label: dispute.eligibility_status === "ELIGIBLE" ? "Transaction is eligible" : "Transaction is not eligible",
-        description: dispute.eligibility_reasons?.join(", ") || "See reasoning",
+        label: isEligible ? "Transaction is eligible" : "Transaction is not eligible",
+        description: isEligible ? "Transaction can be disputed" : (reasons.length > 0 ? reasons[0] : "See reasoning"),
         completed: ["eligibility_checked", "reason_selected", "documents_uploaded", "under_review"].includes(dispute.status),
         timestamp: dispute.created_at,
+        hasDetails: !isEligible && reasons.length > 0,
+        details: !isEligible && reasons.length > 0 ? {
+          items: reasons.map(reason => ({ label: reason }))
+        } : undefined
       });
     }
 
-    if (dispute.transaction?.transaction_time) {
+    if (dispute.transaction?.settled) {
       steps.push({
         label: "Transaction is settled",
-        description: `Settled on ${format(new Date(dispute.transaction.transaction_time), "dd MMM yyyy")}`,
+        description: dispute.transaction.settlement_date 
+          ? `Settled on ${format(new Date(dispute.transaction.settlement_date), "dd MMM yyyy")}`
+          : "Transaction marked as settled",
         completed: true,
-        timestamp: dispute.transaction.transaction_time,
+        timestamp: dispute.transaction.settlement_date || dispute.transaction.transaction_time || dispute.created_at,
+        hasDetails: false,
       });
     }
 
@@ -80,6 +132,7 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
         description: dispute.reason_label + (dispute.custom_reason ? `: ${dispute.custom_reason}` : ""),
         completed: ["reason_selected", "documents_uploaded", "under_review"].includes(dispute.status),
         timestamp: dispute.updated_at,
+        hasDetails: false,
       });
     }
 
@@ -89,15 +142,22 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
         description: "Supporting documents provided",
         completed: ["documents_uploaded", "under_review"].includes(dispute.status),
         timestamp: dispute.updated_at,
+        hasDetails: false,
       });
     }
 
     if (dispute.status === "under_review") {
       steps.push({
-        label: "Chargeback filing in progress...",
-        description: "Your chargeback is being processed",
-        completed: false,
+        label: "Marked as reviewed",
+        description: "Chargeback under bank review",
+        completed: true,
         timestamp: dispute.updated_at,
+        hasDetails: true,
+        details: {
+          items: [
+            { label: "Reviewed by", value: "Bank Admin" }
+          ]
+        }
       });
     }
 
@@ -126,29 +186,54 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-0">
               {activitySteps.map((step, index) => (
                 <div key={index}>
-                  {index > 0 && index < activitySteps.length && (
-                    <div className="ml-3 h-8 w-0.5 bg-border" />
+                  {index > 0 && (
+                    <div className="ml-3 h-6 w-0.5 bg-border" />
                   )}
                   <div className="flex gap-4">
                     <div className="flex-shrink-0 mt-1">
                       {step.completed ? (
-                        <CheckCircle2 className="h-6 w-6 text-primary" />
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
                       ) : (
-                        <Circle className="h-6 w-6 text-muted-foreground" />
+                        <Circle className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1 pb-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="font-medium">{step.label}</div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            {step.description}
-                          </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{step.label}</div>
+                          
+                          {step.hasDetails && step.details ? (
+                            <Collapsible open={openSections[index]} onOpenChange={() => toggleSection(index)}>
+                              <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground mt-1 hover:text-foreground transition-colors">
+                                {step.description}
+                                <ChevronDown className={`h-3 w-3 transition-transform ${openSections[index] ? 'rotate-180' : ''}`} />
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="mt-3 space-y-2 bg-muted/30 rounded-md p-3">
+                                  {step.details.items.map((item, itemIndex) => (
+                                    <div key={itemIndex} className="flex items-start gap-2 text-xs">
+                                      {item.icon && <span>{item.icon}</span>}
+                                      <div className="flex-1">
+                                        <span className="text-muted-foreground">
+                                          {item.label}
+                                          {item.value && `: ${item.value}`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="text-sm text-muted-foreground mt-1">
+                              {step.description}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground whitespace-nowrap ml-4">
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
                           {format(new Date(step.timestamp), "h:mm a")}
                         </div>
                       </div>
