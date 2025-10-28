@@ -773,7 +773,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             setUploadedDocuments([]);
             setShowReasonPicker(false);
             setShowDocumentUpload(false);
-            setShowTransactions(true);
+            setShowTransactions(false);
             setShowContinueOrEndButtons(true);
             
             toast.info("This reason is not eligible for chargeback");
@@ -954,7 +954,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             setUploadedDocuments([]);
             setShowReasonPicker(false);
             setShowDocumentUpload(false);
-            setShowTransactions(true);
+            setShowTransactions(false);
             setShowContinueOrEndButtons(true);
           }
         }, 3000);
@@ -1056,26 +1056,27 @@ Let me check if this transaction is eligible for a chargeback...`;
               {showTransactions && (
                 <div className="mt-6">
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
-                  {showContinueOrEndButtons && (
-                    <div className="mt-6 flex gap-3 justify-center">
-                      <Button 
-                        onClick={() => {
-                          setShowContinueOrEndButtons(false);
-                        }} 
-                        variant="default"
-                        size="lg"
-                      >
-                        Transaction List
-                      </Button>
-                      <Button 
-                        onClick={handleEndSession} 
-                        variant="outline"
-                        size="lg"
-                      >
-                        End Session
-                      </Button>
-                    </div>
-                  )}
+                </div>
+              )}
+              {showContinueOrEndButtons && (
+                <div className="mt-6 flex gap-3 justify-center">
+                  <Button 
+                    onClick={() => {
+                      setShowContinueOrEndButtons(false);
+                      setShowTransactions(true);
+                    }} 
+                    variant="default"
+                    size="lg"
+                  >
+                    Transaction List
+                  </Button>
+                  <Button 
+                    onClick={handleEndSession} 
+                    variant="outline"
+                    size="lg"
+                  >
+                    End Session
+                  </Button>
                 </div>
               )}
               {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
