@@ -82,6 +82,7 @@ const Portal = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedReason, setSelectedReason] = useState<ChargebackReason | null>(null);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [needsReupload, setNeedsReupload] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
@@ -297,6 +298,7 @@ const Portal = () => {
       setShowTransactions(true);
       setShowReasonPicker(false);
       setShowDocumentUpload(false);
+      setNeedsReupload(false);
       setEligibilityResult(null);
       setSelectedTransaction(null);
       setSelectedReason(null);
@@ -526,6 +528,11 @@ const Portal = () => {
 
       if (userMsgError) throw userMsgError;
 
+      // If we were awaiting a re-upload, any user message counts as a response; hide uploader
+      if (needsReupload) {
+        setNeedsReupload(false);
+        setShowDocumentUpload(false);
+      }
       // Check if user is responding to not_eligible options
       if (messageContent === '1') {
         // User wants to select another transaction
@@ -587,6 +594,7 @@ const Portal = () => {
     setShowTransactions(false);
     setShowReasonPicker(false);
     setShowDocumentUpload(false);
+    setNeedsReupload(false);
     setShowOrderDetailsInput(false);
     setShowContinueOrEndButtons(false);
     setSelectedTransaction(null);
@@ -1063,6 +1071,8 @@ Let me check if this transaction is eligible for a chargeback...`;
     try {
       // Store uploaded documents in session state
       setUploadedDocuments(documents);
+      // We are now processing; clear any previous re-upload state
+      setNeedsReupload(false);
       
       setShowDocumentUpload(false);
       setShowTransactions(false);
@@ -1196,7 +1206,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                 content: errorMessage,
               });
 
-            // Keep the document upload UI open for re-upload
+            // Keep the document upload UI open for re-upload and hide other options until user responds
+            setNeedsReupload(true);
+            setShowContinueOrEndButtons(false);
+            setShowTransactions(false);
             setShowDocumentUpload(true);
             toast.error("Some documents failed verification");
           }
@@ -1243,6 +1256,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     setSelectedTransaction(null);
     setShowReasonPicker(false);
     setShowDocumentUpload(false);
+    setNeedsReupload(false);
     setSelectedReason(null);
     setUploadedDocuments([]);
     setOrderDetails("");
@@ -1342,7 +1356,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
                 </div>
               )}
-              {showContinueOrEndButtons && (
+              {showContinueOrEndButtons && !needsReupload && (
                 <div className="mt-6 flex gap-3 justify-center">
                   <Button 
                     onClick={() => {
