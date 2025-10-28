@@ -86,6 +86,7 @@ const Portal = () => {
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [aiClassification, setAiClassification] = useState<AIClassification | null>(null);
   const [isAnalyzingReason, setIsAnalyzingReason] = useState(false);
+  const [showContinueOrEndButtons, setShowContinueOrEndButtons] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -762,7 +763,7 @@ Let me check if this transaction is eligible for a chargeback...`;
               .insert({
                 conversation_id: currentConversationId,
                 role: "assistant",
-                content: "Would you like to:\n1. Select another transaction to dispute\n2. End this chat\n\nPlease type '1' to select another transaction or '2' to end the chat.",
+                content: "Would you like to select another transaction to dispute or end this chat?",
               });
 
             // Reset state to allow selecting another transaction
@@ -773,6 +774,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             setShowReasonPicker(false);
             setShowDocumentUpload(false);
             setShowTransactions(true);
+            setShowContinueOrEndButtons(true);
             
             toast.info("This reason is not eligible for chargeback");
             return;
@@ -936,13 +938,24 @@ Let me check if this transaction is eligible for a chargeback...`;
               .update({ status: "under_review" })
               .eq("id", currentDisputeId);
 
-            // Close the conversation
+            // Add completion message with continue options
             await supabase
-              .from("conversations")
-              .update({ status: "closed" })
-              .eq("id", currentConversationId);
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: "Your dispute has been submitted successfully! Would you like to select another transaction to dispute or end this chat?",
+              });
 
-            setIsReadOnly(true);
+            // Reset state to allow selecting another transaction
+            setSelectedTransaction(null);
+            setSelectedReason(null);
+            setAiClassification(null);
+            setUploadedDocuments([]);
+            setShowReasonPicker(false);
+            setShowDocumentUpload(false);
+            setShowTransactions(true);
+            setShowContinueOrEndButtons(true);
           }
         }, 3000);
       }, 500);
@@ -1043,6 +1056,26 @@ Let me check if this transaction is eligible for a chargeback...`;
               {showTransactions && (
                 <div className="mt-6">
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
+                  {showContinueOrEndButtons && (
+                    <div className="mt-6 flex gap-3 justify-center">
+                      <Button 
+                        onClick={() => {
+                          setShowContinueOrEndButtons(false);
+                        }} 
+                        variant="default"
+                        size="lg"
+                      >
+                        Transaction List
+                      </Button>
+                      <Button 
+                        onClick={handleEndSession} 
+                        variant="outline"
+                        size="lg"
+                      >
+                        End Session
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
