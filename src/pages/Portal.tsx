@@ -5,7 +5,7 @@ import { getUserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, Send, ArrowUp } from "lucide-react";
+import { LogOut, Send, ArrowUp, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
@@ -18,11 +18,6 @@ import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
 
 interface Message {
   id: string;
@@ -93,6 +88,7 @@ const Portal = () => {
   const [showContinueOrEndButtons, setShowContinueOrEndButtons] = useState(false);
   const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
   const [orderDetails, setOrderDetails] = useState("");
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   
@@ -1373,25 +1369,56 @@ Let me check if this transaction is eligible for a chargeback...`;
   }
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen bg-background">
-      <ResizablePanel defaultSize={20} minSize={15} maxSize={40}>
+    <div className="min-h-screen h-screen flex w-full overflow-hidden bg-background">
+      {/* Sidebar */}
+      <div 
+        className={`
+          h-full border-r border-border bg-card flex-shrink-0
+          transition-all duration-300 ease-in-out
+          ${isChatExpanded 
+            ? 'w-0 -translate-x-full opacity-0 pointer-events-none' 
+            : 'w-[280px] translate-x-0 opacity-100'
+          }
+          lg:block
+          ${isChatExpanded ? '' : 'hidden lg:block'}
+        `}
+      >
         <ChatHistory
           currentConversationId={currentConversationId || undefined}
           onConversationSelect={handleConversationSelect}
           onNewChat={handleNewChat}
         />
-      </ResizablePanel>
+      </div>
       
-      <ResizableHandle withHandle />
-      
-      <ResizablePanel defaultSize={80}>
-        <div className="flex flex-col h-full bg-background">
+      {/* Chat Panel */}
+      <div 
+        className={`
+          flex-1 flex flex-col h-full bg-background
+          transition-all duration-300 ease-in-out
+          ${isChatExpanded ? 'w-full' : 'w-auto'}
+        `}
+      >
         {/* Header */}
-        <div className="border-b border-border bg-card px-6 py-4">
+        <div className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold">Chargeback Assistant</h1>
-              <p className="text-sm text-muted-foreground">Powered by Pace</p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsChatExpanded(!isChatExpanded)}
+                className="h-8 w-8"
+                aria-label={isChatExpanded ? "Exit full screen" : "Expand chat"}
+              >
+                {isChatExpanded ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <Menu className="h-4 w-4" />
+                )}
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold">Chargeback Assistant</h1>
+                <p className="text-sm text-muted-foreground">Powered by Pace</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {artifacts.length > 0 && (
@@ -1598,9 +1625,8 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
           </div>
         </div>
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      </div>
+    </div>
   );
 };
 
