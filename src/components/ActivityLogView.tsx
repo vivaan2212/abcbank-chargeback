@@ -56,7 +56,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       if (error) throw error;
 
-      // Load messages to get timestamps for each step
+      // Load messages to get all conversation logs
       const { data: messages } = await supabase
         .from('messages')
         .select('*')
@@ -66,51 +66,20 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // Build activities from dispute data with real timestamps
       const activityList: Activity[] = [];
 
-      // 1. Disputed transaction (dispute created_at)
-      activityList.push({
-        id: '1',
-        timestamp: dispute.created_at,
-        label: 'Disputed transaction',
-        attachments: [{ label: 'Disputed transaction', icon: '📄' }],
-        activityType: 'human_action'
-      });
-
-      // 2. Transaction selected (find message or use created_at)
-      if (dispute.transaction_id) {
-        const txnMessage = messages?.find(m => m.content.includes('selected') || m.content.includes('transaction'));
-        activityList.push({
-          id: '2',
-          timestamp: txnMessage?.created_at || dispute.created_at,
-          label: 'Transaction selected',
-          activityType: 'human_action'
+      // Add all messages as activities
+      if (messages && messages.length > 0) {
+        messages.forEach((message, idx) => {
+          activityList.push({
+            id: `message-${idx}`,
+            timestamp: message.created_at,
+            label: message.content,
+            reviewer: message.role === 'user' ? 'Customer' : 'System',
+            activityType: message.role === 'user' ? 'human_action' : 'message'
+          });
         });
       }
 
-      // 3. Transaction security status
-      if (dispute.transaction) {
-        const securityMessage = messages?.find(m => m.content.includes('secured') || m.content.includes('unsecured'));
-        const isSecured = dispute.transaction.secured_indication === 1;
-        activityList.push({
-          id: '3',
-          timestamp: securityMessage?.created_at || dispute.created_at,
-          label: isSecured ? 'Transaction is secured' : 'Transaction is unsecured',
-          expandable: true,
-          details: `POS entry mode: ${String(dispute.transaction.pos_entry_mode || '').padStart(2, '0')}\nWallet type: ${dispute.transaction.wallet_type || 'None'}\nSecured indication: ${dispute.transaction.secured_indication || 0}`,
-          activityType: isSecured ? 'success' : 'needs_attention'
-        });
-      }
-
-      // 4. Settlement status
-      if (dispute.transaction?.settled) {
-        activityList.push({
-          id: '4',
-          timestamp: dispute.transaction.settlement_date || dispute.created_at,
-          label: 'Transaction is settled',
-          activityType: 'success'
-        });
-      }
-
-      // 5. Chargeback actions
+      // Add chargeback actions
       if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
         dispute.chargeback_actions.forEach((action: any, idx: number) => {
           if (action.action_type === 'validation_recommended') {
@@ -120,7 +89,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label: 'Customer validation recommended',
               expandable: true,
               details: action.admin_message || 'Based on transaction history and pattern analysis',
-              reviewer: 'Rohit Kapoor',
+              reviewer: 'Admin',
               activityType: 'message'
             });
           }
@@ -130,7 +99,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               id: `action-${idx}-no-credit`,
               timestamp: action.created_at,
               label: 'Marked as not recommended for temporary credit',
-              reviewer: 'Rohit Kapoor',
+              reviewer: 'Admin',
               activityType: 'human_action'
             });
           }
