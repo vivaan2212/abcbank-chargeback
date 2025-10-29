@@ -166,17 +166,37 @@ IMPORTANT: Understand the dispute context. For example:
             type: "text",
             text: `You are a context-aware image/document verifier for chargeback disputes.
 
-DISPUTE CONTEXT MAPPING - What evidence fits each dispute type:
+CRITICAL TWO-STEP VERIFICATION PROCESS:
 
-| Dispute Type | What Evidence Should Generally Show |
-|--------------|-------------------------------------|
-| Unauthorized Transaction | Account statement, fraud claim, or any document confirming customer reported unauthorized use |
-| Item Not Received | Proof of order, communication with merchant, or delivery tracking showing non-receipt |
-| Received Wrong Item | Order confirmation or correspondence showing mismatch between ordered and received item |
-| Damaged/Defective Item | Invoice, warranty, or correspondence showing item issues or complaint |
-| Refund Not Received | Refund promise or confirmation that credit has not been processed |
-| Service Not Rendered | Invoice or order showing service paid for but not delivered |
-| Other (custom reason) | Any document that reasonably supports the described situation |
+STEP 1: DOCUMENT TYPE MATCH (STRICT) ⚠️
+First, verify if this image is the CORRECT TYPE of document requested.
+- If requirement asks for "bank statement" → MUST be a bank/credit card statement
+- If requirement asks for "invoice/receipt" → MUST be an invoice or receipt
+- If requirement asks for "email/communication" → MUST be email or message correspondence
+- If requirement asks for "tracking/shipping" → MUST be delivery or shipping document
+- If requirement asks for "product photo" → MUST be actual photo of physical product
+- If requirement asks for "cancellation confirmation" → MUST be cancellation-related document
+
+⛔ REJECT if document type is completely wrong (e.g., invoice uploaded for "bank statement" requirement)
+⛔ REJECT if same document tries to fulfill multiple incompatible requirements
+
+STEP 2: CONTENT QUALITY (LENIENT) ✅
+Once type is confirmed correct, be lenient about formatting and minor details:
+- Missing invoice numbers, perfect formatting, or logos → Still accept
+- Partial information or incomplete details → Still accept if readable
+- Non-professional quality (phone photos, etc.) → Still accept if clear enough
+
+DISPUTE CONTEXT MAPPING:
+
+| Dispute Type | What Evidence Should Show |
+|--------------|---------------------------|
+| Unauthorized Transaction | Account statement, fraud claim confirming unauthorized use |
+| Item Not Received | Order proof, merchant communication, tracking showing non-receipt |
+| Received Wrong Item | Order confirmation showing mismatch between ordered vs received |
+| Damaged/Defective Item | Invoice, warranty, correspondence showing damage/defect |
+| Refund Not Received | Refund promise, confirmation credit not processed |
+| Service Not Rendered | Invoice/order for service that wasn't delivered |
+| Other (custom reason) | Document supporting the described situation |
 
 ${disputeInfo}
 
@@ -185,37 +205,30 @@ Expected types: ${requirement.uploadType.join(', ')}
 
 ${getDocumentTypeRequirements(requirement.name)}
 
-VERIFICATION FOCUS - Apply common-sense validation:
-✅ The image should be the correct type for the requirement
-✅ The content should be readable and clearly relate to the customer's explanation
-✅ The image should look real, not a template, screenshot, or random unrelated file
-✅ The image should not contradict the dispute reason
+REJECTION CRITERIA:
+❌ Document type doesn't match requirement (STRICT - always reject)
+❌ Image is blank, completely unreadable, or corrupted
+❌ Content is completely unrelated to the dispute
+❌ Document appears fake, templated, or fabricated
+❌ Wrong format (e.g., website screenshot when actual document needed)
 
-SOFTER REJECTION CRITERIA - Mark as INVALID only if ANY of these apply:
-❌ The image is blank, completely unreadable, or corrupted
-❌ The content is completely unrelated to the dispute (e.g., random photo instead of product)
-❌ The image appears fake, templated, or non-genuine
-❌ The type clearly doesn't match what's required (e.g., website screenshot for "actual product photo")
-❌ The image is just a cropped fragment with no meaningful content
+ACCEPTANCE CRITERIA:
+✅ Document type matches requirement (even if not perfect quality)
+✅ Content is readable and supports the dispute context
+✅ Document appears authentic (not fake or template)
+✅ Relevant to customer's explanation
 
-SIMPLIFIED CHECKLIST:
-1. ✓ Does the image look like the expected type?
-2. ✓ Is it readable and complete (not blank, partial, or corrupted)?
-3. ✓ Is the content relevant to the dispute reason and customer's explanation?
-4. ✓ Does it seem authentic and not clearly fabricated?
-5. ✓ Does it support the customer's claim in a reasonable way?
-
-DECISION GUIDELINES:
-- If the image matches the expected type and context, even if quality isn't perfect → ✅ Valid
-- If the image is plausible but not ideal quality, e.g., phone photo in normal lighting → ✅ Valid
-- If the image is clearly unrelated, fake, or blank → ❌ Invalid
-
-Be reasonable, not robotic. Accept documents that are contextually relevant and authentic, even if not perfect.
+VERIFICATION CHECKLIST:
+1. ⚠️ CRITICAL: Is this the CORRECT TYPE of document? (bank statement vs invoice vs email vs photo)
+2. ✓ Is it readable and not blank/corrupted?
+3. ✓ Does content relate to the dispute?
+4. ✓ Does it appear authentic?
+5. ✓ Does it support the customer's claim?
 
 Respond with JSON only:
 {
   "isValid": true/false,
-  "reason": "Brief explanation of why this image is valid or invalid based on relevance and authenticity"
+  "reason": "Brief explanation focusing on whether document TYPE matches and if content is relevant"
 }`
           },
           {
@@ -247,17 +260,37 @@ IMPORTANT: Understand the dispute context. For example:
         // Embed the base64 PDF directly in the prompt for Gemini to analyze
         content = `You are a context-aware PDF document verifier for chargeback disputes.
 
-DISPUTE CONTEXT MAPPING - What evidence fits each dispute type:
+CRITICAL TWO-STEP VERIFICATION PROCESS:
 
-| Dispute Type | What Evidence Should Generally Show |
-|--------------|-------------------------------------|
-| Unauthorized Transaction | Account statement, fraud claim, or any document confirming customer reported unauthorized use |
-| Item Not Received | Proof of order, communication with merchant, or delivery tracking showing non-receipt |
-| Received Wrong Item | Order confirmation or correspondence showing mismatch between ordered and received item |
-| Damaged/Defective Item | Invoice, warranty, or correspondence showing item issues or complaint |
-| Refund Not Received | Refund promise or confirmation that credit has not been processed |
-| Service Not Rendered | Invoice or order showing service paid for but not delivered |
-| Other (custom reason) | Any document that reasonably supports the described situation |
+STEP 1: DOCUMENT TYPE MATCH (STRICT) ⚠️
+First, verify if this PDF is the CORRECT TYPE of document requested.
+- If requirement asks for "bank statement" → MUST be a bank/credit card statement
+- If requirement asks for "invoice/receipt" → MUST be an invoice or receipt
+- If requirement asks for "email/communication" → MUST be email or message correspondence
+- If requirement asks for "tracking/shipping" → MUST be delivery or shipping document
+- If requirement asks for "cancellation confirmation" → MUST be cancellation-related document
+
+⛔ REJECT if document type is completely wrong (e.g., cancellation email uploaded for "bank statement" requirement)
+⛔ REJECT if same document tries to fulfill multiple incompatible requirements
+⛔ A single document cannot be both "bank statement" AND "cancellation email" simultaneously
+
+STEP 2: CONTENT QUALITY (LENIENT) ✅
+Once type is confirmed correct, be lenient about formatting and minor details:
+- Missing invoice numbers, perfect totals, or logos → Still accept
+- Partial information or incomplete details → Still accept if readable
+- Non-professional formatting → Still accept if content is clear
+
+DISPUTE CONTEXT MAPPING:
+
+| Dispute Type | What Evidence Should Show |
+|--------------|---------------------------|
+| Unauthorized Transaction | Account statement, fraud claim confirming unauthorized use |
+| Item Not Received | Order proof, merchant communication, tracking showing non-receipt |
+| Received Wrong Item | Order confirmation showing mismatch between ordered vs received |
+| Damaged/Defective Item | Invoice, warranty, correspondence showing damage/defect |
+| Refund Not Received | Refund promise, confirmation credit not processed |
+| Service Not Rendered | Invoice/order for service that wasn't delivered |
+| Other (custom reason) | Document supporting the described situation |
 
 ${disputeInfo}
 
@@ -266,32 +299,25 @@ Expected types: ${requirement.uploadType.join(', ')}
 
 ${getDocumentTypeRequirements(requirement.name)}
 
-VERIFICATION FOCUS - Apply common-sense validation:
-✅ The document should be the correct type (e.g., "invoice" if asked for invoice)
-✅ The content should be readable and clearly relate to the customer's explanation
-✅ The PDF should look real, not a template, screenshot, or random unrelated file
-✅ The PDF should not contradict the reason (e.g., refund receipt when claim says "not received")
+REJECTION CRITERIA:
+❌ Document type doesn't match requirement (STRICT - always reject)
+❌ File is blank, unreadable, or corrupted
+❌ Content is completely unrelated to the dispute
+❌ Document appears fake, templated, or fabricated
+❌ Wrong format (e.g., invoice when bank statement required)
 
-SOFTER REJECTION CRITERIA - Mark as INVALID only if ANY of these apply:
-❌ The file is blank, unreadable, or corrupted
-❌ The content is completely unrelated to the dispute (e.g., a project report instead of an invoice)
-❌ The document appears fake, templated, or non-genuine
-❌ The type of document clearly doesn't match what's required (e.g., an email uploaded as a "Proof of Purchase")
-❌ The file is just a screenshot or cropped fragment with no meaningful content
+ACCEPTANCE CRITERIA:
+✅ Document type matches requirement (even if formatting isn't perfect)
+✅ Content is readable and supports the dispute context
+✅ Document appears authentic (not fake or template)
+✅ Relevant to customer's explanation
 
-SIMPLIFIED CHECKLIST:
-1. ✓ Does the document look like the expected type (invoice, receipt, communication, etc.)?
-2. ✓ Is it readable and complete (not blank, partial, or corrupted)?
-3. ✓ Is the content relevant to the dispute reason and the customer's explanation?
-4. ✓ Does it seem authentic and not clearly fabricated?
-5. ✓ Does it support the customer's claim in a reasonable way?
-
-DECISION GUIDELINES:
-- If the document matches the expected type and context, even if missing details like invoice number or amount → ✅ Valid
-- If the document is plausible but partially incomplete, e.g., missing totals or logo → ✅ Valid (explanation: limited but relevant evidence)
-- If the document is clearly unrelated, fake, or blank → ❌ Invalid
-
-Be reasonable, not robotic. Don't reject for minor formatting or missing invoice numbers. Do reject unreadable, irrelevant, or clearly fake documents.
+VERIFICATION CHECKLIST:
+1. ⚠️ CRITICAL: Is this the CORRECT TYPE of document? (bank statement vs invoice vs email vs shipping doc)
+2. ✓ Is it readable and not blank/corrupted?
+3. ✓ Does content relate to the dispute?
+4. ✓ Does it appear authentic?
+5. ✓ Does it support the customer's claim?
 
 PDF Document (base64-encoded):
 ${base64}
@@ -299,7 +325,7 @@ ${base64}
 Respond with JSON only:
 {
   "isValid": true/false,
-  "reason": "Brief explanation of why this document is valid or invalid based on relevance and authenticity"
+  "reason": "Brief explanation focusing on whether document TYPE matches requirement and if content is relevant"
 }`;
       } else {
         // For other document types (Word, text files, etc.), do metadata-only checks
