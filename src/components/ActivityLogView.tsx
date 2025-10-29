@@ -312,7 +312,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Activity Timeline */}
       <div className="flex-1 overflow-auto px-6 py-6">
         <div className="max-w-3xl space-y-8">
-          {groupedActivities.map((group) => (
+          {groupedActivities.map((group, groupIndex) => (
             <div key={group.label}>
               {/* Date Separator */}
               <div className="flex items-center gap-4 mb-6">
@@ -323,78 +323,85 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
               {/* Activities for this date */}
               <div className="space-y-6">
-                {group.activities.map((activity, index) => (
-                  <div key={activity.id} className="flex gap-4 relative">
-                    {/* Time */}
-                    <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
-                      {format(new Date(activity.timestamp), "h:mm a")}
+                {group.activities.map((activity, index) => {
+                  const isFirstActivity = groupIndex === 0 && index === 0;
+                  const isLastInGroup = index === group.activities.length - 1;
+                  const isLastGroup = groupIndex === groupedActivities.length - 1;
+                  const isLastActivity = isLastInGroup && isLastGroup;
+
+                  return (
+                    <div key={activity.id} className="flex gap-4 relative">
+                      {/* Time */}
+                      <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
+                        {format(new Date(activity.timestamp), "h:mm a")}
+                      </div>
+
+                      {/* Icon with connecting line */}
+                      <div className="flex-shrink-0 pt-0.5 relative">
+                        {/* Connecting line above */}
+                        {!isFirstActivity && (
+                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
+                        )}
+                        
+                        {getActivityIcon(activity.activityType)}
+                        
+                        {/* Connecting line below */}
+                        {!isLastActivity && (
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm mb-1">{activity.label}</div>
+                        
+                        {/* Expandable Details */}
+                        {activity.expandable && (
+                          <button
+                            onClick={() => toggleExpand(activity.id)}
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                          >
+                            <span>See reasoning</span>
+                            <ChevronRight className={cn(
+                              "h-3 w-3 transition-transform",
+                              expandedActivities.has(activity.id) && "rotate-90"
+                            )} />
+                          </button>
+                        )}
+
+                        {/* Expanded Details */}
+                        {expandedActivities.has(activity.id) && activity.details && (
+                          <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                            {activity.details}
+                          </div>
+                        )}
+
+                        {/* Attachments */}
+                        {activity.attachments && activity.attachments.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {activity.attachments.map((attachment, i) => (
+                              <button
+                                key={i}
+                                className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
+                              >
+                                <span>{attachment.icon}</span>
+                                <span>{attachment.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Reviewer */}
+                        {activity.reviewer && (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span>✓</span>
+                            <span>Reviewed by {activity.reviewer}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    {/* Icon with connecting line */}
-                    <div className="flex-shrink-0 pt-0.5 relative">
-                      {/* Connecting line above (if not first) */}
-                      {index > 0 && (
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
-                      )}
-                      
-                      {getActivityIcon(activity.activityType)}
-                      
-                      {/* Connecting line below (if not last) */}
-                      {index < group.activities.length - 1 && (
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm mb-1">{activity.label}</div>
-                      
-                      {/* Expandable Details */}
-                      {activity.expandable && (
-                        <button
-                          onClick={() => toggleExpand(activity.id)}
-                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
-                        >
-                          <span>See reasoning</span>
-                          <ChevronRight className={cn(
-                            "h-3 w-3 transition-transform",
-                            expandedActivities.has(activity.id) && "rotate-90"
-                          )} />
-                        </button>
-                      )}
-
-                      {/* Expanded Details */}
-                      {expandedActivities.has(activity.id) && activity.details && (
-                        <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
-                          {activity.details}
-                        </div>
-                      )}
-
-                      {/* Attachments */}
-                      {activity.attachments && activity.attachments.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {activity.attachments.map((attachment, i) => (
-                            <button
-                              key={i}
-                              className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
-                            >
-                              <span>{attachment.icon}</span>
-                              <span>{attachment.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Reviewer */}
-                      {activity.reviewer && (
-                        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <span>✓</span>
-                          <span>Reviewed by {activity.reviewer}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
