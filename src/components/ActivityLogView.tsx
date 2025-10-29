@@ -96,28 +96,43 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   };
 
   const groupActivitiesByDate = () => {
-    const groups: Record<string, Activity[]> = {};
-    activities.forEach(activity => {
+    // Sort activities by timestamp descending (newest first)
+    const sortedActivities = [...activities].sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    const groups: Array<{ label: string; activities: Activity[]; sortKey: number }> = [];
+    const groupMap: Record<string, Activity[]> = {};
+    
+    sortedActivities.forEach(activity => {
       const date = new Date(activity.timestamp);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
 
       let dateLabel: string;
+      let sortKey: number;
+      
       if (date.toDateString() === today.toDateString()) {
         dateLabel = "Today";
+        sortKey = 0;
       } else if (date.toDateString() === yesterday.toDateString()) {
         dateLabel = "Yesterday";
+        sortKey = 1;
       } else {
         dateLabel = format(date, "dd MMM yyyy");
+        sortKey = 2 + (today.getTime() - date.getTime()); // Older dates get higher numbers
       }
 
-      if (!groups[dateLabel]) {
-        groups[dateLabel] = [];
+      if (!groupMap[dateLabel]) {
+        groupMap[dateLabel] = [];
+        groups.push({ label: dateLabel, activities: groupMap[dateLabel], sortKey });
       }
-      groups[dateLabel].push(activity);
+      groupMap[dateLabel].push(activity);
     });
-    return groups;
+
+    // Sort groups by sortKey (Today first, then Yesterday, then older dates)
+    return groups.sort((a, b) => a.sortKey - b.sortKey);
   };
 
   const getStatusBadge = () => {
@@ -198,18 +213,18 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Activity Timeline */}
       <div className="flex-1 overflow-auto px-6 py-6">
         <div className="max-w-3xl space-y-8">
-          {Object.entries(groupedActivities).map(([dateLabel, dateActivities]) => (
-            <div key={dateLabel}>
+          {groupedActivities.map((group) => (
+            <div key={group.label}>
               {/* Date Separator */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="h-px flex-1 bg-border" />
-                <div className="text-sm text-muted-foreground font-medium">{dateLabel}</div>
+                <div className="text-sm text-muted-foreground font-medium">{group.label}</div>
                 <div className="h-px flex-1 bg-border" />
               </div>
 
               {/* Activities for this date */}
               <div className="space-y-6">
-                {dateActivities.map((activity, index) => (
+                {group.activities.map((activity, index) => (
                   <div key={activity.id} className="flex gap-4">
                     {/* Time */}
                     <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
