@@ -1367,23 +1367,14 @@ Let me check if this transaction is eligible for a chargeback...`;
             // All documents are valid - now process the chargeback action
             if (currentDisputeId && selectedTransaction) {
               try {
-                // Get current session to ensure auth token is included
-                const { data: { session: currentSession } } = await supabase.auth.getSession();
-                
-                if (!currentSession) {
-                  throw new Error('No active session');
-                }
-                
                 // Call the chargeback action processing function
+                // Note: supabase.functions.invoke automatically includes authentication
                 const { data: actionData, error: actionError } = await supabase.functions.invoke(
                   'process-chargeback-action',
                   {
                     body: {
                       disputeId: currentDisputeId,
                       transactionId: selectedTransaction.id
-                    },
-                    headers: {
-                      Authorization: `Bearer ${currentSession.access_token}`
                     }
                   }
                 );
