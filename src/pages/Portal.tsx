@@ -249,6 +249,14 @@ const Portal = () => {
           
           const userId = currentSession.user.id;
           
+          // Check for fresh login flag
+          const freshLoginFlag = sessionStorage.getItem('portal:freshLogin');
+          if (freshLoginFlag === '1') {
+            sessionStorage.removeItem('portal:freshLogin');
+            initializeNewConversation(userId);
+            return;
+          }
+          
           // Check for ?newChat=1 in URL to force new chat creation
           const urlParams = new URLSearchParams(location.search);
           if (urlParams.get('newChat') === '1') {
@@ -287,7 +295,7 @@ const Portal = () => {
             }
           }
           
-          // No saved chat or invalid - load most recent conversation
+          // No saved chat or invalid - check if any conversations exist
           const { data: existingConversations } = await supabase
             .from("conversations")
             .select("*")
@@ -306,8 +314,10 @@ const Portal = () => {
             
             setIsReadOnly(conversation.status === "closed");
             loadMessages(conversation.id);
+          } else {
+            // No conversations exist - auto-create first chat
+            initializeNewConversation(userId);
           }
-          // If no conversations exist, don't auto-create - user must click "New Chat"
         }
       });
     }
