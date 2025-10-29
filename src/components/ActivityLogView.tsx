@@ -293,13 +293,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="border-b px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8"
               >
                 <Menu className="h-4 w-4" />
               </Button>
@@ -307,7 +307,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 variant="ghost"
                 size="icon"
                 onClick={onBack}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -316,7 +316,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               </div>
             </div>
             
-            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="h-8 gap-2">
                 <BookOpen className="h-4 w-4" />
                 <span>Knowledge Base</span>
@@ -331,27 +331,15 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Status Info */}
         <div className="border-b px-6 py-4">
-          <div className="flex items-start justify-between gap-8">
-            <div className="flex items-start gap-8">
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">
-                  Tid {transactionId}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
-                    {statusBadge.label}
-                  </span>
-                </div>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">
+                Tid {transactionId}
               </div>
-              <div className="flex items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Key Details</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Database className="h-4 w-4" />
-                  <span>Transaction</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
+                  {statusBadge.label}
+                </span>
               </div>
             </div>
             <div className="text-sm text-muted-foreground">
@@ -467,9 +455,21 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       {/* Key Details Sidebar */}
       <div className="w-80 border-l bg-card flex flex-col">
+        <div className="border-b px-4 py-3">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <Database className="h-4 w-4" />
+            Key details
+          </div>
+        </div>
+
         <div className="flex-1 overflow-auto px-4 py-4">
           {transactionDetails ? (
             <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Database className="h-4 w-4" />
+                <span>Disputed transaction</span>
+              </div>
+
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Transaction ID</span>
