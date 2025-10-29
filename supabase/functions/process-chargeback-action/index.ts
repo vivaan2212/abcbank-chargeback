@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-request-id',
 };
 
 const RESTRICTED_MCCS = [5968, 4215, 5815, 6300, 5411, 7922, 7011, 4121, 4722, 9399, 4814, 7375, 7394, 4899, 7997];
@@ -65,13 +65,19 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      throw new Error('Not authenticated');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Not authenticated' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { disputeId, transactionId } = await req.json();
 
     if (!disputeId || !transactionId) {
-      throw new Error('Missing disputeId or transactionId');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing disputeId or transactionId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Processing chargeback action for dispute: ${disputeId}, transaction: ${transactionId}`);
@@ -85,7 +91,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (txError || !transaction) {
-      throw new Error('Transaction not found');
+      const forbidden = txError?.message && /policy|permission|rls/i.test(txError.message);
+      const status = forbidden ? 403 : 404;
+      return new Response(
+        JSON.stringify({ success: false, error: 'Transaction not found or access denied' }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const tx = transaction as unknown as Transaction;
@@ -192,7 +203,12 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error('Error inserting chargeback action:', insertError);
-      throw insertError;
+      const forbidden = insertError?.message && /policy|permission|rls/i.test(String(insertError.message));
+      const status = forbidden ? 403 : 500;
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to create chargeback action' }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Chargeback action created successfully: ${chargebackAction.id}`);

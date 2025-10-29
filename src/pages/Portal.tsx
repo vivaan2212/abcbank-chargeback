@@ -1367,32 +1367,58 @@ Let me check if this transaction is eligible for a chargeback...`;
             // All documents are valid - now process the chargeback action
             if (currentDisputeId && selectedTransaction) {
               try {
-                // Get current session to ensure auth token is included explicitly
-                const { data: { session: currentSession } } = await supabase.auth.getSession();
-                if (!currentSession) {
-                  throw new Error('No active session');
-                }
+                const requestId = (window.crypto as any)?.randomUUID?.() ? (window.crypto as any).randomUUID() : `req_${Date.now()}`;
+                const functionsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-chargeback-action`;
 
-                // Call the chargeback action processing function (pass Authorization header)
-                const { data: actionData, error: actionError } = await supabase.functions.invoke(
-                  'process-chargeback-action',
-                  {
-                    body: {
-                      disputeId: currentDisputeId,
-                      transactionId: selectedTransaction.id
-                    },
+                const callOnce = async (token: string | null) => {
+                  const resp = await fetch(functionsUrl, {
+                    method: 'POST',
+                    mode: 'cors',
                     headers: {
-                      Authorization: `Bearer ${currentSession.access_token}`
-                    }
-                  }
-                );
+                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                      'Content-Type': 'application/json',
+                      'X-Request-Id': requestId,
+                    },
+                    body: JSON.stringify({
+                      disputeId: currentDisputeId,
+                      transactionId: selectedTransaction.id,
+                    }),
+                  });
+                  return resp;
+                };
 
-                if (actionError) {
-                  console.error('Chargeback action processing error:', actionError);
-                  throw actionError;
+                let { data: { session: sess } } = await supabase.auth.getSession();
+                let resp = await callOnce(sess?.access_token ?? null);
+
+                if (resp.status === 401) {
+                  await supabase.auth.refreshSession();
+                  const after = await supabase.auth.getSession();
+                  sess = after.data.session;
+                  if (!sess?.access_token) {
+                    toast.error('Session expired. Please sign in again.');
+                    navigate('/login');
+                    return;
+                  }
+                  resp = await callOnce(sess.access_token);
                 }
 
-                console.log('Chargeback action processed:', actionData);
+                console.log('telemetry', { requestId, status: resp.status, path: 'process-chargeback-action', userId: user?.id || null });
+
+                if (resp.status === 401) {
+                  toast.error('Session expired. Please sign in again.');
+                  navigate('/login');
+                  return;
+                }
+                if (resp.status === 403) {
+                  toast.error("You don't have access to this action.");
+                  return;
+                }
+                if (!resp.ok) {
+                  toast.error('We hit a server error. Try again.');
+                  return;
+                }
+
+                const actionData = await resp.json();
 
                 // Map action type to dispute status
                 const statusMap: Record<string, string> = {
