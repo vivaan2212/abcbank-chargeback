@@ -84,8 +84,8 @@ Deno.serve(async (req) => {
     // Calculate derived values
     const localAmount = Number(tx.local_transaction_amount ?? 0);
     const origAmount = Number(tx.transaction_amount ?? 0);
-    const isLocalAED = tx.local_transaction_currency === 'AED';
-    const base_amount = (isLocalAED && localAmount > 0) ? localAmount : origAmount;
+    const isLocalUSD = tx.local_transaction_currency === 'USD';
+    const base_amount = (isLocalUSD && localAmount > 0) ? localAmount : origAmount;
     const refund_amount = Number(tx.refund_amount ?? 0);
     const net_amount = base_amount - refund_amount;
 

@@ -28,7 +28,7 @@ interface Transaction {
   created_at: string;
 }
 
-const MIN_AMOUNT_AED = 15; // For internal flagging only
+const MIN_AMOUNT_USD = 15; // For internal flagging only
 const SECURED_INDICATIONS = [2, 212]; // OTP-secured
 const WALLET_TYPES = ['Apple Pay', 'Google Pay'];
 
@@ -124,16 +124,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculate base_amount: Use local_transaction_amount if it's in AED and > 0, otherwise use transaction_amount
+    // Calculate base_amount: Use local_transaction_amount if it's in USD and > 0, otherwise use transaction_amount
     const localAmount = Number(tx.local_transaction_amount ?? 0);
     const origAmount = Number(tx.transaction_amount ?? 0);
-    const isLocalAED = tx.local_transaction_currency === 'AED';
-    const base_amount = (isLocalAED && localAmount > 0) ? localAmount : origAmount;
+    const isLocalUSD = tx.local_transaction_currency === 'USD';
+    const base_amount = (isLocalUSD && localAmount > 0) ? localAmount : origAmount;
     const refund_amount = Number(tx.refund_amount ?? 0);
     const remaining_amount = base_amount - refund_amount;
 
     // Internal flag for small transactions (not shown to customer)
-    const writeOffRecommended = base_amount < MIN_AMOUNT_AED;
+    const writeOffRecommended = base_amount < MIN_AMOUNT_USD;
 
     // 1. Fully/Over-Refunded Transactions
     if (tx.refund_received === true && remaining_amount <= 0) {
