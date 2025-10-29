@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 
 interface Activity {
   id: string;
@@ -29,6 +30,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
+  const [transactionDetails, setTransactionDetails] = useState<any>(null);
 
   useEffect(() => {
     loadDisputeData();
@@ -148,6 +150,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setActivities(activityList);
+      setTransactionDetails(dispute.transaction);
     } catch (error) {
       console.error('Error loading dispute data:', error);
     } finally {
@@ -275,142 +278,212 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const statusBadge = getStatusBadge();
 
   return (
-    <div className="h-full flex flex-col animate-fade-in">
-      {/* Header */}
-      <div className="border-b px-6 py-4">
-        <div className="flex items-center gap-3 mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Chargebacks / Activity Logs
+    <div className="h-full flex animate-fade-in">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="border-b px-6 py-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              Chargebacks / Activity Logs
+            </div>
+          </div>
+          
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">
+                Tid {transactionId}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
+                  {statusBadge.label}
+                </span>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              1 / 5195
+            </div>
           </div>
         </div>
-        
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-sm text-muted-foreground mb-1">
-              Tid {transactionId}
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
-                {statusBadge.label}
-              </span>
-            </div>
+
+        {/* Activity Timeline */}
+        <div className="flex-1 overflow-auto px-6 py-6">
+          <div className="max-w-3xl space-y-8">
+            {groupedActivities.map((group, groupIndex) => (
+              <div key={group.label}>
+                {/* Date Separator */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-px flex-1 bg-border" />
+                  <div className="text-sm text-muted-foreground font-medium">{group.label}</div>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                {/* Activities for this date */}
+                <div className="space-y-6">
+                  {group.activities.map((activity, index) => {
+                    const isFirstActivity = groupIndex === 0 && index === 0;
+                    const isLastInGroup = index === group.activities.length - 1;
+                    const isLastGroup = groupIndex === groupedActivities.length - 1;
+                    const isLastActivity = isLastInGroup && isLastGroup;
+
+                    return (
+                      <div key={activity.id} className="flex gap-4 relative">
+                        {/* Time */}
+                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
+                          {format(new Date(activity.timestamp), "h:mm a")}
+                        </div>
+
+                        {/* Icon with connecting line */}
+                        <div className="flex-shrink-0 pt-0.5 relative">
+                          {/* Connecting line above */}
+                          {!isFirstActivity && (
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
+                          )}
+                          
+                          {getActivityIcon(activity.activityType)}
+                          
+                          {/* Connecting line below */}
+                          {!isLastActivity && (
+                            <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm mb-1">{activity.label}</div>
+                          
+                          {/* Expandable Details */}
+                          {activity.expandable && (
+                            <button
+                              onClick={() => toggleExpand(activity.id)}
+                              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                            >
+                              <span>See reasoning</span>
+                              <ChevronRight className={cn(
+                                "h-3 w-3 transition-transform",
+                                expandedActivities.has(activity.id) && "rotate-90"
+                              )} />
+                            </button>
+                          )}
+
+                          {/* Expanded Details */}
+                          {expandedActivities.has(activity.id) && activity.details && (
+                            <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                              {activity.details}
+                            </div>
+                          )}
+
+                          {/* Attachments */}
+                          {activity.attachments && activity.attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {activity.attachments.map((attachment, i) => (
+                                <button
+                                  key={i}
+                                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
+                                >
+                                  <span>{attachment.icon}</span>
+                                  <span>{attachment.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Reviewer */}
+                          {activity.reviewer && (
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span>✓</span>
+                              <span>Reviewed by {activity.reviewer}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="text-sm text-muted-foreground">
-            1 / 5195
-          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t px-6 py-3 text-sm text-muted-foreground">
+          Work with Pace
         </div>
       </div>
 
-      {/* Activity Timeline */}
-      <div className="flex-1 overflow-auto px-6 py-6">
-        <div className="max-w-3xl space-y-8">
-          {groupedActivities.map((group, groupIndex) => (
-            <div key={group.label}>
-              {/* Date Separator */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-px flex-1 bg-border" />
-                <div className="text-sm text-muted-foreground font-medium">{group.label}</div>
-                <div className="h-px flex-1 bg-border" />
+      {/* Key Details Sidebar */}
+      <div className="w-80 border-l bg-card flex flex-col">
+        <div className="border-b px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <Database className="h-4 w-4" />
+            Key details
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <span className="text-lg">📖</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8">
+              Share
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto px-4 py-4">
+          {transactionDetails ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Database className="h-4 w-4" />
+                <span>Disputed transaction</span>
               </div>
 
-              {/* Activities for this date */}
-              <div className="space-y-6">
-                {group.activities.map((activity, index) => {
-                  const isFirstActivity = groupIndex === 0 && index === 0;
-                  const isLastInGroup = index === group.activities.length - 1;
-                  const isLastGroup = groupIndex === groupedActivities.length - 1;
-                  const isLastActivity = isLastInGroup && isLastGroup;
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Transaction ID</span>
+                  <span className="font-medium">{transactionDetails.transaction_id || transactionId}</span>
+                </div>
 
-                  return (
-                    <div key={activity.id} className="flex gap-4 relative">
-                      {/* Time */}
-                      <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
-                        {format(new Date(activity.timestamp), "h:mm a")}
-                      </div>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Transaction Date</span>
+                  <span className="font-medium">
+                    {transactionDetails.transaction_date 
+                      ? format(new Date(transactionDetails.transaction_date), "dd/MM/yyyy")
+                      : "N/A"}
+                  </span>
+                </div>
 
-                      {/* Icon with connecting line */}
-                      <div className="flex-shrink-0 pt-0.5 relative">
-                        {/* Connecting line above */}
-                        {!isFirstActivity && (
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
-                        )}
-                        
-                        {getActivityIcon(activity.activityType)}
-                        
-                        {/* Connecting line below */}
-                        {!isLastActivity && (
-                          <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
-                        )}
-                      </div>
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Reference No.</span>
+                  <span className="font-medium">{transactionDetails.arn || "N/A"}</span>
+                </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm mb-1">{activity.label}</div>
-                        
-                        {/* Expandable Details */}
-                        {activity.expandable && (
-                          <button
-                            onClick={() => toggleExpand(activity.id)}
-                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
-                          >
-                            <span>See reasoning</span>
-                            <ChevronRight className={cn(
-                              "h-3 w-3 transition-transform",
-                              expandedActivities.has(activity.id) && "rotate-90"
-                            )} />
-                          </button>
-                        )}
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-medium">₹{transactionDetails.transaction_amount?.toLocaleString() || "0"}</span>
+                </div>
 
-                        {/* Expanded Details */}
-                        {expandedActivities.has(activity.id) && activity.details && (
-                          <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
-                            {activity.details}
-                          </div>
-                        )}
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Merchant Name</span>
+                  <span className="font-medium">{transactionDetails.merchant_name || "N/A"}</span>
+                </div>
 
-                        {/* Attachments */}
-                        {activity.attachments && activity.attachments.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            {activity.attachments.map((attachment, i) => (
-                              <button
-                                key={i}
-                                className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
-                              >
-                                <span>{attachment.icon}</span>
-                                <span>{attachment.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Reviewer */}
-                        {activity.reviewer && (
-                          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>✓</span>
-                            <span>Reviewed by {activity.reviewer}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <span className="text-muted-foreground">Card Network</span>
+                  <span className="font-medium">{transactionDetails.card_type || "N/A"}</span>
+                </div>
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="text-sm text-muted-foreground">No transaction details available</div>
+          )}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t px-6 py-3 text-sm text-muted-foreground">
-        Work with Pace
       </div>
     </div>
   );
