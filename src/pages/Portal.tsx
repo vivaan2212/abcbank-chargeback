@@ -17,6 +17,11 @@ import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface Message {
@@ -1535,34 +1540,42 @@ Let me check if this transaction is eligible for a chargeback...`;
 
   return (
     <div className="min-h-screen h-screen flex w-full overflow-hidden bg-background">
-      {/* Sidebar */}
-      <div 
-        className={`
-          h-full border-r border-border bg-card flex-shrink-0
-          transition-all duration-300 ease-in-out
-          ${isChatExpanded 
-            ? 'w-0 -translate-x-full opacity-0 pointer-events-none' 
-            : 'w-[280px] translate-x-0 opacity-100'
-          }
-          lg:block
-          ${isChatExpanded ? '' : 'hidden lg:block'}
-        `}
-      >
-        <ChatHistory
-          currentConversationId={currentConversationId || undefined}
-          onConversationSelect={handleConversationSelect}
-          onNewChat={handleNewChat}
+      <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+        {/* Sidebar */}
+        <ResizablePanel
+          defaultSize={20}
+          minSize={15}
+          maxSize={35}
+          className={`
+            ${isChatExpanded 
+              ? 'hidden' 
+              : 'hidden lg:block'
+            }
+          `}
+        >
+          <div className="h-full border-r border-border bg-card">
+            <ChatHistory
+              currentConversationId={currentConversationId || undefined}
+              onConversationSelect={handleConversationSelect}
+              onNewChat={handleNewChat}
+            />
+          </div>
+        </ResizablePanel>
+        
+        {/* Resize Handle */}
+        <ResizableHandle 
+          className={`
+            ${isChatExpanded ? 'hidden' : 'hidden lg:flex'}
+          `}
         />
-      </div>
-      
-      {/* Chat Panel */}
-      <div 
-        className={`
-          flex-1 flex flex-col h-full bg-background
-          transition-all duration-300 ease-in-out
-          ${isChatExpanded ? 'w-full' : 'w-auto'}
-        `}
-      >
+        
+        {/* Chat Panel */}
+        <ResizablePanel
+          defaultSize={80}
+          minSize={65}
+          className="flex flex-col h-full"
+        >
+          <div className="flex-1 flex flex-col h-full bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -1809,7 +1822,9 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
           </div>
         </div>
-      </div>
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
