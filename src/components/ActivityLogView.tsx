@@ -56,76 +56,101 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       if (error) throw error;
 
-      // Load messages to get all conversation logs
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', dispute.conversation_id)
-        .order('created_at', { ascending: true });
-
-      // Build activities from dispute data with real timestamps
+      // Build activities from dispute data - milestone-based approach
       const activityList: Activity[] = [];
 
-      // Add all messages as activities with proper status determination
-      if (messages && messages.length > 0) {
-        messages.forEach((message, idx) => {
-          const content = message.content.toLowerCase();
-          let activityType: Activity['activityType'] = 'message';
-          
-          // Determine activity type based on message content
-          if (message.role === 'user') {
-            activityType = 'human_action';
-          } else if (content.includes('completed') || content.includes('success') || content.includes('approved')) {
-            activityType = 'success';
-          } else if (content.includes('needs attention') || content.includes('requires') || content.includes('pending')) {
-            activityType = 'needs_attention';
-          } else if (content.includes('error') || content.includes('failed')) {
-            activityType = 'error';
-          } else if (content.includes('work with pace') || content.includes('message from')) {
-            activityType = 'message'; // Purple for internal messages
-          } else {
-            activityType = 'loading'; // Default processing state
-          }
-          
-          activityList.push({
-            id: `message-${idx}`,
-            timestamp: message.created_at,
-            label: message.content,
-            reviewer: message.role === 'user' ? 'Customer' : 'System',
-            activityType
-          });
+      // 1. Dispute received milestone
+      activityList.push({
+        id: 'milestone-received',
+        timestamp: dispute.created_at,
+        label: 'Received a disputed transaction',
+        attachments: [{ label: 'Disputed transaction', icon: '📄' }],
+        activityType: 'human_action'
+      });
+
+      // 2. Transaction security analysis milestone
+      if (dispute.transaction) {
+        const isSecured = dispute.transaction.secured_indication === 1;
+        const posEntryMode = String(dispute.transaction.pos_entry_mode || '').padStart(2, '0');
+        const walletType = dispute.transaction.wallet_type || 'None';
+        
+        activityList.push({
+          id: 'milestone-security',
+          timestamp: dispute.created_at,
+          label: isSecured ? 'Transaction is secured' : 'Transaction is unsecured',
+          expandable: true,
+          details: `POS entry mode: ${posEntryMode}\nWallet type: ${walletType}\nSecured indication: ${dispute.transaction.secured_indication || 0}`,
+          activityType: isSecured ? 'success' : 'needs_attention'
         });
       }
 
-      // Add chargeback actions
+      // 3. Chargeback action milestones
       if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
         dispute.chargeback_actions.forEach((action: any, idx: number) => {
-          if (action.action_type === 'validation_recommended') {
+          // Build reasoning details from action data
+          let reasoningDetails = '';
+          
+          if (action.requires_manual_review) {
+            const reasons: string[] = [];
+            
+            if (action.days_since_transaction > 21 && !action.dispute?.transaction?.settled) {
+              reasons.push(`The transaction is older than 21 days and is not settled`);
+            }
+            
+            if (action.is_restricted_mcc) {
+              reasons.push(`Merchant category code ${action.merchant_category_code} requires additional review`);
+            }
+            
+            if (action.is_facebook_meta) {
+              reasons.push(`Transaction with high-risk merchant (Facebook/Meta)`);
+            }
+            
+            if (action.admin_message) {
+              reasons.push(action.admin_message);
+            }
+            
+            reasoningDetails = reasons.join('\n\n');
+          }
+          
+          // Credit decision milestone
+          if (action.action_type && !action.temporary_credit_issued) {
+            let label = 'Not recommended for temporary credit';
+            
+            if (action.awaiting_settlement) {
+              label = 'Awaiting settlement before credit decision';
+            } else if (action.awaiting_merchant_refund) {
+              label = 'Awaiting merchant refund';
+            } else if (action.requires_manual_review) {
+              label = `Not recommended for write-off as it's unsettled >${action.days_since_transaction} days`;
+            }
+            
             activityList.push({
-              id: `action-${idx}-validation`,
+              id: `action-${idx}-credit`,
               timestamp: action.created_at,
-              label: 'Customer validation recommended',
-              expandable: true,
-              details: action.admin_message || 'Based on transaction history and pattern analysis',
-              reviewer: 'Admin',
-              activityType: 'message'
+              label,
+              expandable: reasoningDetails ? true : false,
+              details: reasoningDetails,
+              reviewer: 'Rohit Kapoor',
+              activityType: action.requires_manual_review ? 'needs_attention' : 'human_action'
             });
           }
           
-          if (!action.temporary_credit_issued && action.action_type === 'credit_decision') {
+          // Review status milestone
+          if (action.updated_at !== action.created_at) {
             activityList.push({
-              id: `action-${idx}-no-credit`,
-              timestamp: action.created_at,
-              label: 'Marked as not recommended for temporary credit',
-              reviewer: 'Admin',
-              activityType: 'human_action'
+              id: `action-${idx}-reviewed`,
+              timestamp: action.updated_at,
+              label: 'Marked as reviewed',
+              reviewer: 'Rohit Kapoor',
+              activityType: 'success'
             });
           }
 
+          // Chargeback filed milestone
           if (action.chargeback_filed) {
             activityList.push({
               id: `action-${idx}-filed`,
-              timestamp: action.created_at,
+              timestamp: action.updated_at || action.created_at,
               label: `Chargeback filing completed. Ref. no: ${action.id.substring(0, 10)}`,
               attachments: [
                 { label: 'View Document', icon: '📄' },
