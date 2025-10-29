@@ -75,9 +75,10 @@ interface DisputesListProps {
   statusFilter: string;
   userId?: string;
   filters?: DisputeFiltersType;
+  onDisputeSelect?: (dispute: { id: string; transactionId: string | null; status: string }) => void;
 }
 
-const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
+const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: DisputesListProps) => {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [loading, setLoading] = useState(true);
@@ -612,7 +613,17 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
                 <TableRow
                   key={dispute.id}
                   className="cursor-pointer hover:bg-muted/30"
-                  onClick={() => setSelectedDispute(dispute)}
+                  onClick={() => {
+                    if (onDisputeSelect) {
+                      onDisputeSelect({
+                        id: dispute.id,
+                        transactionId: dispute.transaction_id,
+                        status: dispute.status
+                      });
+                    } else {
+                      setSelectedDispute(dispute);
+                    }
+                  }}
                 >
                   <TableCell className="font-medium">
                     {getStatusLabel(dispute.status)}
