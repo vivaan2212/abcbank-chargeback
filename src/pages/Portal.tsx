@@ -455,13 +455,20 @@ const Portal = () => {
         
         // Restore uploaded documents from dispute if exists
         if (dispute.documents) {
-          // Documents are stored as JSON, but we can't fully restore File objects
-          // So we'll just clear the documents state - user will see them in messages
+          // Convert stored document metadata back to ArtifactDoc format
+          const storedArtifacts = (dispute.documents as any[])?.map(doc => ({
+            requirementName: doc.requirementName,
+            name: doc.name,
+            size: doc.size,
+            type: doc.type,
+            path: doc.path
+          })).filter(doc => doc.path) || [];
+          
+          setArtifacts(storedArtifacts);
+          setUploadedDocuments([]);
+        } else {
           setUploadedDocuments([]);
           setArtifacts([]);
-        } else {
-        setUploadedDocuments([]);
-        setArtifacts([]);
         }
         
         // Determine which UI elements to show based on status
@@ -1249,7 +1256,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                     content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
                   });
 
-                // Reset state - no buttons shown, conversation ends naturally
+                // Keep artifacts visible but reset other state
                 setSelectedTransaction(null);
                 setSelectedReason(null);
                 setAiClassification(null);
@@ -1276,7 +1283,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                     content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
                   });
 
-                // Reset state anyway - no buttons shown
+                // Keep artifacts visible but reset other state
                 setSelectedTransaction(null);
                 setSelectedReason(null);
                 setAiClassification(null);
@@ -1548,8 +1555,15 @@ Let me check if this transaction is eligible for a chargeback...`;
                   />
                 </div>
               )}
-                </>
-              )}
+                 </>
+               )}
+               
+               {/* Show artifacts after successful completion */}
+               {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
+                 <div className="mt-6 flex justify-center">
+                   <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
+                 </div>
+               )}
             </div>
           </div>
         </ScrollArea>
