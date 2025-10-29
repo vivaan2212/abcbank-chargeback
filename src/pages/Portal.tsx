@@ -1246,10 +1246,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .insert({
                     conversation_id: currentConversationId,
                     role: "assistant",
-                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. Would you like to select another transaction to dispute or end this chat?",
+                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
                   });
 
-                // Reset state to allow selecting another transaction
+                // Reset state - no buttons shown, conversation ends naturally
                 setSelectedTransaction(null);
                 setSelectedReason(null);
                 setAiClassification(null);
@@ -1257,7 +1257,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 setShowReasonPicker(false);
                 setShowDocumentUpload(false);
                 setShowTransactions(false);
-                setShowContinueOrEndButtons(true);
+                setShowContinueOrEndButtons(false);
 
               } catch (actionProcessError) {
                 console.error('Error processing chargeback action:', actionProcessError);
@@ -1273,10 +1273,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .insert({
                     conversation_id: currentConversationId,
                     role: "assistant",
-                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. Would you like to select another transaction to dispute or end this chat?",
+                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
                   });
 
-                // Reset state anyway
+                // Reset state anyway - no buttons shown
                 setSelectedTransaction(null);
                 setSelectedReason(null);
                 setAiClassification(null);
@@ -1284,7 +1284,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 setShowReasonPicker(false);
                 setShowDocumentUpload(false);
                 setShowTransactions(false);
-                setShowContinueOrEndButtons(true);
+                setShowContinueOrEndButtons(false);
               }
             }
           } else {
