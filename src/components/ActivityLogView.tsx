@@ -15,6 +15,7 @@ interface Activity {
   details?: string;
   attachments?: Array<{ label: string; icon: string }>;
   reviewer?: string;
+  activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
 }
 
 interface ActivityLogViewProps {
@@ -64,7 +65,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         id: '1',
         timestamp: dispute.created_at,
         label: 'Disputed transaction',
-        attachments: [{ label: 'Disputed transaction', icon: '📄' }]
+        attachments: [{ label: 'Disputed transaction', icon: '📄' }],
+        activityType: 'human_action'
       });
 
       // 2. Transaction selected (find message or use created_at)
@@ -73,19 +75,22 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         activityList.push({
           id: '2',
           timestamp: txnMessage?.created_at || dispute.created_at,
-          label: 'Transaction selected'
+          label: 'Transaction selected',
+          activityType: 'human_action'
         });
       }
 
       // 3. Transaction security status
       if (dispute.transaction) {
         const securityMessage = messages?.find(m => m.content.includes('secured') || m.content.includes('unsecured'));
+        const isSecured = dispute.transaction.secured_indication === 1;
         activityList.push({
           id: '3',
           timestamp: securityMessage?.created_at || dispute.created_at,
-          label: dispute.transaction.secured_indication === 1 ? 'Transaction is secured' : 'Transaction is unsecured',
+          label: isSecured ? 'Transaction is secured' : 'Transaction is unsecured',
           expandable: true,
-          details: `POS entry mode: ${String(dispute.transaction.pos_entry_mode || '').padStart(2, '0')}\nWallet type: ${dispute.transaction.wallet_type || 'None'}\nSecured indication: ${dispute.transaction.secured_indication || 0}`
+          details: `POS entry mode: ${String(dispute.transaction.pos_entry_mode || '').padStart(2, '0')}\nWallet type: ${dispute.transaction.wallet_type || 'None'}\nSecured indication: ${dispute.transaction.secured_indication || 0}`,
+          activityType: isSecured ? 'success' : 'needs_attention'
         });
       }
 
@@ -94,7 +99,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         activityList.push({
           id: '4',
           timestamp: dispute.transaction.settlement_date || dispute.created_at,
-          label: 'Transaction is settled'
+          label: 'Transaction is settled',
+          activityType: 'success'
         });
       }
 
@@ -108,7 +114,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label: 'Customer validation recommended',
               expandable: true,
               details: action.admin_message || 'Based on transaction history and pattern analysis',
-              reviewer: 'Rohit Kapoor'
+              reviewer: 'Rohit Kapoor',
+              activityType: 'message'
             });
           }
           
@@ -117,7 +124,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               id: `action-${idx}-no-credit`,
               timestamp: action.created_at,
               label: 'Marked as not recommended for temporary credit',
-              reviewer: 'Rohit Kapoor'
+              reviewer: 'Rohit Kapoor',
+              activityType: 'human_action'
             });
           }
 
@@ -129,7 +137,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               attachments: [
                 { label: 'View Document', icon: '📄' },
                 { label: 'Video Recording', icon: '🎥' }
-              ]
+              ],
+              activityType: 'done'
             });
           }
         });
@@ -156,6 +165,33 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       }
       return newSet;
     });
+  };
+
+  const getActivityIcon = (type?: Activity['activityType']) => {
+    const iconClasses = "h-5 w-5 flex-shrink-0";
+    
+    switch (type) {
+      case 'error':
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-red-500 bg-background")} />;
+      case 'needs_attention':
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-orange-500 bg-background")} />;
+      case 'paused':
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-gray-400 bg-background")} />;
+      case 'loading':
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-blue-400 bg-background")} />;
+      case 'message':
+        return <div className={cn(iconClasses, "rounded border-2 border-purple-400 bg-background")} />;
+      case 'success':
+        return <div className={cn(iconClasses, "rounded border-2 border-green-500 bg-background")} />;
+      case 'human_action':
+        return <div className={cn(iconClasses, "rounded border-2 border-blue-300 bg-background")} />;
+      case 'done':
+        return <div className={cn(iconClasses, "rounded bg-green-700")} />;
+      case 'void':
+        return <div className={cn(iconClasses, "rounded border-2 border-gray-500 bg-background")} />;
+      default:
+        return <div className={cn(iconClasses, "rounded border-2 border-primary bg-background")} />;
+    }
   };
 
   const groupActivitiesByDate = () => {
@@ -294,11 +330,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                       {format(new Date(activity.timestamp), "h:mm a")}
                     </div>
 
-                    {/* Checkbox */}
+                    {/* Icon */}
                     <div className="flex-shrink-0 pt-0.5">
-                      <div className="h-5 w-5 rounded border-2 border-primary bg-background flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-sm bg-primary" />
-                      </div>
+                      {getActivityIcon(activity.activityType)}
                     </div>
 
                     {/* Content */}
