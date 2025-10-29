@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [activities, setActivities] = useState<Activity[]>([]);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     loadDisputeData();
@@ -279,164 +278,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const statusBadge = getStatusBadge();
 
   return (
-    <div className="h-full flex animate-fade-in bg-background">
-      {/* Collapsible Left Sidebar */}
-      <div className={cn(
-        "flex flex-col border-r transition-all duration-300 bg-card",
-        isSidebarCollapsed ? "w-0 overflow-hidden" : "w-[400px]"
-      )}>
-        {/* Sidebar Header */}
-        <div className="border-b px-4 py-3 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Transaction # {transactionId?.substring(0, 8)}...
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Needs attention</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSidebarCollapsed(true)}
-              className="h-6 w-6"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Activity Timeline */}
-        <div className="flex-1 overflow-auto px-4 py-4">
-          <div className="space-y-6">
-            {groupedActivities.map((group, groupIndex) => (
-              <div key={group.label}>
-                {/* Date Separator */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-px flex-1 bg-border" />
-                  <div className="text-xs text-muted-foreground font-medium">{group.label}</div>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-
-                {/* Activities for this date */}
-                <div className="space-y-4">
-                  {group.activities.map((activity, index) => {
-                    const isFirstActivity = groupIndex === 0 && index === 0;
-                    const isLastInGroup = index === group.activities.length - 1;
-                    const isLastGroup = groupIndex === groupedActivities.length - 1;
-                    const isLastActivity = isLastInGroup && isLastGroup;
-
-                    return (
-                      <div key={activity.id} className="flex gap-3 relative text-sm">
-                        {/* Time */}
-                        <div className="text-xs text-muted-foreground w-16 flex-shrink-0 pt-0.5">
-                          {format(new Date(activity.timestamp), "h:mm a")}
-                        </div>
-
-                        {/* Icon with connecting line */}
-                        <div className="flex-shrink-0 pt-0.5 relative">
-                          {/* Connecting line above */}
-                          {!isFirstActivity && (
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-4 w-px bg-border" />
-                          )}
-                          
-                          {getActivityIcon(activity.activityType)}
-                          
-                          {/* Connecting line below */}
-                          {!isLastActivity && (
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full h-4 w-px bg-border" />
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm mb-1">{activity.label}</div>
-                          
-                          {/* Expandable Details */}
-                          {activity.expandable && (
-                            <button
-                              onClick={() => toggleExpand(activity.id)}
-                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
-                            >
-                              <span>See reasoning</span>
-                              <ChevronRight className={cn(
-                                "h-3 w-3 transition-transform",
-                                expandedActivities.has(activity.id) && "rotate-90"
-                              )} />
-                            </button>
-                          )}
-
-                          {/* Expanded Details */}
-                          {expandedActivities.has(activity.id) && activity.details && (
-                            <div className="mt-2 p-2 bg-muted/50 rounded text-xs text-muted-foreground whitespace-pre-line">
-                              {activity.details}
-                            </div>
-                          )}
-
-                          {/* Attachments */}
-                          {activity.attachments && activity.attachments.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {activity.attachments.map((attachment, i) => (
-                                <button
-                                  key={i}
-                                  className="flex items-center gap-2 px-2 py-1.5 bg-muted/50 rounded hover:bg-muted transition-colors text-xs"
-                                >
-                                  <span>{attachment.icon}</span>
-                                  <span>{attachment.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Reviewer */}
-                          {activity.reviewer && (
-                            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                              <span>✓</span>
-                              <span>Reviewed by {activity.reviewer}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Work with Pace input */}
-        <div className="border-t px-4 py-3 bg-card">
-          <div className="text-xs text-muted-foreground mb-2">Work with Pace or anyone else</div>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              className="w-full px-3 py-2 pr-10 text-sm bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <Button
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded"
-            >
-              <ArrowLeft className="h-4 w-4 rotate-180" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
+    <div className="h-full flex animate-fade-in">
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-background">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="border-b px-6 py-3 bg-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {isSidebarCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsSidebarCollapsed(false)}
-                  className="h-8 w-8"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -464,7 +312,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-4 bg-card">
+        <div className="border-b px-6 py-4">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
@@ -482,9 +330,108 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           </div>
         </div>
 
-        {/* Main content area - empty for now, can be used for chat or other content */}
-        <div className="flex-1 overflow-auto">
-          {/* Content goes here */}
+        {/* Activity Timeline */}
+        <div className="flex-1 overflow-auto px-6 py-6">
+          <div className="max-w-3xl space-y-8">
+            {groupedActivities.map((group, groupIndex) => (
+              <div key={group.label}>
+                {/* Date Separator */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-px flex-1 bg-border" />
+                  <div className="text-sm text-muted-foreground font-medium">{group.label}</div>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                {/* Activities for this date */}
+                <div className="space-y-6">
+                  {group.activities.map((activity, index) => {
+                    const isFirstActivity = groupIndex === 0 && index === 0;
+                    const isLastInGroup = index === group.activities.length - 1;
+                    const isLastGroup = groupIndex === groupedActivities.length - 1;
+                    const isLastActivity = isLastInGroup && isLastGroup;
+
+                    return (
+                      <div key={activity.id} className="flex gap-4 relative">
+                        {/* Time */}
+                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
+                          {format(new Date(activity.timestamp), "h:mm a")}
+                        </div>
+
+                        {/* Icon with connecting line */}
+                        <div className="flex-shrink-0 pt-0.5 relative">
+                          {/* Connecting line above */}
+                          {!isFirstActivity && (
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
+                          )}
+                          
+                          {getActivityIcon(activity.activityType)}
+                          
+                          {/* Connecting line below */}
+                          {!isLastActivity && (
+                            <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm mb-1">{activity.label}</div>
+                          
+                          {/* Expandable Details */}
+                          {activity.expandable && (
+                            <button
+                              onClick={() => toggleExpand(activity.id)}
+                              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+                            >
+                              <span>See reasoning</span>
+                              <ChevronRight className={cn(
+                                "h-3 w-3 transition-transform",
+                                expandedActivities.has(activity.id) && "rotate-90"
+                              )} />
+                            </button>
+                          )}
+
+                          {/* Expanded Details */}
+                          {expandedActivities.has(activity.id) && activity.details && (
+                            <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                              {activity.details}
+                            </div>
+                          )}
+
+                          {/* Attachments */}
+                          {activity.attachments && activity.attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {activity.attachments.map((attachment, i) => (
+                                <button
+                                  key={i}
+                                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
+                                >
+                                  <span>{attachment.icon}</span>
+                                  <span>{attachment.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Reviewer */}
+                          {activity.reviewer && (
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span>✓</span>
+                              <span>Reviewed by {activity.reviewer}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t px-6 py-3 text-sm text-muted-foreground">
+          Work with Pace
         </div>
       </div>
 
