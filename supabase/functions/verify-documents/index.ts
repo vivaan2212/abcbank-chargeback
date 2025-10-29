@@ -59,10 +59,12 @@ serve(async (req) => {
       const base64 = btoa(binary);
       const mimeType = file.type || 'application/octet-stream';
 
-      // Determine if file is an image
+      // Determine file type
       const isImage = mimeType.startsWith('image/');
+      const isPDF = mimeType === 'application/pdf';
 
       let content;
+      
       if (isImage) {
         // For images, use vision capabilities
         const disputeInfo = disputeContext 
@@ -105,19 +107,69 @@ Respond with JSON only:
             }
           }
         ];
+      } else if (isPDF) {
+        // For PDFs, use full AI content analysis with vision API (Gemini supports PDFs)
+        const disputeInfo = disputeContext 
+          ? `\nDISPUTE CONTEXT:
+- Reason: ${disputeContext.reasonLabel}
+- Customer's explanation: ${disputeContext.customReason || disputeContext.aiExplanation || 'Not provided'}
+
+IMPORTANT: Understand the dispute context. For example:
+- If the issue is "received wrong/different item", look for order confirmations, shipping details, or product descriptions
+- If the issue is "not received", look for tracking information, delivery confirmations, or correspondence
+- If the issue is "damaged/defective", look for purchase receipts, warranty information, or quality issues documentation
+- If the issue is "unauthorized transaction", look for account statements, fraud reports, or identity verification
+`
+          : '';
+
+        console.log(`Performing full AI content analysis for PDF: ${file.name}`);
+
+        content = [
+          {
+            type: "text",
+            text: `You are verifying a PDF document for a chargeback dispute. 
+${disputeInfo}
+The document should be: "${requirement.name}"
+Expected types: ${requirement.uploadType.join(', ')}
+
+Please read and analyze this PDF document carefully and determine:
+1. Is this document relevant to the requirement "${requirement.name}"?
+2. Does it contain the expected information given the dispute context?
+3. Does it appear to be a legitimate, complete document (not truncated or corrupted)?
+4. Does it contain key details that support the customer's dispute (e.g., dates, amounts, tracking numbers, order details)?
+
+Be thorough and context-aware in your analysis. Consider whether the document provides meaningful evidence for the customer's claim.
+
+Respond with JSON only:
+{
+  "isValid": true/false,
+  "reason": "Brief explanation of why the document is valid or invalid based on its actual content"
+}`
+          },
+          {
+            type: "image_url",  // Gemini uses the same format for PDFs
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`
+            }
+          }
+        ];
       } else {
-        // For PDFs and other documents, we can't use vision, so we'll do basic checks
+        // For other document types (Word, text files, etc.), do metadata-only checks
+        console.log(`Performing metadata-only verification for file type: ${mimeType}`);
+        
         content = `You are verifying a document for a chargeback dispute.
 
 The document should be: "${requirement.name}"
 Expected types: ${requirement.uploadType.join(', ')}
 File provided: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(2)} KB)
 
-Based on the filename and file type, does this seem like an appropriate document for the requirement?
+Note: Full content analysis is not available for this file type. Based on the filename and file type, does this seem like an appropriate document for the requirement?
 Consider:
 - Does the filename suggest it's the right type of document?
-- Is the file type appropriate (PDF, Word, etc.)?
+- Is the file type appropriate?
 - Is the file size reasonable (not empty, not suspiciously small)?
+
+Be lenient in your assessment since you cannot read the actual content.
 
 Respond with JSON only:
 {
