@@ -1573,9 +1573,6 @@ Let me check if this transaction is eligible for a chargeback...`;
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {artifacts.length > 0 && (
-                <ArtifactsViewer documents={artifacts} />
-              )}
               {uploadedDocuments.length > 0 && (
                 <UploadedDocumentsViewer documents={uploadedDocuments} />
               )}
