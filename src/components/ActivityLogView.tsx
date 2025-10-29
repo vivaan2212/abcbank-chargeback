@@ -64,7 +64,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         id: 'milestone-received',
         timestamp: dispute.created_at,
         label: 'Received a disputed transaction',
-        attachments: [{ label: 'Disputed transaction', icon: '📄' }],
+        attachments: dispute.documents ? [{ label: 'Disputed transaction', icon: '📄' }] : undefined,
         activityType: 'human_action'
       });
 
@@ -84,7 +84,70 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         });
       }
 
-      // 3. Chargeback action milestones
+      // 3. Eligibility milestone
+      if (dispute.eligibility_status) {
+        const isEligible = dispute.eligibility_status === 'eligible';
+        let eligibilityLabel = 'Transaction is eligible for chargeback';
+        let eligibilityDetails = '';
+        
+        if (!isEligible) {
+          eligibilityLabel = 'Transaction is not eligible for chargeback';
+        }
+        
+        if (dispute.eligibility_reasons && Array.isArray(dispute.eligibility_reasons)) {
+          eligibilityDetails = dispute.eligibility_reasons.join('\n');
+        }
+        
+        activityList.push({
+          id: 'milestone-eligibility',
+          timestamp: dispute.created_at,
+          label: eligibilityLabel,
+          expandable: eligibilityDetails ? true : false,
+          details: eligibilityDetails,
+          activityType: isEligible ? 'success' : 'needs_attention'
+        });
+      }
+
+      // 4. Document request milestone
+      if (dispute.status === 'documents_requested' || dispute.documents) {
+        activityList.push({
+          id: 'milestone-docs-requested',
+          timestamp: dispute.created_at,
+          label: 'Documents requested from customer',
+          activityType: 'needs_attention'
+        });
+      }
+
+      // 5. Document upload milestone
+      if (dispute.documents) {
+        const docsArray = Array.isArray(dispute.documents) ? dispute.documents : [];
+        if (docsArray.length > 0) {
+          activityList.push({
+            id: 'milestone-docs-uploaded',
+            timestamp: dispute.updated_at,
+            label: `Customer uploaded ${docsArray.length} document${docsArray.length > 1 ? 's' : ''}`,
+            attachments: docsArray.map((doc: any, idx: number) => ({
+              label: doc.name || `Document ${idx + 1}`,
+              icon: '📄'
+            })),
+            activityType: 'success'
+          });
+        }
+      }
+
+      // 6. Reason selection milestone
+      if (dispute.reason_label || dispute.custom_reason) {
+        activityList.push({
+          id: 'milestone-reason',
+          timestamp: dispute.created_at,
+          label: `Dispute reason: ${dispute.reason_label || dispute.custom_reason}`,
+          expandable: dispute.custom_reason ? true : false,
+          details: dispute.custom_reason || undefined,
+          activityType: 'human_action'
+        });
+      }
+
+      // 7. Chargeback action milestones
       if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
         dispute.chargeback_actions.forEach((action: any, idx: number) => {
           // Build reasoning details from action data
