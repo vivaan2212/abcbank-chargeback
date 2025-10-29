@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import DashboardSidebar from "./DashboardSidebar";
 
 interface Activity {
   id: string;
@@ -31,6 +32,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [activities, setActivities] = useState<Activity[]>([]);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadDisputeData();
@@ -279,12 +281,28 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
   return (
     <div className="h-full flex animate-fade-in">
+      {/* Left Sidebar */}
+      <div className={cn(
+        "transition-all duration-300 ease-in-out overflow-hidden",
+        isSidebarOpen ? "w-56" : "w-0"
+      )}>
+        <DashboardSidebar activeSection="chargebacks" />
+      </div>
+
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="h-8 w-8"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
