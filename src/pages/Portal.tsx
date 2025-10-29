@@ -606,12 +606,25 @@ const Portal = () => {
           const shouldShowReasonPicker = dispute.status === "eligibility_checked";
           const shouldShowDocumentUpload = dispute.status === "reason_selected";
           const shouldShowOrderInput = dispute.status === "awaiting_order_details";
-          const shouldShowContinueButtons = dispute.status === "under_review" || dispute.status === "documents_uploaded";
+          
+          // Hide all UI elements for final/completed states
+          const isFinalState = [
+            "under_review",
+            "awaiting_investigation", 
+            "chargeback_filed",
+            "awaiting_merchant_refund",
+            "awaiting_settlement",
+            "pending_manual_review",
+            "expired",
+            "closed"
+          ].includes(dispute.status);
+          
+          const shouldShowContinueButtons = dispute.status === "documents_uploaded" && !isFinalState;
 
-          setShowTransactions(shouldShowTransactions);
-          setShowReasonPicker(shouldShowReasonPicker);
-          setShowDocumentUpload(shouldShowDocumentUpload);
-          setShowOrderDetailsInput(shouldShowOrderInput);
+          setShowTransactions(shouldShowTransactions && !isFinalState);
+          setShowReasonPicker(shouldShowReasonPicker && !isFinalState);
+          setShowDocumentUpload(shouldShowDocumentUpload && !isFinalState);
+          setShowOrderDetailsInput(shouldShowOrderInput && !isFinalState);
           setShowContinueOrEndButtons(shouldShowContinueButtons);
           
           // Reset analyzing state
