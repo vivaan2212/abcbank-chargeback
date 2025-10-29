@@ -49,7 +49,7 @@ const ChatMessage = ({ role, content, timestamp, documents }: ChatMessageProps) 
   };
 
   return (
-    <div className={`flex ${isAssistant ? "justify-start" : "justify-end"} mb-4`}>
+    <div className={`flex ${isAssistant ? "justify-start" : "justify-end"} mb-4 animate-fade-in`}>
       <div className={`max-w-[70%] ${isAssistant ? "items-start" : "items-end"} flex flex-col`}>
         {isAssistant && (
           <div className="flex items-center gap-2 mb-2">
