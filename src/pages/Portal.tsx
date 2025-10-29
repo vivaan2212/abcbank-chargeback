@@ -818,7 +818,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           // No transaction list, no buttons - conversation ends here for this dispute
         } else {
           // Show eligibility message with request for order details
-          const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please provide more details about your order? This will help us better understand the issue and process your request.`;
+          const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please tell us what was your transaction about and what is the issue you are facing? This will help us better understand the situation and process your request.`;
 
           await supabase
             .from("messages")
@@ -1507,12 +1507,12 @@ Let me check if this transaction is eligible for a chargeback...`;
                       </label>
                       <p className="text-sm text-muted-foreground">
                         For example, you can share:
-                        • The product you ordered
+                        • What was your transaction about
                         • The issue you are facing (e.g., incorrect product, damaged goods, unauthorized charge)
                         • Any additional information that will help us understand the situation better
                       </p>
                       <Textarea
-                        placeholder="Describe your order and the issue..."
+                        placeholder="Describe your transaction and the issue..."
                         value={orderDetails}
                         onChange={(e) => setOrderDetails(e.target.value)}
                         rows={4}
