@@ -1364,100 +1364,30 @@ Let me check if this transaction is eligible for a chargeback...`;
           console.log('Verification result:', verificationData);
 
           if (verificationData.success) {
-            // All documents are valid - now process the chargeback action
-            if (currentDisputeId && selectedTransaction) {
-              try {
-                // Get current session to ensure auth token is included explicitly
-                const { data: { session: currentSession } } = await supabase.auth.getSession();
-                if (!currentSession) {
-                  throw new Error('No active session');
-                }
+            // All documents are valid - show success and update status
+            if (currentDisputeId) {
+              await supabase
+                .from("disputes")
+                .update({ status: "documents_verified" })
+                .eq("id", currentDisputeId);
 
-                // Call the chargeback action processing function (pass Authorization header)
-                const { data: actionData, error: actionError } = await supabase.functions.invoke(
-                  'process-chargeback-action',
-                  {
-                    body: {
-                      disputeId: currentDisputeId,
-                      transactionId: selectedTransaction.id
-                    },
-                    headers: {
-                      Authorization: `Bearer ${currentSession.access_token}`
-                    }
-                  }
-                );
+              await supabase
+                .from("messages")
+                .insert({
+                  conversation_id: currentConversationId,
+                  role: "assistant",
+                  content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
+                });
 
-                if (actionError) {
-                  console.error('Chargeback action processing error:', actionError);
-                  throw actionError;
-                }
-
-                console.log('Chargeback action processed:', actionData);
-
-                // Map action type to dispute status
-                const statusMap: Record<string, string> = {
-                  'TEMPORARY_CREDIT_ONLY': 'awaiting_investigation',
-                  'CHARGEBACK_FILED': 'chargeback_filed',
-                  'CHARGEBACK_NO_TEMP': 'chargeback_filed',
-                  'WAIT_FOR_REFUND': 'awaiting_merchant_refund',
-                  'WAIT_FOR_SETTLEMENT': 'awaiting_settlement',
-                  'MANUAL_REVIEW': 'pending_manual_review',
-                  'EXPIRED_NOT_SETTLED': 'expired'
-                };
-
-                const newStatus = statusMap[actionData.actionType] || 'under_review';
-
-                await supabase
-                  .from("disputes")
-                  .update({ status: newStatus })
-                  .eq("id", currentDisputeId);
-
-                // Show generic success message to customer (never show action details)
-                await supabase
-                  .from("messages")
-                  .insert({
-                    conversation_id: currentConversationId,
-                    role: "assistant",
-                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
-                  });
-
-                // Keep artifacts visible but reset other state
-                setSelectedTransaction(null);
-                setSelectedReason(null);
-                setAiClassification(null);
-                setUploadedDocuments([]);
-                setShowReasonPicker(false);
-                setShowDocumentUpload(false);
-                setShowTransactions(false);
-                setShowContinueOrEndButtons(false);
-
-              } catch (actionProcessError) {
-                console.error('Error processing chargeback action:', actionProcessError);
-                
-                // Fallback: update to generic under_review status
-                await supabase
-                  .from("disputes")
-                  .update({ status: "under_review" })
-                  .eq("id", currentDisputeId);
-
-                await supabase
-                  .from("messages")
-                  .insert({
-                    conversation_id: currentConversationId,
-                    role: "assistant",
-                    content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
-                  });
-
-                // Keep artifacts visible but reset other state
-                setSelectedTransaction(null);
-                setSelectedReason(null);
-                setAiClassification(null);
-                setUploadedDocuments([]);
-                setShowReasonPicker(false);
-                setShowDocumentUpload(false);
-                setShowTransactions(false);
-                setShowContinueOrEndButtons(false);
-              }
+              // Reset state
+              setSelectedTransaction(null);
+              setSelectedReason(null);
+              setAiClassification(null);
+              setUploadedDocuments([]);
+              setShowReasonPicker(false);
+              setShowDocumentUpload(false);
+              setShowTransactions(false);
+              setShowContinueOrEndButtons(false);
             }
           } else {
             // Some documents failed verification
