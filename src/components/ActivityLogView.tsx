@@ -168,7 +168,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   };
 
   const getActivityIcon = (type?: Activity['activityType']) => {
-    const iconClasses = "h-5 w-5 flex-shrink-0";
+    const iconClasses = "h-2.5 w-2.5 flex-shrink-0";
     
     switch (type) {
       case 'error':
@@ -324,15 +324,25 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               {/* Activities for this date */}
               <div className="space-y-6">
                 {group.activities.map((activity, index) => (
-                  <div key={activity.id} className="flex gap-4">
+                  <div key={activity.id} className="flex gap-4 relative">
                     {/* Time */}
                     <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
                       {format(new Date(activity.timestamp), "h:mm a")}
                     </div>
 
-                    {/* Icon */}
-                    <div className="flex-shrink-0 pt-0.5">
+                    {/* Icon with connecting line */}
+                    <div className="flex-shrink-0 pt-0.5 relative">
+                      {/* Connecting line above (if not first) */}
+                      {index > 0 && (
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
+                      )}
+                      
                       {getActivityIcon(activity.activityType)}
+                      
+                      {/* Connecting line below (if not last) */}
+                      {index < group.activities.length - 1 && (
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
+                      )}
                     </div>
 
                     {/* Content */}
