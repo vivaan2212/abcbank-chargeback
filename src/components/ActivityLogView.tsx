@@ -175,7 +175,21 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             reasoningDetails = reasons.join('\n\n');
           }
           
-          // Credit decision milestone
+          // Temporary credit issued milestone
+          if (action.temporary_credit_issued) {
+            const creditAmount = action.net_amount || dispute.transaction?.transaction_amount || 0;
+            activityList.push({
+              id: `action-${idx}-temp-credit`,
+              timestamp: action.created_at,
+              label: `Temporary credit approved`,
+              expandable: true,
+              details: `Credit amount: ₹${creditAmount.toLocaleString()}\n\nA temporary credit has been issued to your account while we investigate the dispute. This credit will be made permanent if the chargeback is successful.`,
+              reviewer: 'Rohit Kapoor',
+              activityType: 'done'
+            });
+          }
+          
+          // Credit decision milestone (only if no temp credit)
           if (action.action_type && !action.temporary_credit_issued) {
             let label = 'Not recommended for temporary credit';
             
@@ -195,6 +209,36 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               details: reasoningDetails,
               reviewer: 'Rohit Kapoor',
               activityType: action.requires_manual_review ? 'needs_attention' : 'human_action'
+            });
+          }
+          
+          // Merchant refund awaiting milestone (enhanced)
+          if (action.awaiting_merchant_refund) {
+            const daysSince = action.days_since_transaction || 0;
+            const daysRemaining = Math.max(0, 14 - daysSince);
+            
+            activityList.push({
+              id: `action-${idx}-awaiting-refund`,
+              timestamp: action.created_at,
+              label: 'Awaiting merchant refund',
+              expandable: true,
+              details: action.is_facebook_meta 
+                ? `Transaction with Facebook/Meta detected. These merchants typically issue refunds within 14 days.\n\nDays elapsed: ${daysSince}\nEstimated days remaining: ${daysRemaining}\n\nWe'll automatically monitor for the refund and update the case accordingly.`
+                : `The merchant has been contacted for a refund. This is often faster than filing a chargeback.\n\nDays elapsed: ${daysSince}\n\nWe'll monitor for the refund and proceed with chargeback filing if no refund is received.`,
+              activityType: 'needs_attention'
+            });
+          }
+          
+          // Manual review milestone (enhanced)
+          if (action.requires_manual_review) {
+            activityList.push({
+              id: `action-${idx}-manual-review`,
+              timestamp: action.created_at,
+              label: 'Case requires manual review',
+              expandable: reasoningDetails ? true : false,
+              details: reasoningDetails,
+              reviewer: 'Rohit Kapoor',
+              activityType: 'needs_attention'
             });
           }
           
@@ -223,6 +267,53 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             });
           }
         });
+      }
+
+      // 8. Final dispute outcome milestones
+      if (dispute.status) {
+        const finalStatuses = ['completed', 'approved', 'rejected', 'void', 'cancelled'];
+        
+        if (finalStatuses.includes(dispute.status.toLowerCase())) {
+          let label = '';
+          let activityType: Activity['activityType'] = 'done';
+          let details = '';
+          
+          switch (dispute.status.toLowerCase()) {
+            case 'completed':
+            case 'approved':
+              label = 'Chargeback approved - Case resolved';
+              activityType = 'done';
+              const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
+              details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
+              break;
+              
+            case 'rejected':
+              label = 'Chargeback rejected';
+              activityType = 'error';
+              const action = dispute.chargeback_actions?.[0];
+              details = action?.admin_message || 
+                'The chargeback was not approved by the card network. This may be due to insufficient evidence or the transaction being outside the dispute window.\n\nIf you have additional evidence, you may be able to file a new dispute.';
+              break;
+              
+            case 'void':
+            case 'cancelled':
+              label = 'Case voided';
+              activityType = 'void';
+              details = 'This dispute case has been voided or cancelled. This may happen if a merchant refund was received or if the dispute was withdrawn.';
+              break;
+          }
+          
+          if (label) {
+            activityList.push({
+              id: 'milestone-final-status',
+              timestamp: dispute.updated_at,
+              label,
+              expandable: true,
+              details,
+              activityType
+            });
+          }
+        }
       }
 
       // Sort by timestamp
@@ -339,6 +430,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const getStatusBadge = () => {
     const statusMap: Record<string, { label: string; color: string }> = {
       completed: { label: "Done", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      approved: { label: "Approved", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      rejected: { label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+      void: { label: "Void", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
+      cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
       in_progress: { label: "In progress", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
       needs_attention: { label: "Needs attention", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" }
     };
