@@ -14,7 +14,7 @@ import TransactionList from "@/components/TransactionList";
 import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
-import { Card } from "@/components/ui/card";
+import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
 import {
