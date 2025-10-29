@@ -352,10 +352,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           </div>
         </div>
 
-        {/* Status Info */}
+        {/* Status Info with Key Details */}
         <div className="border-b px-6 py-4 bg-background">
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-8">
+            {/* Left: TID and Status */}
+            <div className="flex-1 min-w-0">
               <div className="text-sm text-muted-foreground mb-1">
                 Tid {transactionId}
               </div>
@@ -365,6 +366,48 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 </span>
               </div>
             </div>
+
+            {/* Middle: Key Details */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-3">
+                <Database className="h-4 w-4" />
+                <span>Key details</span>
+              </div>
+              {transactionDetails ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Database className="h-3 w-3" />
+                    <span>Disputed transaction</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Transaction ID</span>
+                      <div className="font-medium">{transactionDetails.transaction_id || transactionId}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Amount</span>
+                      <div className="font-medium">₹{transactionDetails.transaction_amount?.toLocaleString() || "0"}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Transaction Date</span>
+                      <div className="font-medium">
+                        {transactionDetails.transaction_date 
+                          ? format(new Date(transactionDetails.transaction_date), "dd/MM/yyyy")
+                          : "N/A"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Merchant</span>
+                      <div className="font-medium">{transactionDetails.merchant_name || "N/A"}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">No transaction details available</div>
+              )}
+            </div>
+
+            {/* Right: Counter */}
             <div className="text-sm text-muted-foreground">
               1 / 5195
             </div>
@@ -492,65 +535,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               </Button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Key Details Sidebar */}
-      <div className="w-80 border-l bg-card flex flex-col">
-        <div className="border-b px-4 py-3">
-          <div className="flex items-center gap-2 font-semibold text-sm">
-            <Database className="h-4 w-4" />
-            Key details
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto px-4 py-4">
-          {transactionDetails ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Database className="h-4 w-4" />
-                <span>Disputed transaction</span>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Transaction ID</span>
-                  <span className="font-medium">{transactionDetails.transaction_id || transactionId}</span>
-                </div>
-
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Transaction Date</span>
-                  <span className="font-medium">
-                    {transactionDetails.transaction_date 
-                      ? format(new Date(transactionDetails.transaction_date), "dd/MM/yyyy")
-                      : "N/A"}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Reference No.</span>
-                  <span className="font-medium">{transactionDetails.arn || "N/A"}</span>
-                </div>
-
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">₹{transactionDetails.transaction_amount?.toLocaleString() || "0"}</span>
-                </div>
-
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Merchant Name</span>
-                  <span className="font-medium">{transactionDetails.merchant_name || "N/A"}</span>
-                </div>
-
-                <div className="grid grid-cols-[120px_1fr] gap-2">
-                  <span className="text-muted-foreground">Card Network</span>
-                  <span className="font-medium">{transactionDetails.card_type || "N/A"}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">No transaction details available</div>
-          )}
         </div>
       </div>
     </div>
