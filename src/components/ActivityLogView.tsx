@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -283,20 +283,36 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="border-b px-6 py-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-sm text-muted-foreground">
-              Chargebacks / Activity Logs
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onBack}
+                className="h-8 w-8"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                Chargebacks / Activity Logs
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-8 gap-2">
+                <BookOpen className="h-4 w-4" />
+                <span>Knowledge Base</span>
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 gap-2">
+                <Share2 className="h-4 w-4" />
+                <span>Share</span>
+              </Button>
             </div>
           </div>
-          
+        </div>
+
+        {/* Status Info */}
+        <div className="border-b px-6 py-4">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
@@ -421,18 +437,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       {/* Key Details Sidebar */}
       <div className="w-80 border-l bg-card flex flex-col">
-        <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2 font-semibold text-sm">
             <Database className="h-4 w-4" />
             Key details
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <span className="text-lg">📖</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8">
-              Share
-            </Button>
           </div>
         </div>
 
