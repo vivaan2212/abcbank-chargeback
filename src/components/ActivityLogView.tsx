@@ -66,15 +66,33 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // Build activities from dispute data with real timestamps
       const activityList: Activity[] = [];
 
-      // Add all messages as activities
+      // Add all messages as activities with proper status determination
       if (messages && messages.length > 0) {
         messages.forEach((message, idx) => {
+          const content = message.content.toLowerCase();
+          let activityType: Activity['activityType'] = 'message';
+          
+          // Determine activity type based on message content
+          if (message.role === 'user') {
+            activityType = 'human_action';
+          } else if (content.includes('completed') || content.includes('success') || content.includes('approved')) {
+            activityType = 'success';
+          } else if (content.includes('needs attention') || content.includes('requires') || content.includes('pending')) {
+            activityType = 'needs_attention';
+          } else if (content.includes('error') || content.includes('failed')) {
+            activityType = 'error';
+          } else if (content.includes('work with pace') || content.includes('message from')) {
+            activityType = 'message'; // Purple for internal messages
+          } else {
+            activityType = 'loading'; // Default processing state
+          }
+          
           activityList.push({
             id: `message-${idx}`,
             timestamp: message.created_at,
             label: message.content,
             reviewer: message.role === 'user' ? 'Customer' : 'System',
-            activityType: message.role === 'user' ? 'human_action' : 'message'
+            activityType
           });
         });
       }
@@ -175,19 +193,18 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       case 'paused':
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-gray-400 bg-background")} />;
       case 'loading':
-        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-blue-400 bg-background")} />;
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-gray-400 bg-background")} />;
       case 'message':
         return <div className={cn(iconClasses, "rounded border-2 border-purple-400 bg-background")} />;
       case 'success':
-        return <div className={cn(iconClasses, "rounded border-2 border-green-500 bg-background")} />;
-      case 'human_action':
-        return <div className={cn(iconClasses, "rounded border-2 border-blue-300 bg-background")} />;
       case 'done':
-        return <div className={cn(iconClasses, "rounded bg-green-700")} />;
+        return <div className={cn(iconClasses, "rounded-full bg-green-500")} />;
+      case 'human_action':
+        return <div className={cn(iconClasses, "rounded-full border-2 border-blue-400 bg-background")} />;
       case 'void':
         return <div className={cn(iconClasses, "rounded border-2 border-gray-500 bg-background")} />;
       default:
-        return <div className={cn(iconClasses, "rounded border-2 border-primary bg-background")} />;
+        return <div className={cn(iconClasses, "rounded border-2 border-gray-400 bg-background")} />;
     }
   };
 
