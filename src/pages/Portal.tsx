@@ -1396,7 +1396,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   <Card className="p-6 space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Please describe more about your order
+                        Please describe more about your transaction
                       </label>
                       <p className="text-sm text-muted-foreground">
                         For example, you can share:
