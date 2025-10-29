@@ -91,6 +91,7 @@ const Portal = () => {
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
+  const isCreatingChat = useRef(false);
   
   useEffect(() => {
     // Set up auth listener FIRST to catch all auth events
@@ -105,18 +106,6 @@ const Portal = () => {
       if (event === 'SIGNED_OUT') {
         navigate("/login");
       }
-      
-      // Handle sign in event
-      if (event === 'SIGNED_IN' && currentSession?.user) {
-        // Defer to avoid race conditions; only create new chat if marked as fresh login via sessionStorage
-        setTimeout(() => {
-          const fresh = sessionStorage.getItem('portal:freshLogin') === '1';
-          if (fresh) {
-            sessionStorage.removeItem('portal:freshLogin');
-            initializeNewConversation(currentSession.user.id);
-          }
-        }, 0);
-      }
     });
 
     // Bootstrap only once (avoid double-run in React StrictMode)
@@ -128,100 +117,77 @@ const Portal = () => {
           navigate("/login");
           setIsCheckingRole(false);
         } else {
-          // Allow both bank_admin and customer to access Portal
-          // Bank admins can view customer experience, customers can use it normally
           setIsCheckingRole(false);
           setSession(currentSession);
           setUser(currentSession.user);
           
-          // Fresh login should be indicated via sessionStorage to survive navigation reliably
-          const fresh = sessionStorage.getItem('portal:freshLogin') === '1';
-          if (fresh) {
-            sessionStorage.removeItem('portal:freshLogin');
-            initializeNewConversation(currentSession.user.id);
-          } else {
-            // Try to restore last opened conversation if available and owned by user
-            const savedId = localStorage.getItem('portal:currentConversationId');
-            if (savedId) {
-              const { data: conv } = await supabase
-                .from("conversations")
-                .select("id,status,user_id")
-                .eq("id", savedId)
-                .eq("user_id", currentSession.user.id)
-                .maybeSingle();
-              if (conv) {
-                setCurrentConversationId(conv.id);
-                setIsReadOnly(conv.status === "closed");
-                loadMessages(conv.id);
-              } else {
-                localStorage.removeItem('portal:currentConversationId');
-                loadOrCreateConversation(currentSession.user.id);
-              }
+          const userId = currentSession.user.id;
+          
+          // Check for ?newChat=1 in URL to force new chat creation
+          const urlParams = new URLSearchParams(location.search);
+          if (urlParams.get('newChat') === '1') {
+            // Remove param from URL
+            urlParams.delete('newChat');
+            const newUrl = `${location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+            window.history.replaceState({}, '', newUrl);
+            
+            initializeNewConversation(userId);
+            return;
+          }
+          
+          // Try to restore active chat from sessionStorage
+          const activeChatKey = `cb_active_chat_id::${userId}`;
+          const savedChatId = sessionStorage.getItem(activeChatKey);
+          
+          if (savedChatId) {
+            // Validate saved chat exists and belongs to user
+            const { data: conv } = await supabase
+              .from("conversations")
+              .select("id,status,user_id")
+              .eq("id", savedChatId)
+              .eq("user_id", userId)
+              .maybeSingle();
+              
+            if (conv) {
+              // Restore the saved chat
+              setCurrentConversationId(conv.id);
+              setIsReadOnly(conv.status === "closed");
+              loadMessages(conv.id);
+              return;
             } else {
-              loadOrCreateConversation(currentSession.user.id);
+              // Saved chat not found, clear it
+              sessionStorage.removeItem(activeChatKey);
+              sessionStorage.removeItem(`cb_active_chat_ts::${userId}`);
             }
           }
+          
+          // No saved chat or invalid - load most recent conversation
+          const { data: existingConversations } = await supabase
+            .from("conversations")
+            .select("*")
+            .eq("user_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(1);
+          
+          if (existingConversations && existingConversations.length > 0) {
+            // Load most recent conversation
+            const conversation = existingConversations[0];
+            setCurrentConversationId(conversation.id);
+            
+            // Persist to sessionStorage
+            sessionStorage.setItem(activeChatKey, conversation.id);
+            sessionStorage.setItem(`cb_active_chat_ts::${userId}`, new Date().toISOString());
+            
+            setIsReadOnly(conversation.status === "closed");
+            loadMessages(conversation.id);
+          }
+          // If no conversations exist, don't auto-create - user must click "New Chat"
         }
       });
     }
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const loadOrCreateConversation = async (userId: string) => {
-    try {
-      // First, try to find the most recent conversation (any status)
-      const { data: existingConversations, error: fetchError } = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      if (fetchError) throw fetchError;
-
-      if (existingConversations && existingConversations.length > 0) {
-        // Load existing conversation
-        const conversation = existingConversations[0];
-        setCurrentConversationId(conversation.id);
-        localStorage.setItem('portal:currentConversationId', conversation.id);
-        setIsReadOnly(conversation.status === "closed");
-      // Fetch recent transactions for the user so the list can render immediately
-        try {
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - 120);
-          const { data: txns } = await supabase
-            .from("transactions")
-            .select("*")
-            .eq("customer_id", userId)
-            .gte("transaction_time", cutoffDate.toISOString())
-            .order("transaction_time", { ascending: false })
-            .limit(20);
-          setTransactions(txns || []);
-        } catch (e) {
-          console.error("Failed loading transactions for existing conversation", e);
-        }
-        
-        // Load existing dispute if any
-        const { data: existingDispute } = await supabase
-          .from("disputes")
-          .select("*")
-          .eq("conversation_id", conversation.id)
-          .maybeSingle();
-        
-        if (existingDispute) {
-          setCurrentDisputeId(existingDispute.id);
-        }
-        
-        loadMessages(conversation.id);
-      }
-      // If no conversations exist at all, don't create one automatically
-      // User needs to click "New Chat" button
-    } catch (error: any) {
-      console.error("Error loading conversation:", error);
-      toast.error("Failed to load conversation");
-    }
-  };
+  }, [navigate, location.search]);
 
   useEffect(() => {
     if (currentConversationId) {
@@ -275,6 +241,14 @@ const Portal = () => {
   };
 
   const initializeNewConversation = async (userId: string) => {
+    // Guard against duplicate creation
+    if (isCreatingChat.current) {
+      console.log('Chat creation already in progress, skipping...');
+      return;
+    }
+    
+    isCreatingChat.current = true;
+    
     try {
       // Create new conversation
       const { data: conversation, error: convError } = await supabase
@@ -290,7 +264,13 @@ const Portal = () => {
       if (convError) throw convError;
 
       setCurrentConversationId(conversation.id);
-      localStorage.setItem('portal:currentConversationId', conversation.id);
+      
+      // Persist to sessionStorage (per-user)
+      const activeChatKey = `cb_active_chat_id::${userId}`;
+      const activeTimestampKey = `cb_active_chat_ts::${userId}`;
+      sessionStorage.setItem(activeChatKey, conversation.id);
+      sessionStorage.setItem(activeTimestampKey, new Date().toISOString());
+      
       setIsReadOnly(false);
       // Reset UI state for a fresh conversation
       setShowTransactions(true);
@@ -358,6 +338,8 @@ const Portal = () => {
       if (msgError) throw msgError;
     } catch (error: any) {
       toast.error("Failed to create new conversation");
+    } finally {
+      isCreatingChat.current = false;
     }
   };
 
@@ -609,8 +591,8 @@ const Portal = () => {
     setSelectedTransaction(null);
     setEligibilityResult(null);
     setSelectedReason(null);
-      setUploadedDocuments([]);
-      setArtifacts([]);
+    setUploadedDocuments([]);
+    setArtifacts([]);
     setOrderDetails("");
     setAiClassification(null);
     setIsAnalyzingReason(false);
@@ -619,11 +601,18 @@ const Portal = () => {
     
     // Then update conversation and load new data
     setCurrentConversationId(conversationId);
-    localStorage.setItem('portal:currentConversationId', conversationId);
+    
+    // Persist to sessionStorage (per-user)
+    if (user) {
+      const activeChatKey = `cb_active_chat_id::${user.id}`;
+      const activeTimestampKey = `cb_active_chat_ts::${user.id}`;
+      sessionStorage.setItem(activeChatKey, conversationId);
+      sessionStorage.setItem(activeTimestampKey, new Date().toISOString());
+    }
   };
 
   const handleNewChat = () => {
-    if (user) {
+    if (user && !isCreatingChat.current) {
       initializeNewConversation(user.id);
     }
   };
