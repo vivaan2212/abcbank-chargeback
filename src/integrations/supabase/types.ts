@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      chargeback_actions: {
+        Row: {
+          action_type: string
+          admin_message: string
+          awaiting_merchant_refund: boolean
+          awaiting_settlement: boolean
+          chargeback_filed: boolean
+          created_at: string
+          customer_id: string
+          days_since_settlement: number | null
+          days_since_transaction: number
+          dispute_id: string
+          id: string
+          internal_notes: string | null
+          is_chip: boolean
+          is_contactless: boolean
+          is_facebook_meta: boolean
+          is_magstripe: boolean
+          is_restricted_mcc: boolean
+          is_secured_otp: boolean
+          is_unsecured: boolean
+          merchant_category_code: number
+          net_amount: number
+          requires_manual_review: boolean
+          temporary_credit_issued: boolean
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          admin_message: string
+          awaiting_merchant_refund?: boolean
+          awaiting_settlement?: boolean
+          chargeback_filed?: boolean
+          created_at?: string
+          customer_id: string
+          days_since_settlement?: number | null
+          days_since_transaction: number
+          dispute_id: string
+          id?: string
+          internal_notes?: string | null
+          is_chip: boolean
+          is_contactless: boolean
+          is_facebook_meta?: boolean
+          is_magstripe: boolean
+          is_restricted_mcc?: boolean
+          is_secured_otp: boolean
+          is_unsecured: boolean
+          merchant_category_code: number
+          net_amount: number
+          requires_manual_review?: boolean
+          temporary_credit_issued?: boolean
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          admin_message?: string
+          awaiting_merchant_refund?: boolean
+          awaiting_settlement?: boolean
+          chargeback_filed?: boolean
+          created_at?: string
+          customer_id?: string
+          days_since_settlement?: number | null
+          days_since_transaction?: number
+          dispute_id?: string
+          id?: string
+          internal_notes?: string | null
+          is_chip?: boolean
+          is_contactless?: boolean
+          is_facebook_meta?: boolean
+          is_magstripe?: boolean
+          is_restricted_mcc?: boolean
+          is_secured_otp?: boolean
+          is_unsecured?: boolean
+          merchant_category_code?: number
+          net_amount?: number
+          requires_manual_review?: boolean
+          temporary_credit_issued?: boolean
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chargeback_actions_dispute_id_fkey"
+            columns: ["dispute_id"]
+            isOneToOne: false
+            referencedRelation: "disputes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chargeback_actions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string | null

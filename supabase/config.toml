@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.clear-all-data]
 verify_jwt = true
+
+[functions.process-chargeback-action]
+verify_jwt = true

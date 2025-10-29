@@ -23,12 +23,21 @@ interface Transaction {
   pos_entry_mode: number;
   refund_received: boolean;
   refund_amount: number;
+  settled: boolean;
+  settlement_date: string | null;
   created_at: string;
 }
 
 const MIN_AMOUNT_AED = 15; // For internal flagging only
 const SECURED_INDICATIONS = [2, 212]; // OTP-secured
 const WALLET_TYPES = ['Apple Pay', 'Google Pay'];
+
+function calculateDaysSince(dateString: string): number {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -101,6 +110,19 @@ Deno.serve(async (req) => {
 
     const tx = transaction as unknown as Transaction;
     const ineligibleReasons: string[] = [];
+
+    // Check if transaction is settled - block unsettled transactions early
+    if (!tx.settled) {
+      const days_since_tx = calculateDaysSince(tx.transaction_time);
+      
+      if (days_since_tx < 3) {
+        ineligibleReasons.push('Transaction is not yet settled. Settlement typically takes 2-3 business days. Please try again after settlement.');
+      } else if (days_since_tx > 21) {
+        ineligibleReasons.push('Transaction has been pending settlement for an unusually long time (>21 days). Please contact customer support for assistance.');
+      } else {
+        ineligibleReasons.push('Transaction is not yet settled. Please try again in a few days once the transaction has been settled by the merchant.');
+      }
+    }
 
     // Calculate base_amount: Use local_transaction_amount if it's in AED and > 0, otherwise use transaction_amount
     const localAmount = Number(tx.local_transaction_amount ?? 0);

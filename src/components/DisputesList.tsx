@@ -49,6 +49,26 @@ interface Dispute {
     pos_entry_mode?: number;
     secured_indication?: number;
   };
+  chargeback_actions?: Array<{
+    id: string;
+    action_type: string;
+    admin_message: string;
+    temporary_credit_issued: boolean;
+    chargeback_filed: boolean;
+    awaiting_settlement: boolean;
+    awaiting_merchant_refund: boolean;
+    requires_manual_review: boolean;
+    net_amount: number;
+    days_since_transaction: number;
+    days_since_settlement: number | null;
+    is_secured_otp: boolean;
+    is_unsecured: boolean;
+    merchant_category_code: number;
+    is_restricted_mcc: boolean;
+    is_facebook_meta: boolean;
+    created_at: string;
+    updated_at: string;
+  }>;
 }
 
 interface DisputesListProps {
@@ -118,6 +138,26 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
             wallet_type,
             pos_entry_mode,
             secured_indication
+          ),
+          chargeback_actions(
+            id,
+            action_type,
+            admin_message,
+            temporary_credit_issued,
+            chargeback_filed,
+            awaiting_settlement,
+            awaiting_merchant_refund,
+            requires_manual_review,
+            net_amount,
+            days_since_transaction,
+            days_since_settlement,
+            is_secured_otp,
+            is_unsecured,
+            merchant_category_code,
+            is_restricted_mcc,
+            is_facebook_meta,
+            created_at,
+            updated_at
           )
         `)
         .order("updated_at", { ascending: false });
@@ -135,14 +175,17 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
           "eligibility_checked",
           "reason_selected",
           "documents_uploaded",
-          "under_review"
+          "under_review",
+          "awaiting_investigation",
+          "chargeback_filed",
+          "awaiting_merchant_refund"
         ]);
       } else if (statusFilter === "done") {
         query = query.in("status", ["approved", "completed", "ineligible"]);
       } else if (statusFilter === "needs_attention") {
-        query = query.in("status", ["requires_action"]);
+        query = query.in("status", ["requires_action", "pending_manual_review", "awaiting_settlement"]);
       } else if (statusFilter === "void") {
-        query = query.in("status", ["rejected", "cancelled"]);
+        query = query.in("status", ["rejected", "cancelled", "expired"]);
       }
 
       const { data, error } = await query;
@@ -336,10 +379,16 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
       reason_selected: "Reason selected",
       documents_uploaded: "Documents uploaded",
       under_review: "Chargeback filing in progress...",
+      awaiting_investigation: "Awaiting Investigation",
+      chargeback_filed: "Chargeback Filed",
+      awaiting_merchant_refund: "Awaiting Merchant Refund",
+      awaiting_settlement: "Awaiting Settlement",
+      pending_manual_review: "Pending Manual Review",
       approved: "Approved",
       completed: "Completed",
       rejected: "Rejected",
       cancelled: "Cancelled",
+      expired: "Expired",
       requires_action: "Requires action",
       ineligible: "Ineligible"
     };
@@ -515,12 +564,32 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
                   {getSortIcon('transaction.local_transaction_currency')}
                 </div>
               </TableHead>
+              <TableHead className="whitespace-nowrap">
+                <div className="flex items-center justify-between">
+                  <span>Action Type</span>
+                </div>
+              </TableHead>
+              <TableHead className="whitespace-nowrap">
+                <div className="flex items-center justify-between">
+                  <span>Admin Message</span>
+                </div>
+              </TableHead>
+              <TableHead className="whitespace-nowrap">
+                <div className="flex items-center justify-between">
+                  <span>Temp Credit</span>
+                </div>
+              </TableHead>
+              <TableHead className="whitespace-nowrap">
+                <div className="flex items-center justify-between">
+                  <span>Chargeback Filed</span>
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {disputes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={16} className="h-64">
+                <TableCell colSpan={20} className="h-64">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="rounded-full bg-muted p-4 mb-4">
                       <svg className="h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -571,6 +640,26 @@ const DisputesList = ({ statusFilter, userId, filters }: DisputesListProps) => {
                   </TableCell>
                   <TableCell>{dispute.transaction?.local_transaction_amount ?? "-"}</TableCell>
                   <TableCell>{dispute.transaction?.local_transaction_currency ?? "-"}</TableCell>
+                  <TableCell>
+                    {dispute.chargeback_actions && dispute.chargeback_actions.length > 0
+                      ? dispute.chargeback_actions[0].action_type.replace(/_/g, ' ')
+                      : "-"}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate" title={dispute.chargeback_actions?.[0]?.admin_message}>
+                    {dispute.chargeback_actions && dispute.chargeback_actions.length > 0
+                      ? dispute.chargeback_actions[0].admin_message
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {dispute.chargeback_actions && dispute.chargeback_actions.length > 0
+                      ? (dispute.chargeback_actions[0].temporary_credit_issued ? "✓ Yes" : "✗ No")
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {dispute.chargeback_actions && dispute.chargeback_actions.length > 0
+                      ? (dispute.chargeback_actions[0].chargeback_filed ? "✓ Yes" : "✗ No")
+                      : "-"}
+                  </TableCell>
                 </TableRow>
               ))
             )}
