@@ -170,6 +170,60 @@ export type Database = {
         }
         Relationships: []
       }
+      dispute_decisions: {
+        Row: {
+          audit: Json
+          base_amount_usd: number | null
+          created_at: string
+          customer_id: string
+          decision: string
+          dispute_id: string
+          evaluated_at: string
+          flags: Json
+          id: string
+          inputs_hash: string
+          next_actions: Json
+          policy_code: string
+          reason_summary: string
+          remaining_amount_usd: number | null
+          transaction_id: string
+        }
+        Insert: {
+          audit: Json
+          base_amount_usd?: number | null
+          created_at?: string
+          customer_id: string
+          decision: string
+          dispute_id: string
+          evaluated_at?: string
+          flags?: Json
+          id?: string
+          inputs_hash: string
+          next_actions?: Json
+          policy_code: string
+          reason_summary: string
+          remaining_amount_usd?: number | null
+          transaction_id: string
+        }
+        Update: {
+          audit?: Json
+          base_amount_usd?: number | null
+          created_at?: string
+          customer_id?: string
+          decision?: string
+          dispute_id?: string
+          evaluated_at?: string
+          flags?: Json
+          id?: string
+          inputs_hash?: string
+          next_actions?: Json
+          policy_code?: string
+          reason_summary?: string
+          remaining_amount_usd?: number | null
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       disputes: {
         Row: {
           conversation_id: string | null

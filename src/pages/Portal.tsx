@@ -1364,30 +1364,113 @@ Let me check if this transaction is eligible for a chargeback...`;
           console.log('Verification result:', verificationData);
 
           if (verificationData.success) {
-            // All documents are valid - update status and show success message
-            if (currentDisputeId) {
-              await supabase
-                .from("disputes")
-                .update({ status: "under_review" })
-                .eq("id", currentDisputeId);
+            // All documents are valid - now evaluate decision
+            if (currentDisputeId && selectedTransaction) {
+              console.log('Calling evaluate-decision function...');
+              
+              // Prepare docCheck from verification results
+              const docCheck = verificationData.results.map((r: any) => ({
+                key: r.requirement,
+                isValid: r.isValid,
+                reason: r.reason
+              }));
 
-              await supabase
-                .from("messages")
-                .insert({
-                  conversation_id: currentConversationId,
-                  role: "assistant",
-                  content: "✅ All documents have been verified successfully! Your dispute has been submitted and is now under review. We will update you shortly with the outcome. Thank you for your patience.",
-                });
+              // Get session for auth
+              const { data: { session } } = await supabase.auth.getSession();
+              if (!session?.access_token) {
+                toast.error('Session expired. Please sign in again.');
+                navigate('/login');
+                return;
+              }
 
-              // Keep artifacts visible but reset other state
-              setSelectedTransaction(null);
-              setSelectedReason(null);
-              setAiClassification(null);
-              setUploadedDocuments([]);
-              setShowReasonPicker(false);
-              setShowDocumentUpload(false);
-              setShowTransactions(false);
-              setShowContinueOrEndButtons(false);
+              // Call decision engine
+              const decisionResponse = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evaluate-decision`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({
+                    disputeId: currentDisputeId,
+                    transactionId: selectedTransaction.id,
+                    docCheck
+                  })
+                }
+              );
+
+              if (!decisionResponse.ok) {
+                const errorData = await decisionResponse.json();
+                throw new Error(errorData.error || 'Failed to evaluate decision');
+              }
+
+              const decisionData = await decisionResponse.json();
+              console.log('Decision result:', decisionData);
+
+              if (decisionData.success && decisionData.decision) {
+                const decision = decisionData.decision;
+                
+                // Map decision to user-friendly message
+                let statusMessage = '';
+                let finalStatus = 'under_review';
+                
+                switch (decision.decision) {
+                  case 'FILE_CHARGEBACK':
+                    statusMessage = `✅ Your dispute has been approved! We've filed a chargeback with the card network for $${decision.remaining_amount_usd.toFixed(2)} USD.\n\n${decision.reason_summary}`;
+                    finalStatus = 'approved';
+                    break;
+                  case 'FILE_CHARGEBACK_WITH_TEMP_CREDIT':
+                    statusMessage = `✅ Great news! We've approved your dispute and issued a temporary credit of $${decision.remaining_amount_usd.toFixed(2)} USD to your account. We've also filed a chargeback with the card network.\n\n${decision.reason_summary}`;
+                    finalStatus = 'approved';
+                    break;
+                  case 'WAIT_FOR_SETTLEMENT':
+                    statusMessage = `⏳ Your dispute is being processed. ${decision.reason_summary} We'll update you within 24 hours.`;
+                    finalStatus = 'pending';
+                    break;
+                  case 'REQUEST_REFUND_FROM_MERCHANT':
+                    statusMessage = `🔄 We're requesting a refund directly from the merchant. ${decision.reason_summary} You should receive an update within 5-7 business days.`;
+                    finalStatus = 'pending';
+                    break;
+                  case 'DECLINE_NOT_ELIGIBLE':
+                    statusMessage = `❌ Unfortunately, your dispute is not eligible for a chargeback. ${decision.reason_summary}`;
+                    finalStatus = 'denied';
+                    break;
+                  case 'MANUAL_REVIEW':
+                    statusMessage = `🔍 Your case requires additional review by our team. ${decision.reason_summary} We'll get back to you within 2-3 business days.`;
+                    finalStatus = 'under_review';
+                    break;
+                  default:
+                    statusMessage = '✅ Your dispute has been submitted and is under review.';
+                }
+
+                // Update dispute status
+                await supabase
+                  .from("disputes")
+                  .update({ status: finalStatus })
+                  .eq("id", currentDisputeId);
+
+                // Insert final message
+                await supabase
+                  .from("messages")
+                  .insert({
+                    conversation_id: currentConversationId,
+                    role: "assistant",
+                    content: statusMessage,
+                  });
+
+                // Reset state
+                setSelectedTransaction(null);
+                setSelectedReason(null);
+                setAiClassification(null);
+                setUploadedDocuments([]);
+                setShowReasonPicker(false);
+                setShowDocumentUpload(false);
+                setShowTransactions(false);
+                setShowContinueOrEndButtons(false);
+              } else {
+                throw new Error('Decision evaluation failed');
+              }
             }
           } else {
             // Some documents failed verification

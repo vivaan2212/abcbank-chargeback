@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.delete-conversation]
 verify_jwt = true
+
+[functions.evaluate-decision]
+verify_jwt = true
