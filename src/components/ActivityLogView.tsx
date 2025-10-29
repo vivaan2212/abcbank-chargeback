@@ -86,7 +86,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       // 3. Eligibility milestone
       if (dispute.eligibility_status) {
-        const isEligible = dispute.eligibility_status === 'eligible';
+        const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
         let eligibilityLabel = 'Transaction is eligible for chargeback';
         let eligibilityDetails = '';
         
