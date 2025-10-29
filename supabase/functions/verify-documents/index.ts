@@ -164,39 +164,58 @@ IMPORTANT: Understand the dispute context. For example:
         content = [
           {
             type: "text",
-            text: `You are a context-aware image/document verifier for chargeback disputes.
+            text: `You are an image verifier for chargeback evidence. You will be given two inputs:
 
-CRITICAL TWO-STEP VERIFICATION PROCESS:
+Requested document type — what the system expects (e.g., "Invoice", "Proof of purchase", "Cancellation confirmation", "Delivery tracking", "Refund confirmation", "Bank statement", "Communication / support ticket").
 
-STEP 1: DOCUMENT TYPE MATCH (STRICT) ⚠️
-First, verify if this image is the CORRECT TYPE of document requested.
-- If requirement asks for "bank statement" → MUST be a bank/credit card statement
-- If requirement asks for "invoice/receipt" → MUST be an invoice or receipt
-- If requirement asks for "email/communication" → MUST be email or message correspondence
-- If requirement asks for "tracking/shipping" → MUST be delivery or shipping document
-- If requirement asks for "product photo" → MUST be actual photo of physical product
-- If requirement asks for "cancellation confirmation" → MUST be cancellation-related document
+Uploaded image — the file the customer submitted.
 
-⛔ REJECT if document type is completely wrong (e.g., invoice uploaded for "bank statement" requirement)
-⛔ REJECT if same document tries to fulfill multiple incompatible requirements
+Goal:
+Decide whether the uploaded image is the correct document type and reasonably supports the customer's dispute. If it is, approve it. If it is not, reject and give a precise, actionable resubmit instruction that tells the customer what to upload instead.
 
-STEP 2: CONTENT QUALITY (LENIENT) ✅
-Once type is confirmed correct, be lenient about formatting and minor details:
-- Missing invoice numbers, perfect formatting, or logos → Still accept
-- Partial information or incomplete details → Still accept if readable
-- Non-professional quality (phone photos, etc.) → Still accept if clear enough
+General rules (use common sense, be context-aware):
 
-DISPUTE CONTEXT MAPPING:
+Focus on document type, readability, and relevance — not perfection.
 
-| Dispute Type | What Evidence Should Show |
-|--------------|---------------------------|
-| Unauthorized Transaction | Account statement, fraud claim confirming unauthorized use |
-| Item Not Received | Order proof, merchant communication, tracking showing non-receipt |
-| Received Wrong Item | Order confirmation showing mismatch between ordered vs received |
-| Damaged/Defective Item | Invoice, warranty, correspondence showing damage/defect |
-| Refund Not Received | Refund promise, confirmation credit not processed |
-| Service Not Rendered | Invoice/order for service that wasn't delivered |
-| Other (custom reason) | Document supporting the described situation |
+Do NOT reject a document only because it lacks invoice numbers, order IDs, or exact totals. Accept plausible, readable images that match the requested type.
+
+Reject if the image is unreadable (blank/corrupted), obviously unrelated (project plan when invoice expected), or clearly fake/manipulated.
+
+If the image could be the correct type but is ambiguous (e.g., cropped, only partial), ask for resubmission with a specific instruction (what to include / better photo / upload original document).
+
+How to evaluate:
+
+Identify the document type from the image (header words like INVOICE, RECEIPT, STATEMENT, EMAIL, CANCELLATION, CONFIRMATION; or layout that matches such documents).
+
+Confirm the image is readable (text not blurred; content visible).
+
+Confirm relevance to the requested type and to the customer's explanation (e.g., if reason is "received wrong item", the image should show order info or merchant communication relevant to that order).
+
+If valid, produce isValid: true and a short reason explaining what made it valid (e.g., "Image clearly labeled 'INVOICE' and contains merchant name and order details matching the claim.").
+
+If invalid or ambiguous, produce isValid: false and a clear resubmit instruction telling the user exactly what to upload instead (e.g., "Please re-upload the order confirmation or invoice — we need an image showing the merchant name and order date; if you have a PDF, please upload the original document instead of a screenshot").
+
+Acceptance heuristics (be permissive):
+
+Invoice / Receipt: accept if the image looks like an invoice/receipt (has merchant name, line items or payment summary, and a date) even if invoice number is missing.
+
+Bank Statement: accept if image contains transaction list and account heading even if account number is partially masked.
+
+Cancellation Confirmation / Refund Confirmation: accept if image contains a clear message or header from merchant stating cancellation or refund (email screenshot or document photo OK).
+
+Communication / Support Ticket: accept if image contains sender/recipient and message text showing the request or merchant response.
+
+Product Photo: accept if image shows the actual physical product relevant to the dispute (e.g., wrong item received, damaged item).
+
+Reject / ask to resubmit when (examples):
+
+Image is blank, corrupted, unreadable → ask to re-upload clear photo or original document.
+
+Image is a screenshot of a website where the user was asked to upload an official document → ask for original document or a proper export.
+
+Image is clearly unrelated (e.g., a project plan) → explain mismatch and ask for the required doc type.
+
+Image is partially cropped or missing important details → ask to upload the full document or a better photo.
 
 ${disputeInfo}
 
@@ -205,31 +224,28 @@ Expected types: ${requirement.uploadType.join(', ')}
 
 ${getDocumentTypeRequirements(requirement.name)}
 
-REJECTION CRITERIA:
-❌ Document type doesn't match requirement (STRICT - always reject)
-❌ Image is blank, completely unreadable, or corrupted
-❌ Content is completely unrelated to the dispute
-❌ Document appears fake, templated, or fabricated
-❌ Wrong format (e.g., website screenshot when actual document needed)
+Output (JSON only) — always return exactly this structure:
 
-ACCEPTANCE CRITERIA:
-✅ Document type matches requirement (even if not perfect quality)
-✅ Content is readable and supports the dispute context
-✅ Document appears authentic (not fake or template)
-✅ Relevant to customer's explanation
-
-VERIFICATION CHECKLIST:
-1. ⚠️ CRITICAL: Is this the CORRECT TYPE of document? (bank statement vs invoice vs email vs photo)
-2. ✓ Is it readable and not blank/corrupted?
-3. ✓ Does content relate to the dispute?
-4. ✓ Does it appear authentic?
-5. ✓ Does it support the customer's claim?
-
-Respond with JSON only:
 {
-  "isValid": true/false,
-  "reason": "Brief explanation focusing on whether document TYPE matches and if content is relevant"
-}`
+  "isValid": true|false,
+  "reason": "Short, specific explanation. If false, include a clear resubmit instruction exactly saying what to upload next."
+}
+
+Examples of valid responses:
+
+{"isValid": true, "reason":"Valid invoice: Image shows 'INVOICE' header, merchant 'ACME STORE', order date present — supports claim."}
+
+{"isValid": false, "reason":"Unreadable: Image is too blurred. Please re-upload a clear photo of the invoice or order confirmation."}
+
+Extra guidance for resubmit messages (be explicit):
+
+If asking for an invoice: "Please re-upload the invoice or order confirmation showing the merchant name and order date. A screenshot of a product page is not acceptable."
+
+If asking for bank statement proof: "Please upload a bank statement showing the transaction line with merchant name and date. If you only have an app screenshot, upload a full PDF export or a clear photo of the full statement page."
+
+If asking for cancellation confirmation: "Please upload the merchant's cancellation confirmation (showing the cancellation/acknowledgement text). A screenshot of account settings alone is insufficient."
+
+Be concise in the JSON reason — include the key evidence found/missing and explicit next step when asking to resubmit.`
           },
           {
             type: "image_url",
@@ -258,39 +274,56 @@ IMPORTANT: Understand the dispute context. For example:
         console.log(`Performing full AI content analysis for PDF: ${file.name}`);
 
         // Embed the base64 PDF directly in the prompt for Gemini to analyze
-        content = `You are a context-aware PDF document verifier for chargeback disputes.
+        content = `You are a PDF verifier for chargeback evidence. You will be given two inputs:
 
-CRITICAL TWO-STEP VERIFICATION PROCESS:
+Requested document type — what the system expects (e.g., "Invoice", "Proof of purchase", "Cancellation confirmation", "Delivery tracking", "Refund confirmation", "Bank statement", "Communication / support ticket").
 
-STEP 1: DOCUMENT TYPE MATCH (STRICT) ⚠️
-First, verify if this PDF is the CORRECT TYPE of document requested.
-- If requirement asks for "bank statement" → MUST be a bank/credit card statement
-- If requirement asks for "invoice/receipt" → MUST be an invoice or receipt
-- If requirement asks for "email/communication" → MUST be email or message correspondence
-- If requirement asks for "tracking/shipping" → MUST be delivery or shipping document
-- If requirement asks for "cancellation confirmation" → MUST be cancellation-related document
+Uploaded PDF — the file the customer submitted.
 
-⛔ REJECT if document type is completely wrong (e.g., cancellation email uploaded for "bank statement" requirement)
-⛔ REJECT if same document tries to fulfill multiple incompatible requirements
-⛔ A single document cannot be both "bank statement" AND "cancellation email" simultaneously
+Goal:
+Decide whether the uploaded PDF is the correct document type and reasonably supports the customer's dispute. If it is, approve it. If it is not, reject and give a precise, actionable resubmit instruction that tells the customer what to upload instead.
 
-STEP 2: CONTENT QUALITY (LENIENT) ✅
-Once type is confirmed correct, be lenient about formatting and minor details:
-- Missing invoice numbers, perfect totals, or logos → Still accept
-- Partial information or incomplete details → Still accept if readable
-- Non-professional formatting → Still accept if content is clear
+General rules (use common sense, be context-aware):
 
-DISPUTE CONTEXT MAPPING:
+Focus on document type, readability, and relevance — not perfection.
 
-| Dispute Type | What Evidence Should Show |
-|--------------|---------------------------|
-| Unauthorized Transaction | Account statement, fraud claim confirming unauthorized use |
-| Item Not Received | Order proof, merchant communication, tracking showing non-receipt |
-| Received Wrong Item | Order confirmation showing mismatch between ordered vs received |
-| Damaged/Defective Item | Invoice, warranty, correspondence showing damage/defect |
-| Refund Not Received | Refund promise, confirmation credit not processed |
-| Service Not Rendered | Invoice/order for service that wasn't delivered |
-| Other (custom reason) | Document supporting the described situation |
+Do NOT reject a document only because it lacks invoice numbers, order IDs, or exact totals. Accept plausible, readable PDFs that match the requested type.
+
+Reject if the PDF is unreadable (blank/corrupted), obviously unrelated (project plan when invoice expected), or clearly fake/manipulated.
+
+If the PDF could be the correct type but is ambiguous (e.g., cropped, only partial), ask for resubmission with a specific instruction (what to include / better photo / upload original PDF).
+
+How to evaluate:
+
+Identify the document type from the PDF (header words like INVOICE, RECEIPT, STATEMENT, EMAIL, CANCELLATION, CONFIRMATION; or page layout that matches such documents).
+
+Confirm the document is readable (text not blurred; pages render).
+
+Confirm relevance to the requested type and to the customer's explanation (e.g., if reason is "received wrong item", the PDF should show order info or merchant communication relevant to that order).
+
+If valid, produce isValid: true and a short reason explaining what made it valid (e.g., "PDF clearly labeled 'INVOICE' and contains merchant name and order details matching the claim.").
+
+If invalid or ambiguous, produce isValid: false and a clear resubmit instruction telling the user exactly what to upload instead (e.g., "Please re-upload the order confirmation or invoice — we need a PDF showing the merchant name and order date; if you only have a screenshot, upload the full email or the original PDF").
+
+Acceptance heuristics (be permissive):
+
+Invoice / Receipt: accept if the PDF looks like an invoice/receipt (has merchant name, line items or payment summary, and a date) even if invoice number is missing.
+
+Bank Statement: accept if PDF contains transaction list and account heading even if account number is partially masked.
+
+Cancellation Confirmation / Refund Confirmation: accept if PDF contains a clear message or header from merchant stating cancellation or refund (email export or PDF print OK).
+
+Communication / Support Ticket: accept if PDF contains sender/recipient and message text showing the request or merchant response.
+
+Reject / ask to resubmit when (examples):
+
+PDF is blank, corrupted, unreadable → ask to re-upload original PDF.
+
+PDF is a screenshot of a website where the user was asked to upload an official document → ask for original PDF or a cropped export of the email containing the confirmation.
+
+PDF is clearly unrelated (e.g., a project plan) → explain mismatch and ask for the required doc type.
+
+PDF is partially cropped or missing important pages → ask to upload the full PDF or the original email/attachment.
 
 ${disputeInfo}
 
@@ -299,33 +332,36 @@ Expected types: ${requirement.uploadType.join(', ')}
 
 ${getDocumentTypeRequirements(requirement.name)}
 
-REJECTION CRITERIA:
-❌ Document type doesn't match requirement (STRICT - always reject)
-❌ File is blank, unreadable, or corrupted
-❌ Content is completely unrelated to the dispute
-❌ Document appears fake, templated, or fabricated
-❌ Wrong format (e.g., invoice when bank statement required)
+Output (JSON only) — always return exactly this structure:
 
-ACCEPTANCE CRITERIA:
-✅ Document type matches requirement (even if formatting isn't perfect)
-✅ Content is readable and supports the dispute context
-✅ Document appears authentic (not fake or template)
-✅ Relevant to customer's explanation
+{
+  "isValid": true|false,
+  "reason": "Short, specific explanation. If false, include a clear resubmit instruction exactly saying what to upload next."
+}
 
-VERIFICATION CHECKLIST:
-1. ⚠️ CRITICAL: Is this the CORRECT TYPE of document? (bank statement vs invoice vs email vs shipping doc)
-2. ✓ Is it readable and not blank/corrupted?
-3. ✓ Does content relate to the dispute?
-4. ✓ Does it appear authentic?
-5. ✓ Does it support the customer's claim?
+Examples of valid responses:
+
+{"isValid": true, "reason":"Valid invoice: PDF header 'INVOICE', merchant 'ACME STORE', order date present — supports claim."}
+
+{"isValid": false, "reason":"Unreadable: PDF pages are blurred. Please re-upload the original PDF or a clear export of the invoice or order confirmation."}
+
+Extra guidance for resubmit messages (be explicit):
+
+If asking for an invoice: "Please re-upload the invoice or order confirmation PDF showing the merchant name and order date. A screenshot of a product page is not acceptable."
+
+If asking for bank statement proof: "Please upload a bank statement PDF showing the transaction line with merchant name and date. If you only have an app screenshot, upload the full PDF export or a photo of the full statement page."
+
+If asking for cancellation confirmation: "Please upload the merchant's cancellation confirmation email or PDF (showing the cancellation/acknowledgement text). A screenshot of account settings alone is insufficient."
+
+Be concise in the JSON reason — include the key evidence found/missing and explicit next step when asking to resubmit.
 
 PDF Document (base64-encoded):
 ${base64}
 
 Respond with JSON only:
 {
-  "isValid": true/false,
-  "reason": "Brief explanation focusing on whether document TYPE matches requirement and if content is relevant"
+  "isValid": true|false,
+  "reason": "Short, specific explanation. If false, include a clear resubmit instruction exactly saying what to upload next."
 }`;
       } else {
         // For other document types (Word, text files, etc.), do metadata-only checks
