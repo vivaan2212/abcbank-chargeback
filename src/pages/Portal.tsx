@@ -351,13 +351,21 @@ const Portal = () => {
 
   useEffect(() => {
     // Auto-scroll to bottom when messages change with smooth animation
+    // ScrollArea uses Radix UI which has a nested viewport element
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      // Find the viewport element inside ScrollArea (it's the actual scrollable element)
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      if (viewport) {
+        // Use requestAnimationFrame for smoother scrolling
+        requestAnimationFrame(() => {
+          viewport.scrollTo({
+            top: viewport.scrollHeight,
+            behavior: 'smooth'
+          });
+        });
+      }
     }
-  }, [messages]);
+  }, [messages, showTransactions, showReasonPicker, showDocumentUpload, showOrderDetailsInput, showContinueOrEndButtons, isCheckingEligibility, isCheckingDocuments, isAnalyzingReason]);
 
   const checkConversationStatus = async (conversationId: string) => {
     const { data } = await supabase
