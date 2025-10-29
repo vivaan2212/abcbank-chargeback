@@ -140,6 +140,36 @@ export type Database = {
         }
         Relationships: []
       }
+      delete_operations: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          deleted_at: string
+          id: string
+          idempotency_key: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          deleted_at?: string
+          id?: string
+          idempotency_key: string
+          result?: Json
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          deleted_at?: string
+          id?: string
+          idempotency_key?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       disputes: {
         Row: {
           conversation_id: string | null
@@ -375,6 +405,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      purge_old_delete_operations: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "customer" | "bank_admin"

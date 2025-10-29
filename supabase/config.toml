@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.process-chargeback-action]
 verify_jwt = true
+
+[functions.delete-conversation]
+verify_jwt = true

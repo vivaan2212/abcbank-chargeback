@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -11,6 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Conversation {
   id: string;
@@ -27,6 +37,10 @@ interface ChatHistoryProps {
 
 const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }: ChatHistoryProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteInProgressRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     loadConversations();
@@ -46,39 +60,115 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
     }
   };
 
-  const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+  const openDeleteDialog = (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Get remaining conversations after deletion
+    setConversationToDelete(conversationId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!conversationToDelete || isDeleting) return;
+
+    // Prevent duplicate requests
+    if (deleteInProgressRef.current.has(conversationToDelete)) {
+      console.log('Delete already in progress for:', conversationToDelete);
+      return;
+    }
+
+    deleteInProgressRef.current.add(conversationToDelete);
+    setIsDeleting(true);
+
+    const conversationId = conversationToDelete;
+    const originalConversations = [...conversations];
     const remainingConversations = conversations.filter(conv => conv.id !== conversationId);
-    
-    // Immediately remove from UI
+
+    // Optimistically update UI
     setConversations(remainingConversations);
-    
+    setDeleteDialogOpen(false);
+
     // If deleted conversation was the current one
     if (currentConversationId === conversationId) {
-      // Only create new chat if no other conversations exist
       if (remainingConversations.length === 0) {
+        sessionStorage.removeItem(`cb_active_chat_id::${(await supabase.auth.getUser()).data.user?.id}`);
         onNewChat();
       } else {
-        // Select the first available conversation
-        onConversationSelect(remainingConversations[0].id);
+        const newActiveId = remainingConversations[0].id;
+        sessionStorage.setItem(
+          `cb_active_chat_id::${(await supabase.auth.getUser()).data.user?.id}`,
+          newActiveId
+        );
+        onConversationSelect(newActiveId);
       }
     }
-    
+
     try {
-      const { error } = await supabase
-        .from("conversations")
-        .delete()
-        .eq("id", conversationId);
-
-      if (error) throw error;
-
-      toast.success("Conversation deleted");
+      await deleteConversationWithRetry(conversationId);
+      toast.success("Chat deleted");
     } catch (error: any) {
-      toast.error("Failed to delete conversation");
-      // Reload on error to restore accurate state
-      loadConversations();
+      console.error('Delete failed:', error);
+      toast.error("Couldn't delete. Try again.");
+      // Rollback UI
+      setConversations(originalConversations);
+      if (currentConversationId === conversationId) {
+        onConversationSelect(conversationId);
+      }
+    } finally {
+      deleteInProgressRef.current.delete(conversationId);
+      setIsDeleting(false);
+      setConversationToDelete(null);
+    }
+  };
+
+  const deleteConversationWithRetry = async (
+    conversationId: string,
+    attempt: number = 1
+  ): Promise<void> => {
+    const maxRetries = 3;
+    const idempotencyKey = crypto.randomUUID();
+    const timeout = 8000;
+
+    const retryDelays = [0, 400, 1200]; // exponential backoff
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-conversation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'x-idempotency-key': idempotencyKey,
+          },
+          body: JSON.stringify({ conversationId }),
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Delete failed');
+      }
+
+      const result = await response.json();
+      console.log('Delete succeeded:', result);
+    } catch (error: any) {
+      console.error(`Delete attempt ${attempt} failed:`, error);
+
+      if (attempt < maxRetries) {
+        const delay = retryDelays[attempt - 1] || 1200;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return deleteConversationWithRetry(conversationId, attempt + 1);
+      }
+
+      throw error;
     }
   };
 
@@ -153,7 +243,7 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
                     className="z-50 bg-popover text-popover-foreground border border-border shadow-md"
                   >
                     <DropdownMenuItem
-                      onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                      onClick={(e) => openDeleteDialog(conversation.id, e)}
                       className="text-destructive focus:text-destructive cursor-pointer"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -166,6 +256,34 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
           ))}
         </div>
       </ScrollArea>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The conversation and all its messages will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
