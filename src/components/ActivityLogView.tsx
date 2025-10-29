@@ -40,6 +40,25 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     loadDisputeData();
   }, [disputeId]);
 
+  // Realtime updates for dispute status and chargeback actions
+  useEffect(() => {
+    if (!disputeId) return;
+
+    const channel = supabase
+      .channel(`activity-log-${disputeId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chargeback_actions', filter: `dispute_id=eq.${disputeId}` }, () => {
+        loadDisputeData();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'disputes', filter: `id=eq.${disputeId}` }, () => {
+        loadDisputeData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [disputeId]);
+
   const loadDisputeData = async () => {
     setLoading(true);
     try {
@@ -431,9 +450,15 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     const statusMap: Record<string, { label: string; color: string }> = {
       completed: { label: "Done", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
       approved: { label: "Approved", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
+      chargeback_filed: { label: "Chargeback filed", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+      under_review: { label: "Under review", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
+      awaiting_merchant_refund: { label: "Awaiting refund", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
+      awaiting_settlement: { label: "Awaiting settlement", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
+      pending_manual_review: { label: "Manual review", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
       rejected: { label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
       void: { label: "Void", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
       cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
+      ineligible: { label: "Ineligible", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
       in_progress: { label: "In progress", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
       needs_attention: { label: "Needs attention", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" }
     };
