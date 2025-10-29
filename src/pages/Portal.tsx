@@ -92,6 +92,132 @@ const Portal = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   const isCreatingChat = useRef(false);
+  const inputDraftTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Persist UI interaction state to sessionStorage
+  const saveUIState = (chatId: string) => {
+    if (!chatId) return;
+    
+    const uiState = {
+      showTransactions,
+      showReasonPicker,
+      showDocumentUpload,
+      showOrderDetailsInput,
+      showContinueOrEndButtons,
+      needsReupload,
+      inputMessage,
+      orderDetails,
+      selectedTransaction,
+      selectedReason,
+      eligibilityResult,
+      uploadedDocuments,
+      artifacts,
+      aiClassification,
+      timestamp: new Date().toISOString()
+    };
+    
+    sessionStorage.setItem(`cb_ui::${chatId}`, JSON.stringify(uiState));
+  };
+  
+  // Restore UI interaction state from sessionStorage
+  const restoreUIState = (chatId: string): boolean => {
+    if (!chatId) return false;
+    
+    const stored = sessionStorage.getItem(`cb_ui::${chatId}`);
+    if (!stored) return false;
+    
+    try {
+      const uiState = JSON.parse(stored);
+      
+      // Only restore if timestamp is recent (within 1 hour)
+      const stateAge = Date.now() - new Date(uiState.timestamp).getTime();
+      if (stateAge > 3600000) {
+        sessionStorage.removeItem(`cb_ui::${chatId}`);
+        return false;
+      }
+      
+      // Restore UI state
+      if (uiState.showTransactions !== undefined) setShowTransactions(uiState.showTransactions);
+      if (uiState.showReasonPicker !== undefined) setShowReasonPicker(uiState.showReasonPicker);
+      if (uiState.showDocumentUpload !== undefined) setShowDocumentUpload(uiState.showDocumentUpload);
+      if (uiState.showOrderDetailsInput !== undefined) setShowOrderDetailsInput(uiState.showOrderDetailsInput);
+      if (uiState.showContinueOrEndButtons !== undefined) setShowContinueOrEndButtons(uiState.showContinueOrEndButtons);
+      if (uiState.needsReupload !== undefined) setNeedsReupload(uiState.needsReupload);
+      if (uiState.inputMessage) setInputMessage(uiState.inputMessage);
+      if (uiState.orderDetails) setOrderDetails(uiState.orderDetails);
+      if (uiState.selectedTransaction) setSelectedTransaction(uiState.selectedTransaction);
+      if (uiState.selectedReason) setSelectedReason(uiState.selectedReason);
+      if (uiState.eligibilityResult) setEligibilityResult(uiState.eligibilityResult);
+      if (uiState.uploadedDocuments) setUploadedDocuments(uiState.uploadedDocuments);
+      if (uiState.artifacts) setArtifacts(uiState.artifacts);
+      if (uiState.aiClassification) setAiClassification(uiState.aiClassification);
+      
+      return true;
+    } catch (e) {
+      console.error('Failed to restore UI state:', e);
+      return false;
+    }
+  };
+  
+  
+  // Auto-save UI state when interaction state changes
+  useEffect(() => {
+    if (currentConversationId && !isSwitchingConversation) {
+      // Debounce save to avoid excessive writes
+      const timer = setTimeout(() => {
+        saveUIState(currentConversationId);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    currentConversationId,
+    showTransactions,
+    showReasonPicker,
+    showDocumentUpload,
+    showOrderDetailsInput,
+    showContinueOrEndButtons,
+    needsReupload,
+    inputMessage,
+    orderDetails,
+    selectedTransaction,
+    selectedReason,
+    eligibilityResult,
+    uploadedDocuments,
+    artifacts,
+    aiClassification,
+    isSwitchingConversation
+  ]);
+  
+  // Handle visibility changes - preserve UI without re-evaluation
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Save current state before hiding
+        if (currentConversationId) {
+          saveUIState(currentConversationId);
+        }
+      } else {
+        // Restored visibility - do NOT trigger re-evaluation or refetch
+        // UI state is already persisted and will remain as-is
+        console.log('Tab visible again - UI state preserved');
+      }
+    };
+    
+    const handleBlur = () => {
+      // Save state on blur
+      if (currentConversationId) {
+        saveUIState(currentConversationId);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [currentConversationId]);
   
   useEffect(() => {
     // Set up auth listener FIRST to catch all auth events
@@ -347,6 +473,9 @@ const Portal = () => {
     try {
       setIsSwitchingConversation(true);
       
+      // Try to restore UI state first
+      const restoredUI = restoreUIState(conversationId);
+      
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -377,121 +506,124 @@ const Portal = () => {
         setTransactions(txns || []);
       }
 
-      // Check dispute status for this conversation to determine which UI elements to show
-      const { data: dispute } = await supabase
-        .from("disputes")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .maybeSingle();
+      // Only load dispute state if UI wasn't restored from cache
+      if (!restoredUI) {
+        // Check dispute status for this conversation to determine which UI elements to show
+        const { data: dispute } = await supabase
+          .from("disputes")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .maybeSingle();
 
-      if (dispute) {
-        setCurrentDisputeId(dispute.id);
-        
-        // Restore transaction if exists
-        if (dispute.transaction_id) {
-          const { data: txn } = await supabase
-            .from("transactions")
-            .select("*")
-            .eq("id", dispute.transaction_id)
-            .maybeSingle();
+        if (dispute) {
+          setCurrentDisputeId(dispute.id);
           
-          if (txn) {
-            setSelectedTransaction(txn as Transaction);
+          // Restore transaction if exists
+          if (dispute.transaction_id) {
+            const { data: txn } = await supabase
+              .from("transactions")
+              .select("*")
+              .eq("id", dispute.transaction_id)
+              .maybeSingle();
+            
+            if (txn) {
+              setSelectedTransaction(txn as Transaction);
+            }
+          } else {
+            setSelectedTransaction(null);
           }
-        } else {
-          setSelectedTransaction(null);
-        }
-        
-        // Restore eligibility result if exists
-        if (dispute.eligibility_status) {
-          setEligibilityResult({
-            transactionId: dispute.transaction_id || "",
-            status: dispute.eligibility_status as "ELIGIBLE" | "INELIGIBLE",
-            ineligibleReasons: dispute.eligibility_reasons || undefined
-          });
-        } else {
-          setEligibilityResult(null);
-        }
-        
-        // Restore selected reason if exists
-        if (dispute.reason_id || dispute.reason_label) {
-          setSelectedReason({
-            id: dispute.reason_id || "other",
-            label: dispute.reason_label || "Other",
-            customReason: dispute.custom_reason || undefined
-          });
-        } else {
-          setSelectedReason(null);
-        }
-        
-        // Restore order details if exists
-        if (dispute.order_details) {
-          setOrderDetails(dispute.order_details);
-        } else {
-          setOrderDetails("");
-        }
-        
-        // Restore uploaded documents from dispute if exists
-        if (dispute.documents) {
-          // Convert stored document metadata back to ArtifactDoc format
-          const storedArtifacts = (dispute.documents as any[])?.map(doc => ({
-            requirementName: doc.requirementName,
-            name: doc.name,
-            size: doc.size,
-            type: doc.type,
-            path: doc.path
-          })).filter(doc => doc.path) || [];
           
-          setArtifacts(storedArtifacts);
-          setUploadedDocuments([]);
+          // Restore eligibility result if exists
+          if (dispute.eligibility_status) {
+            setEligibilityResult({
+              transactionId: dispute.transaction_id || "",
+              status: dispute.eligibility_status as "ELIGIBLE" | "INELIGIBLE",
+              ineligibleReasons: dispute.eligibility_reasons || undefined
+            });
+          } else {
+            setEligibilityResult(null);
+          }
+          
+          // Restore selected reason if exists
+          if (dispute.reason_id || dispute.reason_label) {
+            setSelectedReason({
+              id: dispute.reason_id || "other",
+              label: dispute.reason_label || "Other",
+              customReason: dispute.custom_reason || undefined
+            });
+          } else {
+            setSelectedReason(null);
+          }
+          
+          // Restore order details if exists
+          if (dispute.order_details) {
+            setOrderDetails(dispute.order_details);
+          } else {
+            setOrderDetails("");
+          }
+          
+          // Restore uploaded documents from dispute if exists
+          if (dispute.documents) {
+            // Convert stored document metadata back to ArtifactDoc format
+            const storedArtifacts = (dispute.documents as any[])?.map(doc => ({
+              requirementName: doc.requirementName,
+              name: doc.name,
+              size: doc.size,
+              type: doc.type,
+              path: doc.path
+            })).filter(doc => doc.path) || [];
+            
+            setArtifacts(storedArtifacts);
+            setUploadedDocuments([]);
+          } else {
+            setUploadedDocuments([]);
+            setArtifacts([]);
+          }
+          
+          // Determine which UI elements to show based on status
+          const shouldShowTransactions = dispute.status === "started";
+          const shouldShowReasonPicker = dispute.status === "eligibility_checked";
+          const shouldShowDocumentUpload = dispute.status === "reason_selected";
+          const shouldShowOrderInput = dispute.status === "awaiting_order_details";
+          const shouldShowContinueButtons = dispute.status === "under_review" || dispute.status === "documents_uploaded";
+
+          setShowTransactions(shouldShowTransactions);
+          setShowReasonPicker(shouldShowReasonPicker);
+          setShowDocumentUpload(shouldShowDocumentUpload);
+          setShowOrderDetailsInput(shouldShowOrderInput);
+          setShowContinueOrEndButtons(shouldShowContinueButtons);
+          
+          // Reset analyzing state
+          setIsAnalyzingReason(false);
+          setIsCheckingDocuments(false);
+          setIsCheckingEligibility(false);
         } else {
+          // If no dispute found but conversation exists, check if it needs transaction selection
+          const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
+          if (!hasUserSelection) {
+            setShowTransactions(true);
+            setShowReasonPicker(false);
+            setShowDocumentUpload(false);
+            setShowOrderDetailsInput(false);
+            setShowContinueOrEndButtons(false);
+          } else {
+            // Has user selection but no dispute - hide everything
+            setShowTransactions(false);
+            setShowReasonPicker(false);
+            setShowDocumentUpload(false);
+            setShowOrderDetailsInput(false);
+            setShowContinueOrEndButtons(false);
+          }
+          
+          // Reset all states
+          setSelectedTransaction(null);
+          setEligibilityResult(null);
+          setSelectedReason(null);
           setUploadedDocuments([]);
           setArtifacts([]);
+          setOrderDetails("");
+          setAiClassification(null);
         }
-        
-        // Determine which UI elements to show based on status
-        const shouldShowTransactions = dispute.status === "started";
-        const shouldShowReasonPicker = dispute.status === "eligibility_checked";
-        const shouldShowDocumentUpload = dispute.status === "reason_selected";
-        const shouldShowOrderInput = dispute.status === "awaiting_order_details";
-        const shouldShowContinueButtons = dispute.status === "under_review" || dispute.status === "documents_uploaded";
-
-        setShowTransactions(shouldShowTransactions);
-        setShowReasonPicker(shouldShowReasonPicker);
-        setShowDocumentUpload(shouldShowDocumentUpload);
-        setShowOrderDetailsInput(shouldShowOrderInput);
-        setShowContinueOrEndButtons(shouldShowContinueButtons);
-        
-        // Reset analyzing state
-        setIsAnalyzingReason(false);
-        setIsCheckingDocuments(false);
-        setIsCheckingEligibility(false);
-      } else {
-        // If no dispute found but conversation exists, check if it needs transaction selection
-        const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
-        if (!hasUserSelection) {
-          setShowTransactions(true);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(false);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(false);
-        } else {
-          // Has user selection but no dispute - hide everything
-          setShowTransactions(false);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(false);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(false);
-        }
-        
-        // Reset all states
-        setSelectedTransaction(null);
-        setEligibilityResult(null);
-        setSelectedReason(null);
-        setUploadedDocuments([]);
-        setArtifacts([]);
-        setOrderDetails("");
-        setAiClassification(null);
       }
     } catch (error: any) {
       toast.error("Failed to load messages");
@@ -1475,12 +1607,12 @@ Let me check if this transaction is eligible for a chargeback...`;
                 </div>
               )}
               {showTransactions && (
-                <div className="mt-6">
+                <div key={`txn-list-${currentConversationId}`} className="mt-6">
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
                 </div>
               )}
               {showContinueOrEndButtons && !needsReupload && (
-                <div className="mt-6 flex gap-3 justify-center">
+                <div key={`continue-buttons-${currentConversationId}`} className="mt-6 flex gap-3 justify-center">
                   <Button 
                     onClick={() => {
                       setShowContinueOrEndButtons(false);
@@ -1515,7 +1647,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 </div>
               )}
               {showOrderDetailsInput && (
-                <div className="mt-6">
+                <div key={`order-details-${currentConversationId}`} className="mt-6">
                   <Card className="p-6 space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
@@ -1530,7 +1662,18 @@ Let me check if this transaction is eligible for a chargeback...`;
                       <Textarea
                         placeholder="Describe your transaction and the issue..."
                         value={orderDetails}
-                        onChange={(e) => setOrderDetails(e.target.value)}
+                        onChange={(e) => {
+                          setOrderDetails(e.target.value);
+                          // Debounce save to sessionStorage
+                          if (inputDraftTimer.current) {
+                            clearTimeout(inputDraftTimer.current);
+                          }
+                          inputDraftTimer.current = setTimeout(() => {
+                            if (currentConversationId) {
+                              saveUIState(currentConversationId);
+                            }
+                          }, 400);
+                        }}
                         rows={4}
                         className="resize-none"
                       />
@@ -1546,12 +1689,12 @@ Let me check if this transaction is eligible for a chargeback...`;
                 </div>
               )}
               {showReasonPicker && (
-                <div className="mt-6">
+                <div key={`reason-picker-${currentConversationId}`} className="mt-6">
                   <ReasonPicker onSelect={handleReasonSelect} />
                 </div>
               )}
               {isAnalyzingReason && (
-                <div className="mt-6">
+                <div key={`analyzing-${currentConversationId}`} className="mt-6">
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -1561,7 +1704,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 </div>
               )}
               {showDocumentUpload && selectedReason && (
-                <div className="mt-6">
+                <div key={`doc-upload-${currentConversationId}`} className="mt-6">
                   <DocumentUpload
                     reasonId={selectedReason.id}
                     reasonLabel={selectedReason.label}
@@ -1591,7 +1734,18 @@ Let me check if this transaction is eligible for a chargeback...`;
               <Textarea
                 placeholder={isReadOnly ? "This conversation is closed" : "Work with Pace or anyone else"}
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+                onChange={(e) => {
+                  setInputMessage(e.target.value);
+                  // Debounce save to sessionStorage
+                  if (inputDraftTimer.current) {
+                    clearTimeout(inputDraftTimer.current);
+                  }
+                  inputDraftTimer.current = setTimeout(() => {
+                    if (currentConversationId) {
+                      saveUIState(currentConversationId);
+                    }
+                  }, 400);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
