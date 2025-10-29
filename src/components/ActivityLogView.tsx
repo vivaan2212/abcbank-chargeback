@@ -96,9 +96,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   };
 
   const groupActivitiesByDate = () => {
-    // Sort activities by timestamp descending (newest first)
+    // Sort activities by timestamp ascending (oldest first)
     const sortedActivities = [...activities].sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     const groups: Array<{ label: string; activities: Activity[]; sortKey: number }> = [];
@@ -115,13 +115,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       
       if (date.toDateString() === today.toDateString()) {
         dateLabel = "Today";
-        sortKey = 0;
+        sortKey = 2; // Today last
       } else if (date.toDateString() === yesterday.toDateString()) {
         dateLabel = "Yesterday";
-        sortKey = 1;
+        sortKey = 1; // Yesterday in middle
       } else {
         dateLabel = format(date, "dd MMM yyyy");
-        sortKey = 2 + (today.getTime() - date.getTime()); // Older dates get higher numbers
+        sortKey = 0 - date.getTime(); // Older dates first (more negative = earlier date = lower sort key)
       }
 
       if (!groupMap[dateLabel]) {
@@ -131,7 +131,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       groupMap[dateLabel].push(activity);
     });
 
-    // Sort groups by sortKey (Today first, then Yesterday, then older dates)
+    // Sort groups by sortKey (older dates first, then Yesterday, then Today)
     return groups.sort((a, b) => a.sortKey - b.sortKey);
   };
 
