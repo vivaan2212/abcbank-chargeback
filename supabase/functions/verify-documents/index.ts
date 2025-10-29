@@ -108,51 +108,44 @@ Respond with JSON only:
           }
         ];
       } else if (isPDF) {
-        // For PDFs, use full AI content analysis with vision API (Gemini supports PDFs)
+        // For PDFs, use enhanced metadata validation with dispute context
+        // TODO: Implement PDF text extraction for full content analysis
         const disputeInfo = disputeContext 
-          ? `\nDISPUTE CONTEXT:
+          ? `
+
+DISPUTE CONTEXT:
 - Reason: ${disputeContext.reasonLabel}
 - Customer's explanation: ${disputeContext.customReason || disputeContext.aiExplanation || 'Not provided'}
-
-IMPORTANT: Understand the dispute context. For example:
-- If the issue is "received wrong/different item", look for order confirmations, shipping details, or product descriptions
-- If the issue is "not received", look for tracking information, delivery confirmations, or correspondence
-- If the issue is "damaged/defective", look for purchase receipts, warranty information, or quality issues documentation
-- If the issue is "unauthorized transaction", look for account statements, fraud reports, or identity verification
 `
           : '';
 
-        console.log(`Performing full AI content analysis for PDF: ${file.name}`);
+        console.log(`Performing enhanced metadata validation for PDF: ${file.name}`);
 
-        content = [
-          {
-            type: "text",
-            text: `You are verifying a PDF document for a chargeback dispute. 
+        content = `You are verifying a PDF document for a chargeback dispute.
 ${disputeInfo}
 The document should be: "${requirement.name}"
 Expected types: ${requirement.uploadType.join(', ')}
+File provided: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(2)} KB)
 
-Please read and analyze this PDF document carefully and determine:
-1. Is this document relevant to the requirement "${requirement.name}"?
-2. Does it contain the expected information given the dispute context?
-3. Does it appear to be a legitimate, complete document (not truncated or corrupted)?
-4. Does it contain key details that support the customer's dispute (e.g., dates, amounts, tracking numbers, order details)?
+Note: Full PDF content reading is not yet available. Based on the filename, file type, size, and dispute context, assess if this document seems appropriate.
 
-Be thorough and context-aware in your analysis. Consider whether the document provides meaningful evidence for the customer's claim.
+Consider:
+1. Does the filename suggest it matches the requirement "${requirement.name}"?
+2. Is it a PDF file (appropriate for documents like invoices, receipts, statements)?
+3. Is the file size reasonable (typically 50KB - 5MB for legitimate documents)?
+4. Given the dispute context, does the filename make sense?
+   - For "wrong item received": look for invoice, receipt, or order confirmation keywords
+   - For "not received": look for tracking, shipping, or delivery keywords
+   - For "damaged/defective": look for receipt, warranty, or photo keywords
+   - For "unauthorized": look for statement, report, or account keywords
+
+Be moderately lenient since you cannot read the actual content, but flag obvious mismatches.
 
 Respond with JSON only:
 {
   "isValid": true/false,
-  "reason": "Brief explanation of why the document is valid or invalid based on its actual content"
-}`
-          },
-          {
-            type: "image_url",  // Gemini uses the same format for PDFs
-            image_url: {
-              url: `data:${mimeType};base64,${base64}`
-            }
-          }
-        ];
+  "reason": "Brief explanation based on filename analysis and context"
+}`;
       } else {
         // For other document types (Word, text files, etc.), do metadata-only checks
         console.log(`Performing metadata-only verification for file type: ${mimeType}`);
