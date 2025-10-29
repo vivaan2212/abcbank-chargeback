@@ -1,5 +1,6 @@
 import { Database, Users, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import zampLogo from "@/assets/zamp-logo.png";
 
 interface DashboardSidebarProps {
   activeSection?: string;
@@ -8,8 +9,13 @@ interface DashboardSidebarProps {
 const DashboardSidebar = ({ activeSection = "chargebacks" }: DashboardSidebarProps) => {
   return (
     <div className="w-56 h-full border-r bg-background flex flex-col">
+      {/* Logo */}
+      <div className="p-4 pb-2">
+        <img src={zampLogo} alt="Zamp" className="h-6 w-auto" />
+      </div>
+      
       {/* Data Section */}
-      <div className="p-4">
+      <div className="p-4 pt-2">
         <div className="text-xs font-medium text-muted-foreground mb-2">Data</div>
         <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer">
           <Database className="h-4 w-4" />

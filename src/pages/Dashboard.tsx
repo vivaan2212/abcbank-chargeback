@@ -9,7 +9,6 @@ import DisputesList from "@/components/DisputesList";
 import { getUserRole } from "@/lib/auth";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DisputeFilters, { DisputeFiltersType } from "@/components/DisputeFilters";
-import zampLogo from "@/assets/zamp-logo.png";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -164,7 +163,6 @@ const Dashboard = () => {
         {/* Top Bar */}
         <div className="border-b px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={zampLogo} alt="Zamp" className="h-8" />
             <h1 className="text-xl font-semibold">Chargebacks</h1>
           </div>
           <div className="flex items-center gap-2">
