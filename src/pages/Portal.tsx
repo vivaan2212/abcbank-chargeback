@@ -15,6 +15,7 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
+import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { User, Session } from "@supabase/supabase-js";
 import {
@@ -85,6 +86,7 @@ const Portal = () => {
   const [needsReupload, setNeedsReupload] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [artifacts, setArtifacts] = useState<ArtifactDoc[]>([]);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [aiClassification, setAiClassification] = useState<AIClassification | null>(null);
   const [isAnalyzingReason, setIsAnalyzingReason] = useState(false);
@@ -304,6 +306,7 @@ const Portal = () => {
       setSelectedReason(null);
       setIsCheckingDocuments(false);
       setUploadedDocuments([]);
+      setArtifacts([]);
       setAiClassification(null);
       setShowContinueOrEndButtons(false);
       setShowOrderDetailsInput(false);
@@ -455,8 +458,10 @@ const Portal = () => {
           // Documents are stored as JSON, but we can't fully restore File objects
           // So we'll just clear the documents state - user will see them in messages
           setUploadedDocuments([]);
+          setArtifacts([]);
         } else {
-          setUploadedDocuments([]);
+        setUploadedDocuments([]);
+        setArtifacts([]);
         }
         
         // Determine which UI elements to show based on status
@@ -499,6 +504,7 @@ const Portal = () => {
         setEligibilityResult(null);
         setSelectedReason(null);
         setUploadedDocuments([]);
+        setArtifacts([]);
         setOrderDetails("");
         setAiClassification(null);
       }
@@ -600,7 +606,8 @@ const Portal = () => {
     setSelectedTransaction(null);
     setEligibilityResult(null);
     setSelectedReason(null);
-    setUploadedDocuments([]);
+      setUploadedDocuments([]);
+      setArtifacts([]);
     setOrderDetails("");
     setAiClassification(null);
     setIsAnalyzingReason(false);
@@ -634,6 +641,7 @@ const Portal = () => {
       setSession(null);
       setUser(null);
       setUploadedDocuments([]);
+      setArtifacts([]);
       
       toast.success('Logged out successfully');
       navigate("/login");
@@ -678,6 +686,7 @@ const Portal = () => {
       setSelectedTransaction(transaction);
       setSelectedReason(null);
       setUploadedDocuments([]);
+      setArtifacts([]);
       setAiClassification(null);
       setOrderDetails("");
       setShowOrderDetailsInput(false);
@@ -958,6 +967,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             setSelectedReason(null);
             setAiClassification(null);
             setUploadedDocuments([]);
+            setArtifacts([]);
             setShowReasonPicker(false);
             setShowDocumentUpload(false);
             setShowTransactions(false);
@@ -1066,7 +1076,7 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleDocumentsComplete = async (documents: UploadedDocument[]) => {
-    if (!currentConversationId || !currentDisputeId) return;
+    if (!currentConversationId || !currentDisputeId || !user) return;
 
     try {
       // Store uploaded documents in session state
@@ -1078,12 +1088,37 @@ Let me check if this transaction is eligible for a chargeback...`;
       setShowTransactions(false);
       setShowReasonPicker(false);
 
-      // Update dispute with documents
-      const documentsData = documents.map(d => ({
-        name: d.file.name,
-        size: d.file.size,
-        type: d.file.type,
-        requirementName: d.requirementName
+      // Upload files to Supabase Storage
+      const uploadedArtifacts: ArtifactDoc[] = [];
+      for (const doc of documents) {
+        const filePath = `${user.id}/${currentDisputeId}/${doc.file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('dispute-documents')
+          .upload(filePath, doc.file, { upsert: true });
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${doc.file.name}`);
+        } else {
+          uploadedArtifacts.push({
+            requirementName: doc.requirementName,
+            name: doc.file.name,
+            size: doc.file.size,
+            type: doc.file.type,
+            path: filePath
+          });
+        }
+      }
+
+      setArtifacts(uploadedArtifacts);
+
+      // Update dispute with documents metadata and artifact paths
+      const documentsData = uploadedArtifacts.map(a => ({
+        name: a.name,
+        size: a.size,
+        type: a.type,
+        requirementName: a.requirementName,
+        path: a.path
       }));
 
       await supabase
@@ -1320,6 +1355,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     setNeedsReupload(false);
     setSelectedReason(null);
     setUploadedDocuments([]);
+    setArtifacts([]);
     setOrderDetails("");
     setShowOrderDetailsInput(false);
   };
@@ -1351,6 +1387,9 @@ Let me check if this transaction is eligible for a chargeback...`;
               <p className="text-sm text-muted-foreground">Powered by Pace</p>
             </div>
             <div className="flex items-center gap-2">
+              {artifacts.length > 0 && (
+                <ArtifactsViewer documents={artifacts} />
+              )}
               {uploadedDocuments.length > 0 && (
                 <UploadedDocumentsViewer documents={uploadedDocuments} />
               )}
