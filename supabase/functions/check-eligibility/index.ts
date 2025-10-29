@@ -26,20 +26,9 @@ interface Transaction {
   created_at: string;
 }
 
-const MAX_AGE_DAYS = 120;
-const MIN_AMOUNT_AED = 15;
+const MIN_AMOUNT_AED = 15; // For internal flagging only
 const SECURED_INDICATIONS = [2, 212]; // OTP-secured
-const SECURE_POS_ENTRY = [5, 7]; // Chip / Contactless
 const WALLET_TYPES = ['Apple Pay', 'Google Pay'];
-const MAX_SETTLEMENT_DAYS = 21;
-
-function daysSince(dateString: string): number {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -113,34 +102,31 @@ Deno.serve(async (req) => {
     const tx = transaction as unknown as Transaction;
     const ineligibleReasons: string[] = [];
 
-    // 1. Refund already received or fully reversed
-    if (tx.refund_received === true || (tx.transaction_amount - (tx.refund_amount || 0)) <= 0) {
-      ineligibleReasons.push('Refund already received or transaction fully reversed.');
-    }
-
-    // 2. Amount below threshold (use local or fallback to original)
+    // Calculate base_amount: Use local_transaction_amount if it's in AED and > 0, otherwise use transaction_amount
     const localAmount = Number(tx.local_transaction_amount ?? 0);
     const origAmount = Number(tx.transaction_amount ?? 0);
-    const effectiveAmount = isNaN(localAmount) || localAmount <= 0 ? origAmount : localAmount;
-    if (effectiveAmount < MIN_AMOUNT_AED) {
-      ineligibleReasons.push(`Transaction amount below ${MIN_AMOUNT_AED} AED minimum threshold.`);
+    const isLocalAED = tx.local_transaction_currency === 'AED';
+    const base_amount = (isLocalAED && localAmount > 0) ? localAmount : origAmount;
+    const refund_amount = Number(tx.refund_amount ?? 0);
+    const remaining_amount = base_amount - refund_amount;
+
+    // Internal flag for small transactions (not shown to customer)
+    const writeOffRecommended = base_amount < MIN_AMOUNT_AED;
+
+    // 1. Fully/Over-Refunded Transactions
+    if (tx.refund_received === true && remaining_amount <= 0) {
+      ineligibleReasons.push('Refund received in full. No remaining amount to dispute.');
     }
 
-    // 3. Transaction older than allowed window
-    const transactionAge = daysSince(tx.transaction_time);
-    if (transactionAge > MAX_AGE_DAYS) {
-      ineligibleReasons.push(`Transaction is older than ${MAX_AGE_DAYS} days and cannot be disputed.`);
-    }
-
-    // 4. Wallet transaction (Apple Pay/Google Pay) without OTP security
+    // 2. Secured Non-OTP Wallet Transactions
     const isSecuredWallet = tx.is_wallet_transaction && 
                             WALLET_TYPES.includes(tx.wallet_type || '') && 
                             !SECURED_INDICATIONS.includes(tx.secured_indication);
     if (isSecuredWallet) {
-      ineligibleReasons.push('This is a secured non-OTP transaction using a digital wallet and cannot be disputed.');
+      ineligibleReasons.push('Secured non-OTP digital wallet transaction. Not eligible for chargeback.');
     }
 
-    console.log(`Transaction age: ${transactionAge} days, Amount(local): ${tx.local_transaction_amount}, Wallet: ${tx.wallet_type}, Secured: ${tx.secured_indication}, Ineligible reasons: ${ineligibleReasons.length}`);
+    console.log(`Transaction check: base_amount=${base_amount}, remaining=${remaining_amount}, writeOffRecommended=${writeOffRecommended}, wallet=${tx.wallet_type}, secured=${tx.secured_indication}, ineligible=${ineligibleReasons.length}`);
 
     // Return result
     if (ineligibleReasons.length > 0) {
@@ -161,6 +147,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         transactionId: tx.id,
         status: 'ELIGIBLE',
+        ...(writeOffRecommended && { writeOffRecommended: true }),
       }),
       {
         status: 200,
