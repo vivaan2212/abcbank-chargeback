@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu, ArrowUp } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
+import { Input } from "@/components/ui/input";
 
 interface Activity {
   id: string;
@@ -33,6 +34,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [inputText, setInputText] = useState("");
 
   useEffect(() => {
     loadDisputeData();
@@ -170,6 +172,27 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       }
       return newSet;
     });
+  };
+
+  const handleSubmitComment = () => {
+    if (!inputText.trim()) return;
+
+    const newActivity: Activity = {
+      id: `comment-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      label: inputText,
+      reviewer: "Adam Smith",
+      activityType: 'message'
+    };
+
+    setActivities(prev => [...prev, newActivity]);
+    setInputText("");
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSubmitComment();
+    }
   };
 
   const getActivityIcon = (type?: Activity['activityType']) => {
@@ -447,9 +470,28 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t px-6 py-3 text-sm text-muted-foreground bg-background">
-          Work with Pace
+        {/* Footer - Input Box */}
+        <div className="border-t px-6 py-4 bg-background">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
+              <Input
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Work with Pace or anyone else"
+                className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+              />
+              <Button
+                onClick={handleSubmitComment}
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground"
+                disabled={!inputText.trim()}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
