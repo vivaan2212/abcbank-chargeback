@@ -350,9 +350,12 @@ const Portal = () => {
   }, [currentConversationId]);
 
   useEffect(() => {
-    // Auto-scroll to bottom when messages change
+    // Auto-scroll to bottom when messages change with smooth animation
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [messages]);
 
