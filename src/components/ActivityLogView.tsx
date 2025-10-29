@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Activity {
   id: string;
@@ -29,59 +30,121 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Simulate loading with dissolve effect
-    setLoading(true);
-    const timer = setTimeout(() => {
-      // Mock activity data - replace with actual data loading
-      setActivities([
-        {
-          id: "1",
-          timestamp: new Date().toISOString(),
-          label: "Disputed transaction",
-          attachments: [{ label: "Disputed transaction", icon: "📄" }]
-        },
-        {
-          id: "2",
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          label: "Transaction is unsecured",
-          expandable: true,
-          details: "POS entry mode: 07\nWallet type: None\nSecured indication: 0"
-        },
-        {
-          id: "3",
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          label: "Transaction is settled",
-        },
-        {
-          id: "4",
-          timestamp: new Date().toISOString(),
-          label: "Customer validation recommended",
-          expandable: true,
-          details: "Based on transaction history and pattern analysis",
-          attachments: [{ label: "Past transactions with me...", icon: "📊" }],
-          reviewer: "Rohit Kapoor"
-        },
-        {
-          id: "5",
-          timestamp: new Date().toISOString(),
-          label: "Marked as not recommended for temporary credit",
-          reviewer: "Rohit Kapoor"
-        },
-        {
-          id: "6",
-          timestamp: new Date().toISOString(),
-          label: "Chargeback filing completed. Ref. no: 9330640080",
-          attachments: [
-            { label: "View Document", icon: "📄" },
-            { label: "Video Recording", icon: "🎥" }
-          ]
-        }
-      ]);
-      setLoading(false);
-    }, 800);
-
-    return () => clearTimeout(timer);
+    loadDisputeData();
   }, [disputeId]);
+
+  const loadDisputeData = async () => {
+    setLoading(true);
+    try {
+      // Load dispute with all related data
+      const { data: dispute, error } = await supabase
+        .from('disputes')
+        .select(`
+          *,
+          transaction:transactions(*),
+          chargeback_actions(*)
+        `)
+        .eq('id', disputeId)
+        .single();
+
+      if (error) throw error;
+
+      // Load messages to get timestamps for each step
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', dispute.conversation_id)
+        .order('created_at', { ascending: true });
+
+      // Build activities from dispute data with real timestamps
+      const activityList: Activity[] = [];
+
+      // 1. Disputed transaction (dispute created_at)
+      activityList.push({
+        id: '1',
+        timestamp: dispute.created_at,
+        label: 'Disputed transaction',
+        attachments: [{ label: 'Disputed transaction', icon: '📄' }]
+      });
+
+      // 2. Transaction selected (find message or use created_at)
+      if (dispute.transaction_id) {
+        const txnMessage = messages?.find(m => m.content.includes('selected') || m.content.includes('transaction'));
+        activityList.push({
+          id: '2',
+          timestamp: txnMessage?.created_at || dispute.created_at,
+          label: 'Transaction selected'
+        });
+      }
+
+      // 3. Transaction security status
+      if (dispute.transaction) {
+        const securityMessage = messages?.find(m => m.content.includes('secured') || m.content.includes('unsecured'));
+        activityList.push({
+          id: '3',
+          timestamp: securityMessage?.created_at || dispute.created_at,
+          label: dispute.transaction.secured_indication === 1 ? 'Transaction is secured' : 'Transaction is unsecured',
+          expandable: true,
+          details: `POS entry mode: ${String(dispute.transaction.pos_entry_mode || '').padStart(2, '0')}\nWallet type: ${dispute.transaction.wallet_type || 'None'}\nSecured indication: ${dispute.transaction.secured_indication || 0}`
+        });
+      }
+
+      // 4. Settlement status
+      if (dispute.transaction?.settled) {
+        activityList.push({
+          id: '4',
+          timestamp: dispute.transaction.settlement_date || dispute.created_at,
+          label: 'Transaction is settled'
+        });
+      }
+
+      // 5. Chargeback actions
+      if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
+        dispute.chargeback_actions.forEach((action: any, idx: number) => {
+          if (action.action_type === 'validation_recommended') {
+            activityList.push({
+              id: `action-${idx}-validation`,
+              timestamp: action.created_at,
+              label: 'Customer validation recommended',
+              expandable: true,
+              details: action.admin_message || 'Based on transaction history and pattern analysis',
+              reviewer: 'Rohit Kapoor'
+            });
+          }
+          
+          if (!action.temporary_credit_issued && action.action_type === 'credit_decision') {
+            activityList.push({
+              id: `action-${idx}-no-credit`,
+              timestamp: action.created_at,
+              label: 'Marked as not recommended for temporary credit',
+              reviewer: 'Rohit Kapoor'
+            });
+          }
+
+          if (action.chargeback_filed) {
+            activityList.push({
+              id: `action-${idx}-filed`,
+              timestamp: action.created_at,
+              label: `Chargeback filing completed. Ref. no: ${action.id.substring(0, 10)}`,
+              attachments: [
+                { label: 'View Document', icon: '📄' },
+                { label: 'Video Recording', icon: '🎥' }
+              ]
+            });
+          }
+        });
+      }
+
+      // Sort by timestamp
+      activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      setActivities(activityList);
+    } catch (error) {
+      console.error('Error loading dispute data:', error);
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedActivities(prev => {
