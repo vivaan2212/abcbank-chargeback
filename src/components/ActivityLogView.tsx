@@ -290,9 +290,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 bg-background">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
@@ -330,7 +330,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-4">
+        <div className="border-b px-6 py-4 bg-background">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
@@ -349,7 +349,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Activity Timeline */}
-        <div className="flex-1 overflow-auto px-6 py-6">
+        <div className="flex-1 overflow-auto px-6 py-6 bg-background">
           <div className="max-w-3xl space-y-8">
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
@@ -448,7 +448,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Footer */}
-        <div className="border-t px-6 py-3 text-sm text-muted-foreground">
+        <div className="border-t px-6 py-3 text-sm text-muted-foreground bg-background">
           Work with Pace
         </div>
       </div>
