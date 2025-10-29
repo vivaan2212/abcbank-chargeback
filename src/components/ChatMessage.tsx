@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 import { useMemo, useEffect } from "react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import paceAvatar from "@/assets/pace-avatar.png";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -51,9 +53,10 @@ const ChatMessage = ({ role, content, timestamp, documents }: ChatMessageProps) 
       <div className={`max-w-[70%] ${isAssistant ? "items-start" : "items-end"} flex flex-col`}>
         {isAssistant && (
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
-              P
-            </div>
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+              <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
+            </Avatar>
             <span className="text-sm font-medium">Pace</span>
           </div>
         )}
