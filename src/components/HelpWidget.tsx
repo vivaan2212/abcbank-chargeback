@@ -19,6 +19,17 @@ interface HelpWidgetProps {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
+const addClosingMessage = (setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => {
+  setMessages((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      content: "Hope I answered your questions, now let's get back to helping you raise a dispute!",
+      timestamp: new Date(),
+    }
+  ]);
+};
+
 export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -152,7 +163,10 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
         />
         <div className="flex gap-3">
           <Button
-            onClick={onClose}
+            onClick={() => {
+              addClosingMessage(setMessages);
+              setTimeout(() => onClose(), 100);
+            }}
             variant="outline"
             className="flex-1"
           >
