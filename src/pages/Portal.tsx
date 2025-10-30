@@ -898,11 +898,6 @@ const Portal = () => {
 • Merchant: ${transaction.merchant_name}
 • Amount: ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}
 • Date: ${format(new Date(transaction.transaction_time), "dd MMM yyyy")}
-• MCC: ${transaction.merchant_category_code}
-• Acquirer: ${transaction.acquirer_name}
-• POS Entry Mode: ${transaction.pos_entry_mode}
-• Secured Indication: ${transaction.secured_indication}
-• Wallet: ${transaction.is_wallet_transaction ? `Yes${transaction.wallet_type ? ` (${transaction.wallet_type})` : ""}` : "No"}
 
 Let me check if this transaction is eligible for a chargeback...`;
 
