@@ -93,7 +93,7 @@ const Dashboard = () => {
     });
 
     // Subscribe to real-time updates for dispute counts
-    const channel = supabase
+    const disputesChannel = supabase
       .channel('dispute-dashboard-counts')
       .on(
         'postgres_changes',
@@ -103,17 +103,37 @@ const Dashboard = () => {
           table: 'disputes'
         },
         (payload) => {
-          console.log('Count update triggered:', payload);
+          console.log('Disputes update triggered:', payload);
           loadCounts();
         }
       )
       .subscribe((status) => {
-        console.log('Counts subscription status:', status);
+        console.log('Disputes subscription status:', status);
+      });
+
+    // Also subscribe to transactions table for needs_attention updates
+    const transactionsChannel = supabase
+      .channel('transaction-dashboard-counts')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'transactions'
+        },
+        (payload) => {
+          console.log('Transactions update triggered:', payload);
+          loadCounts();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Transactions subscription status:', status);
       });
 
     return () => {
       subscription.unsubscribe();
-      supabase.removeChannel(channel);
+      supabase.removeChannel(disputesChannel);
+      supabase.removeChannel(transactionsChannel);
     };
   }, [navigate]);
 
