@@ -329,6 +329,51 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
               details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
+              
+              // Add video attachment for approved cases - fetch video based on card network
+              const attachments: Activity['attachments'] = [
+                { label: 'View Document', icon: '📄', action: 'document' }
+              ];
+              
+              // If no chargeback_actions but dispute is approved, fetch video by card network
+              if (!dispute.chargeback_actions || dispute.chargeback_actions.length === 0) {
+                // Determine card network from transaction
+                // Common card BINs: Visa starts with 4, Mastercard 51-55 or 2221-2720
+                let cardNetwork = 'Visa'; // default
+                if (dispute.transaction?.transaction_id) {
+                  const txIdStr = String(dispute.transaction.transaction_id);
+                  if (txIdStr.startsWith('5') || txIdStr.startsWith('2')) {
+                    cardNetwork = 'Mastercard';
+                  }
+                }
+                
+                // Fetch video from database
+                const { data: videoData } = await supabase
+                  .from('chargeback_videos')
+                  .select('*')
+                  .eq('card_network', cardNetwork)
+                  .eq('is_active', true)
+                  .single();
+                
+                if (videoData) {
+                  attachments.push({
+                    label: 'Video Recording',
+                    icon: '🎥',
+                    action: 'video',
+                    videoData
+                  });
+                }
+              }
+              
+              activityList.push({
+                id: 'milestone-final-status',
+                timestamp: dispute.updated_at,
+                label,
+                expandable: true,
+                details,
+                attachments,
+                activityType
+              });
               break;
               
             case 'rejected':
