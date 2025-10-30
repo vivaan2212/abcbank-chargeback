@@ -196,7 +196,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       } else if (statusFilter === "done") {
         query = query.in("status", ["approved", "completed", "ineligible"]);
       } else if (statusFilter === "needs_attention") {
-        query = query.in("status", ["requires_action", "pending_manual_review", "awaiting_settlement"]);
+        // Intentionally do not restrict by status; we'll compute from logs and flags
       } else if (statusFilter === "void") {
         query = query.in("status", ["rejected", "cancelled", "expired"]);
       }
@@ -214,6 +214,9 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           dispute.transaction?.needs_attention === true ||
           ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status)
         );
+      } else if (statusFilter === 'done') {
+        // Exclude any rows that still have representment attention
+        filteredData = filteredData.filter(dispute => dispute.transaction?.needs_attention !== true);
       }
 
       // Apply additional filters from filter panel
@@ -414,6 +417,22 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       ineligible: "Ineligible"
     };
     return statusMap[status] || status;
+  };
+
+  // Derive a display status from logs and flags
+  const getDerivedStatus = (dispute: Dispute): string => {
+    // Representment overrides everything
+    if (dispute.transaction?.needs_attention) {
+      return "Representment - Needs Attention";
+    }
+
+    const actions = dispute.chargeback_actions || [];
+
+    if (actions.some(a => a.awaiting_merchant_refund)) return "Awaiting Merchant Refund";
+    if (actions.some(a => a.awaiting_settlement)) return "Awaiting Settlement";
+    if (actions.some(a => a.requires_manual_review)) return "Pending Manual Review";
+
+    return getStatusLabel(dispute.status);
   };
 
   if (selectedDispute) {
@@ -652,14 +671,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
                   }}
                 >
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {getStatusLabel(dispute.status)}
-                      {dispute.transaction?.needs_attention && (
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md">
-                          Needs Attention
-                        </span>
-                      )}
-                    </div>
+                    {getDerivedStatus(dispute)}
                   </TableCell>
                   <TableCell>{dispute.transaction?.acquirer_name ?? "-"}</TableCell>
                   <TableCell>{dispute.transaction?.merchant_category_code ?? "-"}</TableCell>
