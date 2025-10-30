@@ -16,65 +16,94 @@ import type { DisputeFiltersType } from "./DisputeFilters";
 
 interface Dispute {
   id: string;
-  conversation_id: string;
-  customer_id: string;
-  transaction_id: string | null;
   status: string;
-  eligibility_status: string | null;
-  reason_id: string | null;
-  reason_label: string | null;
-  custom_reason: string | null;
-  order_details: string | null;
-  documents: any;
-  eligibility_reasons: string[] | null;
   created_at: string;
   updated_at: string;
+  reason_label: string | null;
+  reason_id: string | null;
+  custom_reason: string | null;
+  eligibility_status: string | null;
+  eligibility_reasons: string[] | null;
+  documents: any;
+  order_details: string | null;
+  customer_id: string;
+  conversation_id: string | null;
+  transaction_id: string | null;
   transaction?: {
     id?: string;
     transaction_id?: number;
-    transaction_time?: string;
+    merchant_name?: string;
+    merchant_category_code?: number;
     transaction_amount?: number;
     transaction_currency?: string;
-    merchant_name?: string;
-    merchant_id?: number;
-    merchant_category_code?: number;
-    acquirer_name?: string;
-    refund_amount?: number;
-    refund_received?: boolean;
-    settled?: boolean;
-    settlement_date?: string | null;
     local_transaction_amount?: number;
     local_transaction_currency?: string;
-    is_wallet_transaction?: boolean;
-    wallet_type?: string | null;
+    transaction_time?: string;
+    acquirer_name?: string;
     pos_entry_mode?: number;
     secured_indication?: number;
-    dispute_status?: string;
-    needs_attention?: boolean;
-    temporary_credit_provided?: boolean;
-    temporary_credit_amount?: number;
-    temporary_credit_currency?: string;
+    is_wallet_transaction?: boolean;
+    wallet_type?: string | null;
+    merchant_id?: number;
+    customer_id?: string;
+    created_at?: string;
+    refund_received?: boolean;
+    refund_amount?: number;
+    settled?: boolean;
+    settlement_date?: string | null;
+    temporary_credit_provided?: boolean | null;
+    temporary_credit_amount?: number | null;
+    temporary_credit_currency?: string | null;
+    temporary_credit_reversal_at?: string | null;
+    needs_attention?: boolean | null;
+    dispute_status?: string | null;
+    chargeback_case_id?: string | null;
+    chargeback_representment_static?: {
+      id: string;
+      transaction_id: string;
+      will_be_represented: boolean;
+      representment_status: string;
+      merchant_reason_text: string | null;
+      merchant_document_url: string | null;
+      source: string | null;
+      created_at: string;
+      updated_at: string;
+    }[] | {
+      id: string;
+      transaction_id?: string;
+      will_be_represented: boolean;
+      representment_status: string;
+      merchant_reason_text: string | null;
+      merchant_document_url: string | null;
+      source: string | null;
+      created_at?: string;
+      updated_at?: string;
+    };
   };
   chargeback_actions?: Array<{
     id: string;
+    dispute_id?: string;
     action_type: string;
     admin_message: string;
-    temporary_credit_issued: boolean;
     chargeback_filed: boolean;
     awaiting_settlement: boolean;
-    awaiting_merchant_refund: boolean;
-    requires_manual_review: boolean;
-    net_amount: number;
-    days_since_transaction: number;
     days_since_settlement: number | null;
-    is_secured_otp: boolean;
-    is_unsecured: boolean;
-    merchant_category_code: number;
-    is_restricted_mcc: boolean;
-    is_facebook_meta: boolean;
+    awaiting_merchant_refund: boolean;
+    temporary_credit_issued?: boolean;
+    requires_manual_review?: boolean;
+    net_amount?: number;
+    days_since_transaction?: number;
+    is_secured_otp?: boolean;
+    is_unsecured?: boolean;
+    merchant_category_code?: number;
+    is_restricted_mcc?: boolean;
+    is_facebook_meta?: boolean;
     created_at: string;
     updated_at: string;
   }>;
+  dispute_decisions?: Array<{
+    decision: string;
+  }> | any;
 }
 
 interface DisputesListProps {
@@ -142,63 +171,63 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       
       let query = supabase
         .from("disputes")
-        .select(`
-          *,
-          transaction:transactions(
+      .select(`
+        *,
+        transaction:transactions(
+          id,
+          transaction_id,
+          transaction_time,
+          transaction_amount,
+          transaction_currency,
+          merchant_name,
+          merchant_id,
+          merchant_category_code,
+          acquirer_name,
+          refund_amount,
+          refund_received,
+          settled,
+          settlement_date,
+          local_transaction_amount,
+          local_transaction_currency,
+          is_wallet_transaction,
+          wallet_type,
+          pos_entry_mode,
+          secured_indication,
+          dispute_status,
+          needs_attention,
+          temporary_credit_provided,
+          temporary_credit_amount,
+          temporary_credit_currency,
+          chargeback_representment_static(
             id,
-            transaction_id,
-            transaction_time,
-            transaction_amount,
-            transaction_currency,
-            merchant_name,
-            merchant_id,
-            merchant_category_code,
-            acquirer_name,
-            refund_amount,
-            refund_received,
-            settled,
-            settlement_date,
-            local_transaction_amount,
-            local_transaction_currency,
-            is_wallet_transaction,
-            wallet_type,
-            pos_entry_mode,
-            secured_indication,
-            dispute_status,
-            needs_attention,
-            temporary_credit_provided,
-            temporary_credit_amount,
-            temporary_credit_currency,
-            chargeback_representment_static(
-              id,
-              will_be_represented,
-              representment_status,
-              merchant_document_url,
-              merchant_reason_text,
-              source
-            )
-          ),
-          chargeback_actions(
-            id,
-            action_type,
-            admin_message,
-            temporary_credit_issued,
-            chargeback_filed,
-            awaiting_settlement,
-            awaiting_merchant_refund,
-            requires_manual_review,
-            net_amount,
-            days_since_transaction,
-            days_since_settlement,
-            is_secured_otp,
-            is_unsecured,
-            merchant_category_code,
-            is_restricted_mcc,
-            is_facebook_meta,
-            created_at,
-            updated_at
+            will_be_represented,
+            representment_status,
+            merchant_document_url,
+            merchant_reason_text,
+            source
           )
-        `)
+        ),
+        chargeback_actions(
+          id,
+          action_type,
+          admin_message,
+          temporary_credit_issued,
+          chargeback_filed,
+          awaiting_settlement,
+          awaiting_merchant_refund,
+          requires_manual_review,
+          net_amount,
+          days_since_transaction,
+          days_since_settlement,
+          is_secured_otp,
+          is_unsecured,
+          merchant_category_code,
+          is_restricted_mcc,
+          is_facebook_meta,
+          created_at,
+          updated_at
+        )
+      `)
         .order("updated_at", { ascending: false });
       
       // Only filter by customer_id if userId is provided (customer view)
@@ -231,8 +260,34 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
       if (error) throw error;
       
+      // Fetch dispute decisions separately for all disputes
+      const disputeIds = data?.map(d => d.id) || [];
+      let decisionsMap: Record<string, any[]> = {};
+      
+      if (disputeIds.length > 0) {
+        const { data: decisionsData } = await supabase
+          .from('dispute_decisions')
+          .select('dispute_id, decision')
+          .in('dispute_id', disputeIds);
+        
+        if (decisionsData) {
+          decisionsData.forEach((decision: any) => {
+            if (!decisionsMap[decision.dispute_id]) {
+              decisionsMap[decision.dispute_id] = [];
+            }
+            decisionsMap[decision.dispute_id].push({ decision: decision.decision });
+          });
+        }
+      }
+      
+      // Attach decisions to disputes
+      const dataWithDecisions = data?.map(dispute => ({
+        ...dispute,
+        dispute_decisions: decisionsMap[dispute.id] || []
+      })) || [];
+      
       // Only show disputes on dashboard after transaction selection
-      let filteredData = data?.filter(d => d.transaction_id !== null) || [];
+      let filteredData = dataWithDecisions.filter(d => d.transaction_id !== null);
 
       // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
@@ -459,7 +514,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       requires_action: "Requires action",
       ineligible: "Ineligible",
       closed_lost: "Closed - Lost",
-      representment_contested: "Representment Contested"
+      representment_contested: "Representment Contested",
+      write_off_approved: "Write-off provided to customer"
     };
     return statusMap[status] || status;
   };
@@ -467,6 +523,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
   // Derive a display status from logs and flags to match activity log
   const getDerivedStatus = (dispute: Dispute): string => {
     const actions = dispute.chargeback_actions || [];
+    
+    // Check for write-off approval first (highest priority)
+    const latestDecision = dispute.dispute_decisions?.[0];
+    if (latestDecision?.decision === 'APPROVE_WRITEOFF') {
+      return "Write-off provided to customer";
+    }
     
     // Access representment data - handle both single object and array
     const repData = (dispute.transaction as any)?.chargeback_representment_static;

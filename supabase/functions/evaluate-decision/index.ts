@@ -47,6 +47,8 @@ interface DecisionResult {
   policy_code: string;
   flags: {
     writeOffRecommended?: boolean;
+    writeOffApproved?: boolean;
+    permanentCredit?: boolean;
     highRiskMCC?: boolean;
     idempotencyKey: string;
   };
@@ -140,6 +142,34 @@ function evaluateDecision(
   const matched_rules: string[] = [];
   const idempotencyKey = crypto.randomUUID();
   
+  // =======================================
+  // RULE R0: Low-value automatic write-off (after document verification)
+  // =======================================
+  if (base_amount_usd !== null && base_amount_usd < 15) {
+    matched_rules.push('R0');
+    return {
+      decision: 'APPROVE_WRITEOFF',
+      reason_summary: 'Transaction under $15 - automatic write-off approved',
+      policy_code: 'CB-POL-USD-v1:R0',
+      flags: { 
+        idempotencyKey,
+        writeOffApproved: true,
+        permanentCredit: true 
+      },
+      next_actions: ['issue_permanent_credit'],
+      audit: {
+        tx_id: tx.transaction_id,
+        customer_id: tx.customer_id,
+        evaluated_at: new Date().toISOString(),
+        inputs_hash,
+        matched_rules,
+        docFindings: Object.fromEntries(docCheck.map(d => [d.key, { valid: d.isValid, reason: d.reason }]))
+      },
+      base_amount_usd,
+      remaining_amount_usd
+    };
+  }
+
   // Hard blocks (B1-B4)
   if (tx.refund_received && remaining_amount_usd <= 0) {
     matched_rules.push('B1');
@@ -574,13 +604,8 @@ function evaluateDecision(
     }
   }
   
-  // R12: Low-value write-off (internal flag only)
-  const flags: DecisionResult['flags'] = { idempotencyKey };
-  if (base_amount_usd !== null && base_amount_usd < 15) {
-    flags.writeOffRecommended = true;
-  }
-  
   // R13: Default to MANUAL_REVIEW
+  const flags: DecisionResult['flags'] = { idempotencyKey };
   matched_rules.push('R13');
   return {
     decision: 'MANUAL_REVIEW',

@@ -143,6 +143,15 @@ const ActivityLogView = ({
         `).eq('id', disputeId).single();
       if (error) throw error;
 
+      // Fetch dispute decisions separately
+      const { data: decisions } = await supabase
+        .from('dispute_decisions')
+        .select('decision, created_at')
+        .eq('dispute_id', disputeId);
+      
+      // Add decisions to dispute object
+      (dispute as any).dispute_decisions = decisions || [];
+
       // Build activities from dispute data - milestone-based approach
       const activityList: Activity[] = [];
 
@@ -504,6 +513,29 @@ const ActivityLogView = ({
 
       // Sort by timestamp
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // Check for write-off approval
+      const writeOffDecision = (dispute as any).dispute_decisions?.find(
+        (d: any) => d.decision === 'APPROVE_WRITEOFF'
+      );
+      
+      if (writeOffDecision) {
+        const writeOffAmount = dispute.transaction?.transaction_amount || 0;
+        const currency = dispute.transaction?.transaction_currency || 'INR';
+        
+        activityList.push({
+          id: `write-off-${writeOffDecision.created_at}`,
+          timestamp: writeOffDecision.created_at,
+          label: 'Write-off approved - Permanent credit issued',
+          expandable: true,
+          details: `Credit amount: ${currency === 'USD' ? '$' : '₹'}${writeOffAmount.toLocaleString()}\n\nThis transaction is below $15 and has been automatically approved for write-off after document verification.\n\nA permanent credit has been issued to your account. No chargeback will be filed for this transaction.\n\nCase is now closed.`,
+          activityType: 'done'
+        });
+        
+        // Re-sort to place write-off in correct chronological order
+        activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      }
+      
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);
     } catch (error) {
