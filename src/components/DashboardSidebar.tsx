@@ -83,10 +83,10 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
       <div className="flex-1" />
 
       {/* Bank Dropdown at Bottom */}
-      <div className="px-4 py-4 border-t">
+      <div className="px-4 py-[18px] border-t">
         <DropdownMenu>
           <DropdownMenuTrigger className="w-full">
-            <div className="flex items-center justify-between px-2 py-2 rounded hover:bg-muted/50 cursor-pointer">
+            <div className="flex items-center justify-between px-2 py-2.5 rounded hover:bg-muted/50 cursor-pointer">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded bg-pink-200 flex items-center justify-center text-sm font-medium">
                   A
