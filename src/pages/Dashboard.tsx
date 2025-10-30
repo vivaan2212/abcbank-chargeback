@@ -11,7 +11,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 import DisputeFilters, { DisputeFiltersType } from "@/components/DisputeFilters";
 import ActivityLogView from "@/components/ActivityLogView";
 import { cn } from "@/lib/utils";
-
+import { UploadToStorageButton } from "@/components/UploadToStorageButton";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -204,6 +204,11 @@ const Dashboard = () => {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
+                <UploadToStorageButton
+                  bucket="chargeback-videos"
+                  label="Upload Video"
+                  accept="video/*,application/pdf,image/*"
+                />
                 <Button 
                   variant="destructive" 
                   size="sm"
