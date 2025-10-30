@@ -15,16 +15,11 @@ interface Message {
 
 interface HelpWidgetProps {
   onClose: () => void;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
-export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "I'm here to help! Ask me any question about the current step or the onboarding process.",
-      timestamp: new Date(),
-    }
-  ]);
+export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 

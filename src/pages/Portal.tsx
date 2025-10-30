@@ -97,6 +97,13 @@ const Portal = () => {
   const [orderDetails, setOrderDetails] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [isHelpWidgetOpen, setIsHelpWidgetOpen] = useState(false);
+  const [helpWidgetMessages, setHelpWidgetMessages] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>>([
+    {
+      role: "assistant",
+      content: "I'm here to help! Ask me any question about the current step or the onboarding process.",
+      timestamp: new Date(),
+    }
+  ]);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -431,6 +438,16 @@ const Portal = () => {
       if (convError) throw convError;
 
       setCurrentConversationId(conversation.id);
+      
+      // Reset help widget for new conversation
+      setIsHelpWidgetOpen(false);
+      setHelpWidgetMessages([
+        {
+          role: "assistant",
+          content: "I'm here to help! Ask me any question about the current step or the onboarding process.",
+          timestamp: new Date(),
+        }
+      ]);
       
       // Persist to sessionStorage (per-user)
       const activeChatKey = `cb_active_chat_id::${userId}`;
@@ -808,6 +825,15 @@ const Portal = () => {
 
   const handleNewChat = () => {
     if (user && !isCreatingChat.current) {
+      // Reset help widget when starting new chat
+      setIsHelpWidgetOpen(false);
+      setHelpWidgetMessages([
+        {
+          role: "assistant",
+          content: "I'm here to help! Ask me any question about the current step or the onboarding process.",
+          timestamp: new Date(),
+        }
+      ]);
       initializeNewConversation(user.id);
     }
   };
@@ -1894,10 +1920,14 @@ Let me check if this transaction is eligible for a chargeback...`;
                    </div>
                  )}
 
-                 {/* Help Widget inline */}
-                 {isHelpWidgetOpen && (
-                   <HelpWidget onClose={() => setIsHelpWidgetOpen(false)} />
-                 )}
+                  {/* Help Widget inline */}
+                  {isHelpWidgetOpen && (
+                    <HelpWidget 
+                      onClose={() => setIsHelpWidgetOpen(false)}
+                      messages={helpWidgetMessages}
+                      setMessages={setHelpWidgetMessages}
+                    />
+                  )}
               </div>
             </div>
           </ScrollArea>
