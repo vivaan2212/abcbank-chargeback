@@ -113,18 +113,28 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Create audit log entry
-      const { error: auditError } = await supabase
-        .from('representment_audit_log')
-        .insert({
-          transaction_id,
-          action: 'contest_representment',
-          performed_by: user.id,
-          performed_at: new Date().toISOString(),
-          reason: 'Bank chose to contest merchant representment',
-          note: notes || 'Representment contested by bank admin',
-          metadata: { additional_documents }
-        });
+      // Also update the dispute record status
+      const { error: disputeUpdateError } = await supabase
+        .from('disputes')
+        .update({ status: 'representment_contested' })
+        .eq('transaction_id', transaction_id);
+
+      if (disputeUpdateError) {
+        console.error('Error updating dispute status:', disputeUpdateError);
+      }
+
+        // Create audit log entry
+        const { error: auditError } = await supabase
+          .from('representment_audit_log')
+          .insert({
+            transaction_id,
+            action: 'contest',
+            performed_by: user.id,
+            performed_at: new Date().toISOString(),
+            reason: 'Bank chose to contest merchant representment',
+            note: notes || 'Representment contested by bank admin',
+            metadata: { additional_documents }
+          });
 
       if (auditError) {
         console.error('Error creating audit log:', auditError);

@@ -161,18 +161,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create audit log entry
-    const { error: auditError } = await supabase
-      .from('representment_audit_log')
-      .insert({
-        transaction_id,
-        action: 'accept_representment_and_reverse_credit',
-        performed_by: user.id,
-        performed_at: new Date().toISOString(),
-        merchant_document_url: representment?.representment_document_url,
-        note: notes || "Bank accepted merchant's proof; customer credit reversed.",
-        metadata: { credit_reversal: creditReversalResult }
-      });
+    // Also update the dispute record status
+    const { error: disputeUpdateError } = await supabase
+      .from('disputes')
+      .update({ status: 'closed_lost' })
+      .eq('transaction_id', transaction_id);
+
+    if (disputeUpdateError) {
+      console.error('Error updating dispute status:', disputeUpdateError);
+    }
+
+      // Create audit log entry
+      const { error: auditError } = await supabase
+        .from('representment_audit_log')
+        .insert({
+          transaction_id,
+          action: 'accept',
+          performed_by: user.id,
+          performed_at: new Date().toISOString(),
+          merchant_document_url: representment?.representment_document_url,
+          note: notes || "Bank accepted merchant's proof; customer credit reversed.",
+          metadata: { credit_reversal: creditReversalResult }
+        });
 
     if (auditError) {
       console.error('Error creating audit log:', auditError);

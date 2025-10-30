@@ -194,7 +194,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           "awaiting_merchant_refund"
         ]);
       } else if (statusFilter === "done") {
-        query = query.in("status", ["approved", "completed", "ineligible"]);
+        query = query.in("status", ["approved", "completed", "ineligible", "closed_lost", "representment_contested"]);
       } else if (statusFilter === "needs_attention") {
         // Intentionally do not restrict by status; we'll compute from logs and flags
       } else if (statusFilter === "void") {
@@ -414,7 +414,9 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       cancelled: "Cancelled",
       expired: "Expired",
       requires_action: "Requires action",
-      ineligible: "Ineligible"
+      ineligible: "Ineligible",
+      closed_lost: "Closed - Lost",
+      representment_contested: "Representment Contested"
     };
     return statusMap[status] || status;
   };

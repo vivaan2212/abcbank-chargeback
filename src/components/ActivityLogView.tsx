@@ -421,15 +421,49 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         
         setRepresentment(repData);
         
-        if (repData && dispute.transaction?.needs_attention) {
-          activityList.push({
-            id: 'milestone-representment-received',
-            timestamp: repData.representment_created_at,
-            label: 'Merchant has responded to chargeback',
-            expandable: true,
-            details: 'REPRESENTMENT_BLOCK',
-            activityType: 'needs_attention'
-          });
+        if (repData) {
+          // Check if representment action was taken
+          const { data: auditLog } = await supabase
+            .from('representment_audit_log')
+            .select('*')
+            .eq('transaction_id', dispute.transaction.id)
+            .in('action', ['accept', 'contest'])
+            .order('performed_at', { ascending: false })
+            .maybeSingle();
+
+          if (auditLog) {
+            // Show completed representment action
+            activityList.push({
+              id: 'milestone-representment-received',
+              timestamp: repData.representment_created_at,
+              label: 'Merchant has responded to chargeback',
+              expandable: true,
+              details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
+              activityType: 'human_action'
+            });
+
+            activityList.push({
+              id: 'milestone-representment-action',
+              timestamp: auditLog.performed_at,
+              label: auditLog.action === 'accept' 
+                ? 'Representment accepted - Merchant evidence approved' 
+                : 'Representment contested - Proceeding with chargeback',
+              expandable: auditLog.note ? true : false,
+              details: auditLog.note || undefined,
+              reviewer: 'Rohit Kapoor',
+              activityType: auditLog.action === 'accept' ? 'done' : 'success'
+            });
+          } else if (dispute.transaction?.needs_attention) {
+            // Still awaiting action
+            activityList.push({
+              id: 'milestone-representment-received',
+              timestamp: repData.representment_created_at,
+              label: 'Merchant has responded to chargeback',
+              expandable: true,
+              details: 'REPRESENTMENT_BLOCK',
+              activityType: 'needs_attention'
+            });
+          }
         }
       }
       setIsLoadingRepresentment(false);

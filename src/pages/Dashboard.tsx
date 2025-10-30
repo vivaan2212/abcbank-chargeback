@@ -57,7 +57,7 @@ const Dashboard = () => {
           newCounts.needs_attention++;
         } else if (status === 'void' || status === 'rejected' || status === 'cancelled') {
           newCounts.void++;
-        } else if (status === 'done' || status === 'completed' || status === 'approved' || status === 'ineligible') {
+        } else if (status === 'done' || status === 'completed' || status === 'approved' || status === 'ineligible' || status === 'closed_lost' || status === 'representment_contested') {
           newCounts.done++;
         }
       });
