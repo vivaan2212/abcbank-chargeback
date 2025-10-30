@@ -478,16 +478,26 @@ const Portal = () => {
       if (txnError) throw txnError;
       setTransactions(txns || []);
 
-      // Add welcome message
-      const { error: msgError } = await supabase
+      // Add welcome messages
+      const { error: msgError1 } = await supabase
         .from("messages")
         .insert({
           conversation_id: conversation.id,
           role: "assistant",
-          content: `Hi ${firstName}, welcome to ABC Bank.\nI'm your chargeback filing assistant.\nThese are your transactions from the last 120 days — please select the transaction for which you'd like to proceed with filing a chargeback.`,
+          content: `**Hi ${firstName}, welcome to ABC Bank!**\nI'm Pace, your Chargeback Filing assistant.`,
         });
 
-      if (msgError) throw msgError;
+      if (msgError1) throw msgError1;
+
+      const { error: msgError2 } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversation.id,
+          role: "assistant",
+          content: `These are your transactions from the last 120 days - please select the transaction for which you'd like to raise a dispute.`,
+        });
+
+      if (msgError2) throw msgError2;
     } catch (error: any) {
       toast.error("Failed to create new conversation");
     } finally {
