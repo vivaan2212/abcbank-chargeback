@@ -1460,75 +1460,14 @@ Let me check if this transaction is eligible for a chargeback...`;
           console.log('Verification result:', verificationData);
 
           if (verificationData.success) {
-            // All documents are valid - check if transaction is unsecured (no OTP)
+            // All documents are valid - use decision engine for all transactions
             if (currentDisputeId && selectedTransaction) {
-              const SECURED_INDICATIONS = [2, 212];
-              const isUnsecured = !SECURED_INDICATIONS.includes(selectedTransaction.secured_indication) && 
-                                  !selectedTransaction.is_wallet_transaction;
-              
-              // For unsecured transactions, directly file chargeback with temporary credit
-              if (isUnsecured) {
-                console.log('Unsecured transaction detected - directly filing chargeback with temp credit');
-                
-                // Update dispute status to approved immediately
-                await supabase
-                  .from("disputes")
-                  .update({ status: 'approved' })
-                  .eq("id", currentDisputeId);
-                
-                // Call process-chargeback-action to file the chargeback
-                try {
-                  console.log('Invoking process-chargeback-action for unsecured transaction...');
-                  const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
-                    body: {
-                      disputeId: currentDisputeId,
-                      transactionId: selectedTransaction.id,
-                    }
-                  });
-                  
-                  if (cbError) {
-                    console.error('process-chargeback-action error:', cbError);
-                    throw cbError;
-                  }
-                  
-                  console.log('process-chargeback-action result:', cbData);
-                  
-                  // Show success message
-                  const amount = selectedTransaction.transaction_amount;
-                  const currency = selectedTransaction.transaction_currency;
-                  const statusMessage = `✅ Great news! We've approved your dispute and issued a temporary credit of ${amount.toFixed(2)} ${currency} to your account. We've also filed a chargeback with the card network.\n\nYour case has been automatically approved since this was an unsecured transaction.`;
-                  
-                  await supabase
-                    .from("messages")
-                    .insert({
-                      conversation_id: currentConversationId,
-                      role: "assistant",
-                      content: statusMessage,
-                    });
-                } catch (err) {
-                  console.error('Failed to process unsecured transaction:', err);
-                  toast.error('Failed to process chargeback');
-                }
-                
-                // Reset state
-                setSelectedTransaction(null);
-                setSelectedReason(null);
-                setAiClassification(null);
-                setUploadedDocuments([]);
-                setShowReasonPicker(false);
-                setShowDocumentUpload(false);
-                setShowTransactions(false);
-                setShowContinueOrEndButtons(false);
-              } else {
-                // For secured transactions, use the decision engine
-                console.log('Secured transaction - using evaluate-decision function...');
-                
-                // Prepare docCheck from verification results
-                const docCheck = verificationData.results.map((r: any) => ({
-                  key: r.requirement,
-                  isValid: r.isValid,
-                  reason: r.reason
-                }));
+              // Prepare docCheck from verification results
+              const docCheck = verificationData.results.map((r: any) => ({
+                key: r.requirement,
+                isValid: r.isValid,
+                reason: r.reason
+              }));
 
               // Get session for auth
               const { data: { session } } = await supabase.auth.getSession();
@@ -1538,7 +1477,8 @@ Let me check if this transaction is eligible for a chargeback...`;
                 return;
               }
 
-              // Call decision engine
+              // Call decision engine for ALL transactions (secured and unsecured)
+              console.log('Calling evaluate-decision function...');
               const decisionResponse = await fetch(
                 `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evaluate-decision`,
                 {
@@ -1569,7 +1509,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 let statusMessage = '';
                 let finalStatus = 'approved';
                 
-                // If a chargeback should be filed, trigger backend action first to get card network info
+                // If a chargeback should be filed (but NOT for write-offs), trigger backend action first
                 let cardNetwork = '';
                 if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision)) {
                   try {
@@ -1607,6 +1547,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                 
                 // Map decision to user-friendly message
                 switch (decision.decision) {
+                  case 'APPROVE_WRITEOFF':
+                    statusMessage = `✅ Great news! Your dispute has been approved for a write-off.\n\n💰 We've issued a permanent credit of ${currencySymbol}${amount} to your account.\n\nSince this transaction is under $15, we've automatically approved your dispute and provided the credit. No chargeback will be filed, and this case is now closed.\n\nThe funds are yours to keep - no further action needed!`;
+                    finalStatus = 'write_off_approved';
+                    break;
                   case 'FILE_CHARGEBACK':
                   case 'FILE_CHARGEBACK_WITH_TEMP_CREDIT':
                     const tempCreditNote = decision.decision === 'FILE_CHARGEBACK_WITH_TEMP_CREDIT' 
@@ -1641,27 +1585,26 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .update({ status: finalStatus })
                   .eq("id", currentDisputeId);
 
-                  // Insert final message
-                  await supabase
-                    .from("messages")
-                    .insert({
-                      conversation_id: currentConversationId,
-                      role: "assistant",
-                      content: statusMessage,
-                    });
+                // Insert final message
+                await supabase
+                  .from("messages")
+                  .insert({
+                    conversation_id: currentConversationId,
+                    role: "assistant",
+                    content: statusMessage,
+                  });
 
-                  // Reset state
-                  setSelectedTransaction(null);
-                  setSelectedReason(null);
-                  setAiClassification(null);
-                  setUploadedDocuments([]);
-                  setShowReasonPicker(false);
-                  setShowDocumentUpload(false);
-                  setShowTransactions(false);
-                  setShowContinueOrEndButtons(false);
-                } else {
-                  throw new Error('Decision evaluation failed');
-                }
+                // Reset state
+                setSelectedTransaction(null);
+                setSelectedReason(null);
+                setAiClassification(null);
+                setUploadedDocuments([]);
+                setShowReasonPicker(false);
+                setShowDocumentUpload(false);
+                setShowTransactions(false);
+                setShowContinueOrEndButtons(false);
+              } else {
+                throw new Error('Decision evaluation failed');
               }
             }
           } else {
