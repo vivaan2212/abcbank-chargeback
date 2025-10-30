@@ -425,7 +425,7 @@ const Portal = () => {
       
       setIsReadOnly(false);
       // Reset UI state for a fresh conversation
-      setShowTransactions(true);
+      setShowTransactions(false);
       setShowReasonPicker(false);
       setShowDocumentUpload(false);
       setNeedsReupload(false);
@@ -639,7 +639,7 @@ const Portal = () => {
           // If no dispute found but conversation exists, check if it needs transaction selection
           const hasUserSelection = loaded.some(m => m.role === "user" && m.content.startsWith("I'd like to dispute"));
           if (!hasUserSelection) {
-            setShowTransactions(true);
+            setShowTransactions(false);
             setShowReasonPicker(false);
             setShowDocumentUpload(false);
             setShowOrderDetailsInput(false);
