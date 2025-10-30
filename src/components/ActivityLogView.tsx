@@ -412,14 +412,15 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // 9. Merchant representment milestone (after chargeback filed)
       if (dispute.transaction?.id) {
         console.log('Checking for representment, transaction ID:', dispute.transaction.id);
-        const { data: repData, error: repError } = await supabase
+        const { data: repDataArray, error: repError } = await supabase
           .from('merchant_representments')
           .select('*')
           .eq('transaction_id', dispute.transaction.id)
           .eq('has_representment', true)
           .order('representment_created_at', { ascending: false })
-          .maybeSingle();
+          .limit(1);
         
+        const repData = repDataArray?.[0] || null;
         console.log('Representment data:', repData, 'Error:', repError);
         setRepresentment(repData);
         
