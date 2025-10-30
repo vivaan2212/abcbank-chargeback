@@ -487,7 +487,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             break;
           case 'accepted_by_bank':
             repActivity.label = 'Representment Accepted - Merchant Wins';
-            repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
+            let acceptDetails = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
+            // Check if temporary credit was reversed
+            if (dispute.transaction.temporary_credit_reversal_at) {
+              acceptDetails += '\n\nTemporary credit has been reversed and deducted from your account.';
+            }
+            repActivity.details = acceptDetails;
             repActivity.activityType = 'error';
             break;
           case 'rejected_by_bank':
