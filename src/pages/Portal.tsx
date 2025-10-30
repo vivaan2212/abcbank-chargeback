@@ -1317,7 +1317,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: "Thank you for uploading the required documents. We are now verifying them using AI to ensure they meet the requirements. Please wait...",
+            content: "Thank you for uploading the required documents. Pace is verifying them. Please wait...",
           });
 
         toast.success("Documents submitted successfully");
