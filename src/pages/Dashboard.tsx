@@ -130,10 +130,30 @@ const Dashboard = () => {
         console.log('Transactions subscription status:', status);
       });
 
+    // Subscribe to representment status changes
+    const representmentChannel = supabase
+      .channel('representment-dashboard-counts')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chargeback_representment_static'
+        },
+        (payload) => {
+          console.log('Representment update triggered:', payload);
+          loadCounts();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Representment subscription status:', status);
+      });
+
     return () => {
       subscription.unsubscribe();
       supabase.removeChannel(disputesChannel);
       supabase.removeChannel(transactionsChannel);
+      supabase.removeChannel(representmentChannel);
     };
   }, [navigate]);
 
