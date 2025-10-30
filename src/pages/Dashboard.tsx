@@ -241,37 +241,41 @@ const Dashboard = () => {
             <div className="flex-1 overflow-auto">
               <Tabs defaultValue="in-progress" className="h-full flex flex-col">
                 <div className="border-b px-6">
-                  <TabsList className="h-12 bg-transparent">
+                  <TabsList className="h-12 bg-transparent gap-1">
                     <TabsTrigger 
                       value="needs-attention" 
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                      className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        ⚠ Needs attention <span className="text-muted-foreground">{counts.needs_attention}</span>
+                        <span className="w-4 h-4 rounded-sm border-2 border-[#ff8c00] bg-transparent" />
+                        Needs attention <span className="text-muted-foreground">{counts.needs_attention}</span>
                       </span>
                     </TabsTrigger>
                     <TabsTrigger 
                       value="void"
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                      className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        ⊘ Void <span className="text-muted-foreground">{counts.void}</span>
+                        <span className="w-4 h-4 rounded-sm border-2 border-gray-400 bg-transparent" />
+                        Void <span className="text-muted-foreground">{counts.void}</span>
                       </span>
                     </TabsTrigger>
                     <TabsTrigger 
                       value="in-progress"
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                      className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        ◷ In progress <span className="text-muted-foreground">{counts.in_progress}</span>
+                        <span className="w-4 h-4 rounded-sm border-2 border-[#4169e1] bg-transparent" />
+                        In progress <span className="text-muted-foreground">{counts.in_progress}</span>
                       </span>
                     </TabsTrigger>
                     <TabsTrigger 
                       value="done"
-                      className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                      className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        ✓ Done <span className="text-muted-foreground">{counts.done}</span>
+                        <span className="w-4 h-4 rounded-sm border-2 border-[#22c55e] bg-transparent" />
+                        Done <span className="text-muted-foreground">{counts.done}</span>
                       </span>
                     </TabsTrigger>
                   </TabsList>
