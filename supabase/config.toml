@@ -20,3 +20,9 @@ verify_jwt = true
 
 [functions.evaluate-decision]
 verify_jwt = true
+
+[functions.accept-representment]
+verify_jwt = true
+
+[functions.reject-representment]
+verify_jwt = true

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { RepresentmentPanel } from "./RepresentmentPanel";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface DisputeDetailProps {
   dispute: {
@@ -18,6 +20,14 @@ interface DisputeDetailProps {
     eligibility_reasons: string[] | null;
     created_at: string;
     updated_at: string;
+    chargeback_representment_static?: {
+      id: string;
+      will_be_represented: boolean;
+      representment_status: string;
+      merchant_document_url?: string;
+      merchant_reason_text?: string;
+      source?: string;
+    };
     transaction?: {
       id?: string;
       transaction_id?: number;
@@ -49,9 +59,16 @@ interface DisputeDetailProps {
 
 const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
+  const queryClient = useQueryClient();
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const handleRepresentmentActionComplete = () => {
+    // Refresh data
+    queryClient.invalidateQueries({ queryKey: ['disputes'] });
+    onUpdate?.();
   };
 
   const getActivitySteps = () => {
@@ -209,6 +226,20 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Representment Panel - Full Width if pending */}
+      {dispute.chargeback_representment_static && dispute.transaction?.id && (
+        <div className="lg:col-span-3">
+          <RepresentmentPanel
+            transactionId={dispute.transaction.id}
+            representmentStatus={dispute.chargeback_representment_static.representment_status}
+            merchantReason={dispute.chargeback_representment_static.merchant_reason_text}
+            merchantDocumentUrl={dispute.chargeback_representment_static.merchant_document_url}
+            temporaryCreditProvided={dispute.transaction.temporary_credit_provided}
+            onActionComplete={handleRepresentmentActionComplete}
+          />
+        </div>
+      )}
+
       {/* Activity Log */}
       <div className="lg:col-span-2">
         <Card>

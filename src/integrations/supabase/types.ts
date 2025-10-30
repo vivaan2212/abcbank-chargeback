@@ -126,6 +126,50 @@ export type Database = {
           },
         ]
       }
+      chargeback_representment_static: {
+        Row: {
+          created_at: string
+          id: string
+          merchant_document_url: string | null
+          merchant_reason_text: string | null
+          representment_status: Database["public"]["Enums"]["representment_status_enum"]
+          source: string | null
+          transaction_id: string
+          updated_at: string
+          will_be_represented: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          merchant_document_url?: string | null
+          merchant_reason_text?: string | null
+          representment_status?: Database["public"]["Enums"]["representment_status_enum"]
+          source?: string | null
+          transaction_id: string
+          updated_at?: string
+          will_be_represented?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          merchant_document_url?: string | null
+          merchant_reason_text?: string | null
+          representment_status?: Database["public"]["Enums"]["representment_status_enum"]
+          source?: string | null
+          transaction_id?: string
+          updated_at?: string
+          will_be_represented?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_transaction"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chargeback_videos: {
         Row: {
           card_network: string
@@ -527,6 +571,12 @@ export type Database = {
     }
     Enums: {
       app_role: "customer" | "bank_admin"
+      representment_status_enum:
+        | "no_representment"
+        | "pending"
+        | "accepted_by_bank"
+        | "awaiting_customer_info"
+        | "rejected_by_bank"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -655,6 +705,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["customer", "bank_admin"],
+      representment_status_enum: [
+        "no_representment",
+        "pending",
+        "accepted_by_bank",
+        "awaiting_customer_info",
+        "rejected_by_bank",
+      ],
     },
   },
 } as const

@@ -81,6 +81,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         .select(`
           *,
           transaction:transactions(*),
+          chargeback_representment_static(*),
           chargeback_actions(
             *,
             video:chargeback_videos(id, card_network, video_path)
@@ -403,6 +404,42 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       // Sort by timestamp
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      // Add representment info after sorting if exists
+      const repData = (dispute as any).chargeback_representment_static;
+      if (repData && repData.representment_status !== 'no_representment') {
+        const repActivity: Activity = {
+          id: 'representment-status',
+          timestamp: repData.updated_at || dispute.updated_at,
+          label: '',
+          expandable: true,
+          details: '',
+          activityType: 'needs_attention'
+        };
+
+        switch (repData.representment_status) {
+          case 'pending':
+            repActivity.label = 'Merchant Representment Received';
+            repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
+            repActivity.activityType = 'needs_attention';
+            if (repData.merchant_reason_text) {
+              repActivity.details += `\n\nMerchant's reason: ${repData.merchant_reason_text}`;
+            }
+            break;
+          case 'awaiting_customer_info':
+            repActivity.label = 'Waiting for Customer Response';
+            repActivity.details = 'The bank has requested additional evidence from the customer to contest the merchant\'s representment.';
+            repActivity.activityType = 'paused';
+            break;
+          case 'accepted_by_bank':
+            repActivity.label = 'Representment Accepted - Merchant Wins';
+            repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
+            repActivity.activityType = 'error';
+            break;
+        }
+
+        activityList.push(repActivity);
+      }
 
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);

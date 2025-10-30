@@ -244,6 +244,24 @@ Deno.serve(async (req) => {
 
     console.log(`Chargeback action created successfully: ${chargebackAction.id}`);
 
+    // Ensure representment record exists for this transaction
+    const { data: existingRep } = await supabase
+      .from('chargeback_representment_static')
+      .select('id')
+      .eq('transaction_id', transactionId)
+      .maybeSingle();
+
+    if (!existingRep) {
+      console.log('Creating representment record for transaction:', transactionId);
+      await supabase
+        .from('chargeback_representment_static')
+        .insert({
+          transaction_id: transactionId,
+          will_be_represented: false,
+          representment_status: 'no_representment',
+        });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
