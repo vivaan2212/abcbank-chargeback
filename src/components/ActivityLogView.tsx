@@ -411,11 +411,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
-
-      // Sort by timestamp
-      activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-      // Add representment info after sorting if exists
+      // 9. Add representment info BEFORE sorting (so it appears in chronological order)
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
       if (repData) {
         const repActivity: Activity = {
@@ -451,10 +447,19 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
             repActivity.activityType = 'error';
             break;
+          case 'rejected_by_bank':
+            repActivity.label = 'Representment Rejected - Customer Wins';
+            repActivity.details = 'The bank has rejected the merchant\'s representment. Your chargeback stands as approved.';
+            repActivity.activityType = 'done';
+            break;
         }
 
         activityList.push(repActivity);
       }
+
+
+      // Sort by timestamp
+      activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);
