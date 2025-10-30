@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu, ArrowUp } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu, ArrowUp, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
+import { useToast } from "@/hooks/use-toast";
 
 interface Activity {
   id: string;
@@ -26,6 +27,8 @@ interface Activity {
   }>;
   reviewer?: string;
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
+  showRepresentmentActions?: boolean;
+  representmentTransactionId?: string;
 }
 
 interface ActivityLogViewProps {
@@ -47,10 +50,32 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     url: string;
     cardNetwork: string;
   } | null>(null);
+  const [isBankAdmin, setIsBankAdmin] = useState(false);
+  const [processingRepresentment, setProcessingRepresentment] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadDisputeData();
   }, [disputeId]);
+
+  // Check if user is bank admin
+  useEffect(() => {
+    const checkBankAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'bank_admin')
+        .maybeSingle();
+
+      setIsBankAdmin(!!roles);
+    };
+
+    checkBankAdmin();
+  }, []);
 
   // Realtime updates for dispute status and chargeback actions
   useEffect(() => {
@@ -62,6 +87,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         loadDisputeData();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'disputes', filter: `id=eq.${disputeId}` }, () => {
+        loadDisputeData();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chargeback_representment_static' }, () => {
         loadDisputeData();
       })
       .subscribe();
@@ -446,6 +474,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
             repActivity.activityType = 'needs_attention';
+            repActivity.showRepresentmentActions = isBankAdmin;
+            repActivity.representmentTransactionId = dispute.transaction.id;
             if (repData.merchant_reason_text) {
               repActivity.details += `\n\nMerchant's reason: ${repData.merchant_reason_text}`;
             }
@@ -515,6 +545,68 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       }
     } else if (attachment.action === 'document') {
       // Handle document view (existing functionality)
+    }
+  };
+
+  const handleAcceptRepresentment = async (transactionId: string) => {
+    if (!confirm('Accept merchant representment? This will close the case in favor of the merchant and reverse any temporary credit.')) {
+      return;
+    }
+
+    setProcessingRepresentment(true);
+    try {
+      const { error } = await supabase.functions.invoke('accept-representment', {
+        body: { transaction_id: transactionId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Representment Accepted",
+        description: "Merchant wins. Temporary credit has been reversed.",
+      });
+
+      await loadDisputeData();
+    } catch (error) {
+      console.error('Error accepting representment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept representment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRepresentment(false);
+    }
+  };
+
+  const handleRejectRepresentment = async (transactionId: string) => {
+    if (!confirm('Reject merchant representment? This will ask the customer for additional evidence.')) {
+      return;
+    }
+
+    setProcessingRepresentment(true);
+    try {
+      const { error } = await supabase.functions.invoke('reject-representment', {
+        body: { transaction_id: transactionId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Representment Rejected",
+        description: "Customer has been asked for additional evidence.",
+      });
+
+      await loadDisputeData();
+    } catch (error) {
+      console.error('Error rejecting representment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject representment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingRepresentment(false);
     }
   };
 
@@ -778,6 +870,32 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                           {expandedActivities.has(activity.id) && activity.details && (
                             <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
                               {activity.details}
+                            </div>
+                          )}
+
+                          {/* Representment Action Buttons */}
+                          {activity.showRepresentmentActions && activity.representmentTransactionId && (
+                            <div className="mt-3 flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleAcceptRepresentment(activity.representmentTransactionId!)}
+                                disabled={processingRepresentment}
+                                className="gap-2"
+                              >
+                                <Check className="h-4 w-4" />
+                                Accept Representment
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleRejectRepresentment(activity.representmentTransactionId!)}
+                                disabled={processingRepresentment}
+                                className="gap-2"
+                              >
+                                <X className="h-4 w-4" />
+                                Reject & Request Info
+                              </Button>
                             </div>
                           )}
 
