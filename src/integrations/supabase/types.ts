@@ -126,6 +126,36 @@ export type Database = {
           },
         ]
       }
+      chargeback_knowledge_base: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          keywords: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chargeback_representment_static: {
         Row: {
           created_at: string

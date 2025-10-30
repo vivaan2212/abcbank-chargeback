@@ -1644,7 +1644,9 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleHelpRequest = async () => {
-    if (!currentConversationId || isReadOnly) return;
+    if (!currentConversationId || isReadOnly || isSending) return;
+
+    setIsSending(true);
 
     try {
       // Add user help request message
@@ -1656,19 +1658,50 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: "I need help with this step",
         });
 
+      // Get conversation history for context
+      const { data: messageHistory } = await supabase
+        .from("messages")
+        .select("role, content")
+        .eq("conversation_id", currentConversationId)
+        .order("created_at", { ascending: true })
+        .limit(10);
+
+      // Call edge function to get AI-powered answer
+      const { data: helpData, error: helpError } = await supabase.functions.invoke(
+        'answer-help-question',
+        {
+          body: {
+            question: "I need help with this step",
+            conversationHistory: messageHistory || []
+          }
+        }
+      );
+
+      if (helpError) throw helpError;
+
       // Add assistant help response
-      setTimeout(async () => {
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
-          });
-      }, 500);
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: helpData.answer || "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
+        });
+
     } catch (error: any) {
       console.error("Failed to send help request:", error);
-      toast.error("Failed to send help request");
+      toast.error("Failed to get help. Please try again.");
+      
+      // Fallback response
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
+        });
+    } finally {
+      setIsSending(false);
     }
   };
 
