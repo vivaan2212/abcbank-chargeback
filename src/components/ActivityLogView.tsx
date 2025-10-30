@@ -414,9 +414,22 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // 9. Add representment info BEFORE sorting (so it appears in chronological order)
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
       if (repData) {
+        // Place representment just after Temporary Credit if it's pending/awaiting so it's visible at the end
+        const tempCreditAction = (dispute.chargeback_actions as any[])?.find(a => a.temporary_credit_issued);
+        const tempCreditTs = tempCreditAction ? new Date(tempCreditAction.updated_at || tempCreditAction.created_at).getTime() : undefined;
+        const finalTs = dispute.updated_at ? new Date(dispute.updated_at).getTime() : undefined;
+        const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
+        let repTsNum = repBaseTs;
+        if ((repData.representment_status === 'pending' || repData.representment_status === 'awaiting_customer_info') && tempCreditTs) {
+          repTsNum = tempCreditTs + 500; // just after temp credit
+        } else if (finalTs && repBaseTs < finalTs && (repData.representment_status === 'pending' || repData.representment_status === 'awaiting_customer_info')) {
+          repTsNum = (finalTs as number) - 1000; // fallback near final status
+        }
+        const repTs = new Date(repTsNum).toISOString();
+
         const repActivity: Activity = {
           id: 'representment-status',
-          timestamp: repData.updated_at || dispute.updated_at,
+          timestamp: repTs,
           label: '',
           expandable: true,
           details: '',
