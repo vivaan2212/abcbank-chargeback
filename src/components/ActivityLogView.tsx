@@ -446,11 +446,27 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
       
       if (repData && chargebackFiledOrApproved && repData.representment_status !== 'no_representment') {
-        // Only show representment milestone after chargeback was filed
-        const finalTs = dispute.updated_at ? new Date(dispute.updated_at).getTime() : undefined;
+        // Calculate chargeback filing timestamp - find the last chargeback filed action
+        let chargebackFiledTs: number | null = null;
+        if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
+          const filedActions = (dispute.chargeback_actions as any[]).filter(a => a.chargeback_filed);
+          if (filedActions.length > 0) {
+            const lastFiled = filedActions[filedActions.length - 1];
+            chargebackFiledTs = new Date(lastFiled.updated_at || lastFiled.created_at).getTime();
+          }
+        }
+        
+        // Ensure representment appears AFTER chargeback filing
         const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
-        // Ensure representment appears AFTER the final status
-        const repTs = (finalTs && repBaseTs > finalTs) ? repData.updated_at : new Date(Math.max(repBaseTs, finalTs || repBaseTs)).toISOString();
+        let repTs: string;
+        
+        if (chargebackFiledTs) {
+          // If we have a chargeback filing time, ensure representment is at least 1ms after it
+          repTs = new Date(Math.max(repBaseTs, chargebackFiledTs + 1)).toISOString();
+        } else {
+          // Fallback to using dispute updated_at
+          repTs = new Date(repBaseTs).toISOString();
+        }
 
         const repActivity: Activity = {
           id: 'representment-status',
