@@ -95,7 +95,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     loadDisputes();
 
     // Subscribe to real-time updates for disputes
-    const channel = supabase
+    const disputesChannel = supabase
       .channel('disputes-dashboard-changes')
       .on(
         'postgres_changes',
@@ -113,8 +113,26 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         console.log('Disputes subscription status:', status);
       });
 
+    // Subscribe to representment status changes
+    const repChannel = supabase
+      .channel('representment-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chargeback_representment_static',
+        },
+        (payload) => {
+          console.log('Representment status change detected:', payload);
+          loadDisputes();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(disputesChannel);
+      supabase.removeChannel(repChannel);
     };
   }, [statusFilter, userId, filters, sortField, sortDirection]);
 
@@ -449,6 +467,13 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
   // Derive a display status from logs and flags
   const getDerivedStatus = (dispute: Dispute): string => {
     const actions = dispute.chargeback_actions || [];
+    const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+
+    // Check representment status first (most recent activity)
+    if (repStatus === 'accepted_by_bank') return "Representment Accepted - Merchant Wins";
+    if (repStatus === 'rejected_by_bank') return "Representment Rejected - Customer Wins";
+    if (repStatus === 'pending') return "Merchant Representment Received";
+    if (repStatus === 'awaiting_customer_info') return "Waiting for Customer Response";
 
     if (actions.some(a => a.awaiting_merchant_refund)) return "Awaiting Merchant Refund";
     if (actions.some(a => a.awaiting_settlement)) return "Awaiting Settlement";
