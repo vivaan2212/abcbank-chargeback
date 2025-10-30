@@ -319,8 +319,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             });
           }
 
-          // Chargeback filed milestone
-          if (action.chargeback_filed) {
+          // Chargeback filed milestone - only show if dispute is NOT in final approved state
+          // (to avoid duplicate "Chargeback filed" and "Chargeback approved" entries)
+          const isFinalApproved = ['completed', 'approved', 'closed_won'].includes(dispute.status?.toLowerCase() || '');
+          
+          if (action.chargeback_filed && !isFinalApproved) {
             const attachments: Activity['attachments'] = [
               { label: 'View Document', icon: '📄', action: 'document' }
             ];
