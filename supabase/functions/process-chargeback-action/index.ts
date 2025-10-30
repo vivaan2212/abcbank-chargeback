@@ -148,11 +148,12 @@ Deno.serve(async (req) => {
       admin_message = `Facebook/Meta transaction - waiting 7 days for automatic refund (${days_since_settlement} days elapsed, ${7 - days_since_settlement} days remaining).`;
       awaiting_merchant_refund = true;
     }
-    // Case 1: OTP/3D Secure → Temporary Credit Only
+    // Case 1: OTP/3D Secure → Chargeback Filed with Temporary Credit
     else if (is_secured_otp) {
-      action_type = 'TEMPORARY_CREDIT_ONLY';
-      admin_message = 'OTP-secured transaction - temporary credit issued. Case under investigation.';
+      action_type = 'CHARGEBACK_FILED';
+      admin_message = 'OTP-secured transaction - chargeback filed with temporary credit issued.';
       temporary_credit_issued = true;
+      chargeback_filed = true;
     }
     // Case 3: Restricted MCC → Chargeback without Temp Credit
     else if (is_restricted_mcc) {
