@@ -812,16 +812,14 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Status Info */}
         <div className="border-b px-6 py-3 bg-muted/30">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground mb-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
                 Tid {transactionId}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
-                  {statusBadge.label}
-                </span>
-              </div>
+              </span>
+              <span className={cn("text-xs px-2 py-1 rounded-full font-medium", statusBadge.color)}>
+                {statusBadge.label}
+              </span>
             </div>
             <div className="text-sm text-muted-foreground">
               1 / 5195
