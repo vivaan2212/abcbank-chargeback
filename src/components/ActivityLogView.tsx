@@ -724,6 +724,24 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         {/* Activity Timeline */}
         <div className="flex-1 overflow-auto px-6 py-6 bg-background">
           <div className="max-w-3xl space-y-8">
+            {/* Show active representment if it needs attention */}
+            {representment && transactionDetails?.needs_attention && (
+              <div className="mb-8">
+                <RepresentmentView
+                  transactionId={transactionDetails.id}
+                  representment={representment}
+                  temporaryCredit={{
+                    provided: transactionDetails.temporary_credit_provided || false,
+                    amount: transactionDetails.temporary_credit_amount || 0,
+                    currency: transactionDetails.temporary_credit_currency || 'USD'
+                  }}
+                  onActionComplete={async () => {
+                    // Reload the dispute data after action is taken
+                    await loadDisputeData();
+                  }}
+                />
+              </div>
+            )}
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Date Separator */}
