@@ -346,9 +346,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         });
       }
 
-      // 8. Final dispute outcome milestones
+      // 8. Final dispute outcome milestones  
       if (dispute.status) {
-        const finalStatuses = ['completed', 'approved', 'rejected', 'void', 'cancelled'];
+        const finalStatuses = ['completed', 'approved', 'rejected', 'void', 'cancelled', 'closed_won', 'closed_lost'];
         
         if (finalStatuses.includes(dispute.status.toLowerCase())) {
           let label = '';
@@ -359,6 +359,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           switch (dispute.status.toLowerCase()) {
             case 'completed':
             case 'approved':
+            case 'closed_won':
               label = 'Chargeback approved - Case resolved';
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
