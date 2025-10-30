@@ -467,7 +467,11 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
   // Derive a display status from logs and flags to match activity log
   const getDerivedStatus = (dispute: Dispute): string => {
     const actions = dispute.chargeback_actions || [];
-    const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+    
+    // Access representment data - handle both single object and array
+    const repData = (dispute.transaction as any)?.chargeback_representment_static;
+    const repStatus = Array.isArray(repData) ? repData[0]?.representment_status : repData?.representment_status;
+    
     const status = dispute.status?.toLowerCase() || '';
 
     // Check final outcomes first (most recent)
@@ -481,8 +485,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       return "Case voided";
     }
 
-    // Check representment status (after chargeback filed)
-    if (repStatus === 'accepted_by_bank') return "Merchant Representment Received";
+    // Check representment status (after chargeback filed) - PRIORITY
+    if (repStatus === 'accepted_by_bank') return "Representment Accepted - Merchant Wins";
     if (repStatus === 'rejected_by_bank') return "Representment Rejected - Customer Wins";
     if (repStatus === 'pending') return "Merchant Representment Received";
     if (repStatus === 'awaiting_customer_info') return "Waiting for Customer Response";
@@ -535,10 +539,13 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
   // Get the color for the status square based on current tab filter
   const getStatusColor = (dispute: Dispute): string => {
-    // Use the active tab filter to determine color
+    // For needs_attention tab, still use orange even if representment is pending
     if (statusFilter === 'needs_attention') {
       return 'text-[#ff8c00] fill-[#ff8c00]'; // Orange
-    } else if (statusFilter === 'void') {
+    }
+    
+    // For other tabs, use the tab color
+    if (statusFilter === 'void') {
       return 'text-gray-400 fill-gray-400'; // Gray
     } else if (statusFilter === 'done') {
       return 'text-[#22c55e] fill-[#22c55e]'; // Green
