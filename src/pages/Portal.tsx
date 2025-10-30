@@ -1731,14 +1731,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </div>
                 </div>
 
-                {/* Help Chatbot Bar */}
-                <HelpChatbot 
-                  userName={userFirstName}
-                  isExpanded={isHelpExpanded}
-                  onToggle={() => setIsHelpExpanded(true)}
-                />
-
-        {isReadOnly && (
+                {isReadOnly && (
           <div className="bg-muted/50 px-6 py-3 border-b border-border">
             <p className="text-sm text-muted-foreground">
               You are viewing a past conversation. Start a new chat to continue.
@@ -1906,48 +1899,12 @@ Let me check if this transaction is eligible for a chargeback...`;
           </div>
         </ScrollArea>
 
-        {/* Input */}
-        <div className="border-t border-border bg-card px-6 py-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative flex items-center gap-2 bg-muted/30 rounded-lg border border-border pl-4">
-              <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
-              <Textarea
-                placeholder={isReadOnly ? "This conversation is closed" : "Have a question? Ask Pace right away"}
-                value={inputMessage}
-                onChange={(e) => {
-                  setInputMessage(e.target.value);
-                  // Debounce save to sessionStorage
-                  if (inputDraftTimer.current) {
-                    clearTimeout(inputDraftTimer.current);
-                  }
-                  inputDraftTimer.current = setTimeout(() => {
-                    if (currentConversationId) {
-                      saveUIState(currentConversationId);
-                    }
-                  }, 400);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                disabled={isSending || isReadOnly}
-                className="resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-12"
-                rows={1}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={isSending || isReadOnly || !inputMessage.trim()}
-                size="icon"
-                variant="ghost"
-                className="absolute right-2 h-8 w-8 rounded-md"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
+        {/* Help Chatbot replacing input */}
+        <HelpChatbot 
+          userName={userFirstName}
+          isExpanded={isHelpExpanded}
+          onToggle={() => setIsHelpExpanded(!isHelpExpanded)}
+        />
               </>
             )}
           </div>
