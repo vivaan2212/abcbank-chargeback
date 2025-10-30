@@ -341,8 +341,16 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 { label: 'View Document', icon: '📄', action: 'document' }
               ];
               
-              // If no chargeback_actions but dispute is approved, fetch video by card network
-              if (!dispute.chargeback_actions || dispute.chargeback_actions.length === 0) {
+              // Check if video exists in chargeback_actions
+              if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0 && dispute.chargeback_actions[0].video) {
+                attachments.push({
+                  label: 'Video Recording',
+                  icon: '🎥',
+                  action: 'video',
+                  videoData: dispute.chargeback_actions[0].video
+                });
+              } else {
+                // If no chargeback_actions but dispute is approved, fetch video by card network
                 // Determine card network from transaction's acquirer_name
                 let cardNetwork = 'Visa'; // default
                 if (dispute.transaction?.acquirer_name) {
