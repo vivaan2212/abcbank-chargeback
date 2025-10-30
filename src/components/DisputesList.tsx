@@ -11,7 +11,7 @@ import {
 import { format } from "date-fns";
 import DisputeDetail from "./DisputeDetail";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Square } from "lucide-react";
 import type { DisputeFiltersType } from "./DisputeFilters";
 
 interface Dispute {
@@ -512,168 +512,169 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow className="border-b">
+              <TableHead className="w-12"></TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('status')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Current Status</span>
                   {getSortIcon('status')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.acquirer_name')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Acquirer Name</span>
                   {getSortIcon('transaction.acquirer_name')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.merchant_category_code')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Merchant Category Code</span>
                   {getSortIcon('transaction.merchant_category_code')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.merchant_id')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Merchant ID</span>
                   {getSortIcon('transaction.merchant_id')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.merchant_name')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Merchant Name</span>
                   {getSortIcon('transaction.merchant_name')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.transaction_id')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Reference Number</span>
                   {getSortIcon('transaction.transaction_id')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction_id')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Tid</span>
                   {getSortIcon('transaction_id')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.transaction_amount')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Transaction Amount</span>
                   {getSortIcon('transaction.transaction_amount')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.transaction_currency')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Transaction Currency</span>
                   {getSortIcon('transaction.transaction_currency')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.transaction_time')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Transaction Time</span>
                   {getSortIcon('transaction.transaction_time')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.refund_amount')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Refund Amount</span>
                   {getSortIcon('transaction.refund_amount')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.refund_received')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Refund Received</span>
                   {getSortIcon('transaction.refund_received')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.settled')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Settled</span>
                   {getSortIcon('transaction.settled')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.settlement_date')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Settlement Date</span>
                   {getSortIcon('transaction.settlement_date')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.local_transaction_amount')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Local Amount</span>
                   {getSortIcon('transaction.local_transaction_amount')}
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                className="cursor-pointer select-none hover:bg-muted/30 transition-colors text-muted-foreground font-normal"
                 onClick={() => handleSort('transaction.local_transaction_currency')}
               >
-                <div className="flex items-center justify-between whitespace-nowrap">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>Local Currency</span>
                   {getSortIcon('transaction.local_transaction_currency')}
                 </div>
               </TableHead>
-              <TableHead className="whitespace-nowrap">
-                <div className="flex items-center justify-between">
+              <TableHead className="whitespace-nowrap text-muted-foreground font-normal">
+                <div className="flex items-center gap-2">
                   <span>Action Type</span>
                 </div>
               </TableHead>
-              <TableHead className="whitespace-nowrap">
-                <div className="flex items-center justify-between">
+              <TableHead className="whitespace-nowrap text-muted-foreground font-normal">
+                <div className="flex items-center gap-2">
                   <span>Admin Message</span>
                 </div>
               </TableHead>
-              <TableHead className="whitespace-nowrap">
-                <div className="flex items-center justify-between">
+              <TableHead className="whitespace-nowrap text-muted-foreground font-normal">
+                <div className="flex items-center gap-2">
                   <span>Temp Credit</span>
                 </div>
               </TableHead>
-              <TableHead className="whitespace-nowrap">
-                <div className="flex items-center justify-between">
+              <TableHead className="whitespace-nowrap text-muted-foreground font-normal">
+                <div className="flex items-center gap-2">
                   <span>Chargeback Filed</span>
                 </div>
               </TableHead>
@@ -682,7 +683,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           <TableBody>
             {disputes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={20} className="h-64">
+                <TableCell colSpan={21} className="h-64">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="rounded-full bg-muted p-4 mb-4">
                       <svg className="h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -704,7 +705,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
               disputes.map((dispute) => (
                 <TableRow
                   key={dispute.id}
-                  className="cursor-pointer hover:bg-muted/30"
+                  className="cursor-pointer hover:bg-muted/20 border-b"
                   onClick={() => {
                     if (onDisputeSelect) {
                       onDisputeSelect({
@@ -717,7 +718,10 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
                     }
                   }}
                 >
-                  <TableCell className="font-medium">
+                  <TableCell>
+                    <Square className="h-3 w-3 text-[#ff8c00] fill-[#ff8c00]" />
+                  </TableCell>
+                  <TableCell className="font-normal">
                     {getDerivedStatus(dispute)}
                   </TableCell>
                   <TableCell>{dispute.transaction?.acquirer_name ?? "-"}</TableCell>
