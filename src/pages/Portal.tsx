@@ -1900,11 +1900,13 @@ Let me check if this transaction is eligible for a chargeback...`;
         </ScrollArea>
 
         {/* Help Chatbot replacing input */}
-        <HelpChatbot 
-          userName={userFirstName}
-          isExpanded={isHelpExpanded}
-          onToggle={() => setIsHelpExpanded(!isHelpExpanded)}
-        />
+        <div className="relative">
+          <HelpChatbot 
+            userName={userFirstName}
+            isExpanded={isHelpExpanded}
+            onToggle={() => setIsHelpExpanded(!isHelpExpanded)}
+          />
+        </div>
               </>
             )}
           </div>
