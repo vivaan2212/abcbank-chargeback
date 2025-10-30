@@ -41,7 +41,7 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
   };
 
   return (
-    <div className="w-56 h-full border-r bg-background flex flex-col">
+    <div className="w-56 h-full border-r flex flex-col" style={{ backgroundColor: '#fbfbfb' }}>
       {/* Logo */}
       <div className="p-4 pb-2">
         <img src={zampLogo} alt="Zamp" className="h-4 w-auto" />
