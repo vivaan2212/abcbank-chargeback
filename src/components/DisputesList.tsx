@@ -464,21 +464,72 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     return statusMap[status] || status;
   };
 
-  // Derive a display status from logs and flags
+  // Derive a display status from logs and flags to match activity log
   const getDerivedStatus = (dispute: Dispute): string => {
     const actions = dispute.chargeback_actions || [];
     const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+    const status = dispute.status?.toLowerCase() || '';
 
-    // Check representment status first (most recent activity)
-    if (repStatus === 'accepted_by_bank') return "Representment Accepted - Merchant Wins";
+    // Check final outcomes first (most recent)
+    if (['completed', 'approved', 'closed_won'].includes(status)) {
+      return "Chargeback approved - Case resolved";
+    }
+    if (status === 'rejected') {
+      return "Chargeback rejected";
+    }
+    if (['void', 'cancelled'].includes(status)) {
+      return "Case voided";
+    }
+
+    // Check representment status (after chargeback filed)
+    if (repStatus === 'accepted_by_bank') return "Merchant Representment Received";
     if (repStatus === 'rejected_by_bank') return "Representment Rejected - Customer Wins";
     if (repStatus === 'pending') return "Merchant Representment Received";
     if (repStatus === 'awaiting_customer_info') return "Waiting for Customer Response";
 
-    if (actions.some(a => a.awaiting_merchant_refund)) return "Awaiting Merchant Refund";
-    if (actions.some(a => a.awaiting_settlement)) return "Awaiting Settlement";
-    if (actions.some(a => a.requires_manual_review)) return "Pending Manual Review";
+    // Check chargeback actions for most recent activity
+    if (actions.length > 0) {
+      const latestAction = actions[actions.length - 1];
+      
+      // Check if chargeback has been filed (not in final state)
+      if (latestAction.chargeback_filed && !['completed', 'approved', 'closed_won'].includes(status)) {
+        return "Chargeback filing completed";
+      }
+      
+      // Check for awaiting merchant refund
+      if (latestAction.awaiting_merchant_refund) {
+        return "Awaiting merchant refund";
+      }
+      
+      // Check for manual review
+      if (latestAction.requires_manual_review) {
+        return "Case requires manual review";
+      }
+      
+      // Check for temporary credit
+      if (latestAction.temporary_credit_issued) {
+        return "Temporary credit approved";
+      }
+    }
 
+    // Check document status
+    if (dispute.documents && Array.isArray(dispute.documents) && dispute.documents.length > 0) {
+      return `Customer uploaded ${dispute.documents.length} document${dispute.documents.length > 1 ? 's' : ''}`;
+    }
+
+    // Check reason selection
+    if (dispute.reason_label || dispute.custom_reason) {
+      return `Dispute reason: ${dispute.reason_label || dispute.custom_reason}`;
+    }
+
+    // Check eligibility
+    if (dispute.eligibility_status) {
+      return dispute.eligibility_status.toUpperCase() === 'ELIGIBLE' 
+        ? 'Transaction is eligible for chargeback'
+        : 'Transaction is not eligible for chargeback';
+    }
+
+    // Default to basic status label
     return getStatusLabel(dispute.status);
   };
 
