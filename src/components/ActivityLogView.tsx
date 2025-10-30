@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
+import { ChargebackVideoModal } from "./ChargebackVideoModal";
 
 interface Activity {
   id: string;
@@ -16,7 +17,12 @@ interface Activity {
   expandable?: boolean;
   expanded?: boolean;
   details?: string;
-  attachments?: Array<{ label: string; icon: string }>;
+  attachments?: Array<{ 
+    label: string; 
+    icon: string; 
+    action?: string;
+    videoData?: any;
+  }>;
   reviewer?: string;
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
 }
@@ -35,6 +41,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState("");
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<{
+    url: string;
+    cardNetwork: string;
+  } | null>(null);
 
   useEffect(() => {
     loadDisputeData();
@@ -68,7 +79,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         .select(`
           *,
           transaction:transactions(*),
-          chargeback_actions(*)
+          chargeback_actions(
+            *,
+            video:chargeback_videos(id, card_network, video_path)
+          )
         `)
         .eq('id', disputeId)
         .single();
@@ -274,14 +288,25 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
           // Chargeback filed milestone
           if (action.chargeback_filed) {
+            const attachments: Activity['attachments'] = [
+              { label: 'View Document', icon: '📄', action: 'document' }
+            ];
+            
+            // Add video recording if available
+            if (action.video) {
+              attachments.push({
+                label: 'Video Recording',
+                icon: '🎥',
+                action: 'video',
+                videoData: action.video
+              });
+            }
+            
             activityList.push({
               id: `action-${idx}-filed`,
               timestamp: action.updated_at || action.created_at,
               label: `Chargeback filing completed. Ref. no: ${action.id.substring(0, 10)}`,
-              attachments: [
-                { label: 'View Document', icon: '📄' },
-                { label: 'Video Recording', icon: '🎥' }
-              ],
+              attachments,
               activityType: 'done'
             });
           }
@@ -357,6 +382,29 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       }
       return newSet;
     });
+  };
+
+  const handleAttachmentClick = async (attachment: Activity['attachments'][number]) => {
+    if (attachment.action === 'video' && attachment.videoData) {
+      try {
+        // Generate signed URL for video
+        const { data, error } = await supabase.storage
+          .from('chargeback-videos')
+          .createSignedUrl(attachment.videoData.video_path, 3600); // 1 hour expiry
+        
+        if (error) throw error;
+        
+        setSelectedVideo({
+          url: data.signedUrl,
+          cardNetwork: attachment.videoData.card_network
+        });
+        setVideoModalOpen(true);
+      } catch (error) {
+        console.error('Failed to load video:', error);
+      }
+    } else if (attachment.action === 'document') {
+      // Handle document view (existing functionality)
+    }
   };
 
   const handleSubmitComment = () => {
@@ -628,6 +676,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                               {activity.attachments.map((attachment, i) => (
                                 <button
                                   key={i}
+                                  onClick={() => handleAttachmentClick(attachment)}
                                   className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
                                 >
                                   <span>{attachment.icon}</span>
@@ -753,6 +802,14 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           )}
         </div>
       </div>
+
+      {/* Video Modal */}
+      <ChargebackVideoModal
+        isOpen={videoModalOpen}
+        onClose={() => setVideoModalOpen(false)}
+        videoUrl={selectedVideo?.url || null}
+        cardNetwork={selectedVideo?.cardNetwork || null}
+      />
     </div>
   );
 };

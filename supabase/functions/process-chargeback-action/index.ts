@@ -26,6 +26,7 @@ interface Transaction {
   merchant_name: string;
   merchant_category_code: number;
   customer_id: string;
+  acquirer_name: string;
 }
 
 function calculateDaysSince(dateString: string): number {
@@ -161,6 +162,28 @@ Deno.serve(async (req) => {
 
     console.log(`Decision: action=${action_type}, temp_credit=${temporary_credit_issued}, chargeback=${chargeback_filed}`);
 
+    // Get video reference for chargeback filing
+    let video_id: string | null = null;
+    if (chargeback_filed) {
+      const cardNetwork = tx.acquirer_name?.toLowerCase().includes('visa') 
+        ? 'Visa' 
+        : tx.acquirer_name?.toLowerCase().includes('mastercard') 
+        ? 'Mastercard' 
+        : null;
+
+      if (cardNetwork) {
+        const { data: video } = await supabaseClient
+          .from('chargeback_videos')
+          .select('id')
+          .eq('card_network', cardNetwork)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        video_id = video?.id || null;
+        console.log(`Card network: ${cardNetwork}, Video ID: ${video_id}`);
+      }
+    }
+
     // Insert chargeback action record
     const { data: chargebackAction, error: insertError } = await supabaseClient
       .from('chargeback_actions')
@@ -186,6 +209,7 @@ Deno.serve(async (req) => {
         awaiting_settlement,
         awaiting_merchant_refund,
         admin_message,
+        video_id,
       })
       .select()
       .single();

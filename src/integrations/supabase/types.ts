@@ -41,6 +41,7 @@ export type Database = {
           temporary_credit_issued: boolean
           transaction_id: string
           updated_at: string
+          video_id: string | null
         }
         Insert: {
           action_type: string
@@ -68,6 +69,7 @@ export type Database = {
           temporary_credit_issued?: boolean
           transaction_id: string
           updated_at?: string
+          video_id?: string | null
         }
         Update: {
           action_type?: string
@@ -95,6 +97,7 @@ export type Database = {
           temporary_credit_issued?: boolean
           transaction_id?: string
           updated_at?: string
+          video_id?: string | null
         }
         Relationships: [
           {
@@ -111,7 +114,44 @@ export type Database = {
             referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "chargeback_actions_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "chargeback_videos"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      chargeback_videos: {
+        Row: {
+          card_network: string
+          duration_seconds: number
+          file_size_mb: number
+          id: string
+          is_active: boolean
+          uploaded_at: string
+          video_path: string
+        }
+        Insert: {
+          card_network: string
+          duration_seconds: number
+          file_size_mb: number
+          id?: string
+          is_active?: boolean
+          uploaded_at?: string
+          video_path: string
+        }
+        Update: {
+          card_network?: string
+          duration_seconds?: number
+          file_size_mb?: number
+          id?: string
+          is_active?: boolean
+          uploaded_at?: string
+          video_path?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
