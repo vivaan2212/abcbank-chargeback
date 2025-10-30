@@ -217,7 +217,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Top Bar */}
-            <div className="border-b px-6 py-3 flex items-center justify-between">
+            <div className="px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h1 className="text-xl font-semibold">Chargebacks</h1>
               </div>
@@ -238,10 +238,11 @@ const Dashboard = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto">
-              <Tabs defaultValue="in-progress" className="h-full flex flex-col">
-                <div className="border-b px-6">
-                  <TabsList className="h-12 bg-transparent gap-1">
+            <div className="flex-1 overflow-auto px-6 pt-4">
+              <div className="border rounded-lg bg-background">
+                <Tabs defaultValue="in-progress" className="h-full flex flex-col">
+                  <div className="border-b px-6">
+                    <TabsList className="h-12 bg-transparent gap-1">
                     <TabsTrigger 
                       value="needs-attention" 
                       className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
@@ -281,7 +282,7 @@ const Dashboard = () => {
                   </TabsList>
                 </div>
 
-                <div className="flex-1 overflow-auto px-6 pt-4">
+                <div className="px-6 py-4">
                   <div className="mb-4">
                     <DisputeFilters
                       filters={filters}
@@ -327,6 +328,7 @@ const Dashboard = () => {
                   </TabsContent>
                 </div>
               </Tabs>
+              </div>
             </div>
           </>
         )}
