@@ -46,10 +46,8 @@ const Dashboard = () => {
         done: 0
       };
       
-      // Only count disputes after transaction selection
-      const disputesWithTransactions = data?.filter(d => d.transaction_id !== null) || [];
-      
-      disputesWithTransactions.forEach(dispute => {
+      // Count all disputes
+      (data || []).forEach(dispute => {
         const status = dispute.status;
         
         // Map database statuses to display categories
