@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { getUserRole } from "@/lib/auth";
-import { Globe, ArrowRight, Zap, User, Shield } from "lucide-react";
+import { Globe, Zap, User, Brain } from "lucide-react";
 import paceAvatar from "@/assets/pace-avatar.png";
 
 const Login = () => {
@@ -16,7 +16,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [existingSession, setExistingSession] = useState<Session | null>(null);
-  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [loginStep, setLoginStep] = useState<'welcome' | 'email' | 'password'>('welcome');
 
   useEffect(() => {
     // Check if user is already logged in but don't auto-redirect
@@ -92,8 +92,19 @@ const Login = () => {
     }
   };
 
-  // Show welcome screen first, then login form
-  if (!showLoginForm && !existingSession) {
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email && email.includes('@')) {
+      setLoginStep('password');
+    }
+  };
+
+  const validateEmail = () => {
+    return email && email.includes('@');
+  };
+
+  // Show welcome screen with inline form expansion
+  if (loginStep !== 'password' && !existingSession) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-between bg-background p-8">
         {/* Logo */}
@@ -107,36 +118,59 @@ const Login = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center max-w-3xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-            Welcome to ABC Bank Chargeback Portal
+            Welcome to ABC Bank Dispute Portal
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl">
-            Let's get you set up with the right dispute resolution platform for your needs. 
-            We'll guide you through a quick onboarding process.
+            Login securely to access your dispute and chargeback support assistant
           </p>
 
-          <Button 
-            size="lg"
-            onClick={() => setShowLoginForm(true)}
-            className="px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
-          >
-            Get Started
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          {loginStep === 'welcome' ? (
+            <Button 
+              size="lg"
+              onClick={() => setLoginStep('email')}
+              className="px-8 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+            >
+              Login
+            </Button>
+          ) : (
+            <form onSubmit={handleEmailSubmit} className="w-full max-w-md space-y-4">
+              <div className="space-y-2">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="h-12 text-base"
+                  autoFocus
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
+                disabled={isLoading || !validateEmail()}
+              >
+                Continue
+              </Button>
+            </form>
+          )}
 
           {/* Features */}
           <div className="flex flex-wrap items-center justify-center gap-8 mt-16">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-sm text-muted-foreground">Quick Setup</span>
+              <span className="text-sm text-muted-foreground">Quick support</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-sm text-muted-foreground">Personalized</span>
+              <span className="text-sm text-muted-foreground">Personalised</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-sm text-muted-foreground">Secure</span>
+              <span className="text-sm text-muted-foreground">Intelligent</span>
             </div>
           </div>
         </div>
@@ -154,24 +188,30 @@ const Login = () => {
     );
   }
 
-  // Show login form
+  // Show password form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-xl shadow-lg p-8 border border-border">
-          <div className="flex flex-col items-center mb-8">
-            <div className="flex items-center gap-2 mb-2">
-              <Globe className="w-6 h-6 text-primary" />
-              <div className="text-2xl font-bold">ABC Bank</div>
-            </div>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              powered by 
-              <img src={paceAvatar} alt="Pace" className="w-5 h-5 rounded-full inline-block ml-1" />
-            </p>
-          </div>
+    <div className="min-h-screen flex flex-col items-center justify-between bg-background p-8">
+      {/* Logo */}
+      <div className="w-full max-w-4xl pt-12">
+        <div className="flex items-center justify-center gap-2 mb-16">
+          <Globe className="w-8 h-8 text-primary" />
+          <span className="text-2xl font-bold">ABC Bank</span>
+        </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center max-w-3xl mx-auto text-center">
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+          Welcome to ABC Bank Dispute Portal
+        </h1>
+        
+        <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl">
+          Login securely to access your dispute and chargeback support assistant
+        </p>
+
+        <div className="w-full max-w-md">
           {existingSession ? (
-            <div className="space-y-4">
+            <div className="space-y-4 bg-card rounded-xl p-6 border border-border">
               <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
                   You are already logged in as
@@ -205,23 +245,8 @@ const Login = () => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your.email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -230,40 +255,56 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="h-11"
+                  className="h-12 text-base"
+                  autoFocus
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold"
+                className="w-full h-12 text-base font-semibold"
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? "Logging in..." : "Continue"}
               </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setLoginStep('email')}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Back to email
+                </button>
+              </div>
             </form>
           )}
+        </div>
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-muted-foreground">Need an account? </span>
-            <button
-              onClick={() => navigate("/signup")}
-              className="text-primary hover:underline font-medium"
-            >
-              Sign up
-            </button>
+        {/* Features */}
+        <div className="flex flex-wrap items-center justify-center gap-8 mt-16">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-sm text-muted-foreground">Quick support</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-sm text-muted-foreground">Personalised</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-sm text-muted-foreground">Intelligent</span>
+          </div>
+        </div>
+      </div>
 
-          {showLoginForm && !existingSession && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => setShowLoginForm(false)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ← Back to welcome
-              </button>
-            </div>
-          )}
+      {/* Footer */}
+      <div className="w-full max-w-4xl pb-8">
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <span>Powered by</span>
+          <div className="flex items-center gap-1">
+            <img src={paceAvatar} alt="Pace" className="w-6 h-6 rounded-full" />
+          </div>
         </div>
       </div>
     </div>
