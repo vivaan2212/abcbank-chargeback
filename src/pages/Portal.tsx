@@ -5,7 +5,7 @@ import { getUserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, Send, ArrowUp, Menu, X, MessageCircleQuestion } from "lucide-react";
+import { LogOut, Send, ArrowUp, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
@@ -1681,15 +1681,16 @@ Let me check if this transaction is eligible for a chargeback...`;
         
         {/* Chat Panel */}
         <ResizablePanel
-          defaultSize={isHelpExpanded ? 50 : 80}
-          minSize={40}
+          defaultSize={80}
+          minSize={65}
           className="flex flex-col h-full"
         >
           <div className="flex-1 flex flex-col h-full bg-background">
             {isHelpExpanded ? (
               <HelpChatbot 
                 userName={userFirstName}
-                onClose={() => setIsHelpExpanded(false)}
+                isExpanded={isHelpExpanded}
+                onToggle={() => setIsHelpExpanded(false)}
               />
             ) : (
               <>
@@ -1888,51 +1889,40 @@ Let me check if this transaction is eligible for a chargeback...`;
                  </>
                )}
                
-                 {/* Show artifacts after successful completion */}
-                 {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
-                   <div className="mt-6 flex justify-center">
-                     <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
-                   </div>
-                 )}
-              </div>
-            </div>
-          </ScrollArea>
+                {/* Show artifacts after successful completion */}
+                {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
+                  <div className="mt-6 flex justify-center">
+                    <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
+                  </div>
+                )}
 
-          {/* Help Chatbot button at bottom (only when not expanded) */}
-          {!isHelpExpanded && (
-            <div 
-              onClick={() => setIsHelpExpanded(true)}
-              className="w-full bg-card border-t border-border px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
-            >
-              <MessageCircleQuestion className="w-5 h-5 text-primary" />
-              <span className="text-sm font-semibold">Have a question? Ask Pace right away.</span>
-            </div>
-          )}
-               </>
-             )}
+                {/* Help Chatbot inline with messages */}
+                {isHelpExpanded && (
+                  <HelpChatbot 
+                    userName={userFirstName}
+                    isExpanded={isHelpExpanded}
+                    onToggle={() => setIsHelpExpanded(false)}
+                  />
+                )}
+             </div>
            </div>
-         </ResizablePanel>
+         </ScrollArea>
 
-         {/* Right Side Help Panel */}
-         {isHelpExpanded && (
-           <>
-             <ResizableHandle />
-             <ResizablePanel
-               defaultSize={35}
-               minSize={25}
-               maxSize={45}
-               className="h-full"
-             >
-               <HelpChatbot 
-                 userName={userFirstName}
-                 onClose={() => setIsHelpExpanded(false)}
-               />
-             </ResizablePanel>
-           </>
+         {/* Help Chatbot button at bottom (only when not expanded) */}
+         {!isHelpExpanded && (
+           <HelpChatbot 
+             userName={userFirstName}
+             isExpanded={isHelpExpanded}
+             onToggle={() => setIsHelpExpanded(true)}
+           />
          )}
-       </ResizablePanelGroup>
-     </div>
-   );
- };
+              </>
+            )}
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+};
 
- export default Portal;
+export default Portal;
