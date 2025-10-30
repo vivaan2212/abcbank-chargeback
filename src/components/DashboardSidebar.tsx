@@ -1,12 +1,43 @@
-import { Database, Users, TrendingUp } from "lucide-react";
+import { Database, Users, TrendingUp, ChevronUp, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import zampLogo from "@/assets/zamp-logo.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface DashboardSidebarProps {
   activeSection?: string;
 }
 
 const DashboardSidebar = ({ activeSection = "chargebacks" }: DashboardSidebarProps) => {
+  const handleClearAllData = async () => {
+    if (!confirm('⚠️ WARNING: This will permanently delete ALL disputes, conversations, and messages. This action cannot be undone. Are you absolutely sure?')) {
+      return;
+    }
+
+    try {
+      toast.info('Deleting all data...');
+      
+      const { data, error } = await supabase.functions.invoke('clear-all-data');
+      
+      if (error) throw error;
+      
+      console.log('Deletion result:', data);
+      toast.success(`Successfully deleted: ${data.deleted.messages} messages, ${data.deleted.disputes} disputes, ${data.deleted.conversations} conversations`);
+      
+      // Reload the page to refresh counts
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to clear data:', error);
+      toast.error('Failed to clear all data. Check console for details.');
+    }
+  };
+
   return (
     <div className="w-56 h-full border-r bg-background flex flex-col">
       {/* Logo */}
@@ -44,6 +75,35 @@ const DashboardSidebar = ({ activeSection = "chargebacks" }: DashboardSidebarPro
           <TrendingUp className="h-4 w-4" />
           <span className="text-sm">Chargebacks</span>
         </div>
+      </div>
+
+      {/* Spacer to push dropdown to bottom */}
+      <div className="flex-1" />
+
+      {/* Bank Dropdown at Bottom */}
+      <div className="p-4 border-t">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="w-full">
+            <div className="flex items-center justify-between px-2 py-2 rounded hover:bg-muted/50 cursor-pointer">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-pink-200 flex items-center justify-center text-sm font-medium">
+                  A
+                </div>
+                <span className="text-sm font-medium">ABC Bank</span>
+              </div>
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem 
+              onClick={handleClearAllData}
+              className="text-destructive focus:text-destructive cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All Data
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

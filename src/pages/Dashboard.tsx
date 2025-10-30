@@ -149,30 +149,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleClearAllData = async () => {
-    if (!confirm('⚠️ WARNING: This will permanently delete ALL disputes, conversations, and messages. This action cannot be undone. Are you absolutely sure?')) {
-      return;
-    }
-
-    try {
-      toast.info('Deleting all data...');
-      
-      const { data, error } = await supabase.functions.invoke('clear-all-data');
-      
-      if (error) throw error;
-      
-      console.log('Deletion result:', data);
-      toast.success(`Successfully deleted: ${data.deleted.messages} messages, ${data.deleted.disputes} disputes, ${data.deleted.conversations} conversations`);
-      
-      // Reload counts
-      loadCounts();
-    } catch (error) {
-      console.error('Failed to clear data:', error);
-      toast.error('Failed to clear all data. Check console for details.');
-    }
-  };
-
-
   const handleApplyFilters = () => {
     // Force re-render with new filters
     setFilterKey(prev => prev + 1);
@@ -223,13 +199,6 @@ const Dashboard = () => {
                 <Button variant="ghost" size="sm">
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
-                </Button>
-                <Button
-                  variant="destructive" 
-                  size="sm"
-                  onClick={handleClearAllData}
-                >
-                  Clear All Data
                 </Button>
                 <Button variant="ghost" size="icon" onClick={handleLogout}>
                   <LogOut className="h-5 w-5" />
