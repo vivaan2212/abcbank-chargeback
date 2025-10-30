@@ -41,7 +41,7 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
   };
 
   return (
-    <div className="w-56 h-full border-r bg-sidebar-background flex flex-col">
+    <div className="w-56 h-full border-r bg-background flex flex-col">
       {/* Logo */}
       <div className="p-4 pb-2">
         <img src={zampLogo} alt="Zamp" className="h-4 w-auto" />
@@ -68,7 +68,7 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
       {/* Processes Section */}
       <div className="px-4">
         <div className="text-xs font-medium text-muted-foreground mb-2">Processes</div>
-        <div className="border rounded-md bg-card overflow-hidden">
+        <div className="border rounded-lg bg-card">
           <div 
             className={cn(
               "flex items-center gap-2 px-2 py-1.5 cursor-pointer",
