@@ -448,7 +448,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
       const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
       
-      if (repData && chargebackFiledOrApproved && repData.representment_status !== 'no_representment') {
+      if (repData && chargebackFiledOrApproved) {
         // Calculate chargeback filing timestamp - find the last chargeback filed action
         let chargebackFiledTs: number | null = null;
         if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
@@ -481,6 +481,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         };
 
         switch (repData.representment_status) {
+          case 'no_representment':
+            repActivity.label = 'Merchant Representment Period Closed';
+            repActivity.details = 'The merchant did not contest this chargeback within the allowed timeframe. Your chargeback remains approved.';
+            repActivity.activityType = 'done';
+            break;
           case 'pending':
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
