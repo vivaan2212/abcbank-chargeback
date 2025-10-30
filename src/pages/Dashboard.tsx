@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BookOpen, Share2 } from "lucide-react";
+import { LogOut, BookOpen, Share2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import DisputesList from "@/components/DisputesList";
 import { getUserRole } from "@/lib/auth";
@@ -28,6 +28,8 @@ const Dashboard = () => {
     in_progress: 0,
     done: 0
   });
+  const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
+  const [isKnowledgeBaseClosing, setIsKnowledgeBaseClosing] = useState(false);
 
   const loadCounts = async () => {
     try {
@@ -182,6 +184,14 @@ const Dashboard = () => {
     setSelectedDispute(null);
   };
 
+  const handleCloseKnowledgeBase = () => {
+    setIsKnowledgeBaseClosing(true);
+    setTimeout(() => {
+      setIsKnowledgeBaseOpen(false);
+      setIsKnowledgeBaseClosing(false);
+    }, 400); // Match the animation duration
+  };
+
   if (!user) return null;
 
   return (
@@ -212,7 +222,11 @@ const Dashboard = () => {
                 <h1 className="text-xl font-semibold">Chargebacks</h1>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsKnowledgeBaseOpen(true)}
+                >
                   <BookOpen className="h-4 w-4 mr-2" />
                   Knowledge Base
                 </Button>
@@ -313,6 +327,92 @@ const Dashboard = () => {
           </>
         )}
       </div>
+
+      {/* Knowledge Base Overlay */}
+      {isKnowledgeBaseOpen && (
+        <>
+          {/* Dark Backdrop */}
+          <div 
+            className={cn(
+              "fixed inset-0 bg-black/50 z-40",
+              isKnowledgeBaseClosing ? "animate-fade-out" : "animate-fade-in"
+            )}
+            onClick={handleCloseKnowledgeBase}
+          />
+          
+          {/* Sliding Panel */}
+          <div className={cn(
+            "fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col",
+            isKnowledgeBaseClosing ? "animate-slide-out-right" : "animate-slide-in-right"
+          )}>
+            {/* Header */}
+            <div className="border-b px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-5 w-5" />
+                <h2 className="text-lg font-semibold">Knowledge</h2>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">Updated 10m ago</span>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm">4</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">💬</span>
+                  <span className="text-sm">2</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCloseKnowledgeBase}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto px-6 py-6">
+              <div className="max-w-3xl space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold mb-6">Chargeback for Banks</h1>
+                  
+                  <p className="text-muted-foreground leading-relaxed mb-6">
+                    This agent automates the end-to-end chargeback filing process by eliminating manual case review, 
+                    reducing human error in dispute categorization, and ensuring timely, compliant submissions across 
+                    card networks. It processes high-volume transaction and dispute data, identifies eligible chargebacks, 
+                    compiles supporting evidence, and files them accurately within network timelines — enabling faster 
+                    recoveries and consistent adherence to Visa and Mastercard rules that would be impossible through 
+                    manual operations.
+                  </p>
+
+                  <h2 className="text-2xl font-semibold mb-4">Key Features</h2>
+                  
+                  <ul className="space-y-3 text-muted-foreground">
+                    <li className="flex gap-3">
+                      <span className="text-primary">•</span>
+                      <span>Automated eligibility assessment based on card network rules</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-primary">•</span>
+                      <span>Intelligent reason code selection and documentation</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-primary">•</span>
+                      <span>Real-time tracking and status updates</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="text-primary">•</span>
+                      <span>Integration with banking systems and card networks</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
