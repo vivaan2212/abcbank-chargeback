@@ -1,6 +1,6 @@
 import { Database, Users, TrendingUp, ChevronUp, Trash2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import zampLogo from "@/assets/zamp-logo-new.png";
+import zampLogo from "@/assets/zamp-icon.svg";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,7 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
     <div className="w-56 h-full border-r bg-background flex flex-col">
       {/* Logo */}
       <div className="p-4 pb-2">
-        <img src={zampLogo} alt="Zamp" className="h-6 w-auto" />
+        <img src={zampLogo} alt="Zamp" className="h-4 w-auto" />
       </div>
       
       {/* Data Section */}
