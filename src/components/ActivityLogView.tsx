@@ -54,7 +54,16 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [isBankAdmin, setIsBankAdmin] = useState(false);
   const [processingRepresentment, setProcessingRepresentment] = useState(false);
   const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
+  const [isKnowledgeBaseClosing, setIsKnowledgeBaseClosing] = useState(false);
   const { toast } = useToast();
+
+  const handleCloseKnowledgeBase = () => {
+    setIsKnowledgeBaseClosing(true);
+    setTimeout(() => {
+      setIsKnowledgeBaseOpen(false);
+      setIsKnowledgeBaseClosing(false);
+    }, 400); // Match the animation duration
+  };
 
   useEffect(() => {
     loadDisputeData();
@@ -1072,12 +1081,18 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         <>
           {/* Dark Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/50 z-40 animate-fade-in"
-            onClick={() => setIsKnowledgeBaseOpen(false)}
+            className={cn(
+              "fixed inset-0 bg-black/50 z-40",
+              isKnowledgeBaseClosing ? "animate-fade-out" : "animate-fade-in"
+            )}
+            onClick={handleCloseKnowledgeBase}
           />
           
           {/* Sliding Panel */}
-          <div className="fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl animate-slide-in-right overflow-hidden flex flex-col">
+          <div className={cn(
+            "fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col",
+            isKnowledgeBaseClosing ? "animate-slide-out-right" : "animate-slide-in-right"
+          )}>
             {/* Header */}
             <div className="border-b px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1097,7 +1112,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsKnowledgeBaseOpen(false)}
+                  onClick={handleCloseKnowledgeBase}
                   className="h-8 w-8"
                 >
                   <X className="h-4 w-4" />

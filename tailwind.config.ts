@@ -102,12 +102,22 @@ export default {
             transform: "translateX(0)",
           },
         },
+        "slide-out-right": {
+          "0%": {
+            transform: "translateX(0)",
+          },
+          "100%": {
+            transform: "translateX(100%)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.4s ease-out",
+        "fade-out": "fade-in 0.3s ease-out reverse",
         "slide-in-right": "slide-in-right 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        "slide-out-right": "slide-out-right 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
       },
     },
   },
