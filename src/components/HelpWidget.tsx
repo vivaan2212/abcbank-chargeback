@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
 import paceAvatar from "@/assets/pace-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,7 +21,7 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I'm Pace, your chargeback assistant. Ask me any question about the chargeback process, timelines, evidence requirements, or anything else related to disputes.",
+      content: "I'm here to help! Ask me any question about the current step or the onboarding process.",
       timestamp: new Date(),
     }
   ]);
@@ -88,117 +87,97 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
 
   return (
     <div className="mt-6 animate-fade-in">
-      <div className="bg-card border border-border rounded-lg shadow-sm">
-        {/* Header */}
-        <div className="border-b border-border px-4 py-3 flex items-center gap-3">
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-            <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h2 className="text-base font-semibold">Ask Pace</h2>
-            <p className="text-xs text-muted-foreground">Chargeback Assistant</p>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="px-4 py-4 max-h-[400px] overflow-y-auto">
-          <div className="space-y-4">
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === "assistant" ? "justify-start" : "justify-end"}`}
-              >
-                <div className={`max-w-[80%] ${msg.role === "assistant" ? "items-start" : "items-end"} flex flex-col`}>
-                  {msg.role === "assistant" && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="w-6 h-6">
-                        <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs font-medium">Pace</span>
-                    </div>
-                  )}
-                  
-                  <div
-                    className={`rounded-2xl px-4 py-3 ${
-                      msg.role === "assistant"
-                        ? "bg-muted text-foreground rounded-tl-none"
-                        : "bg-primary text-primary-foreground rounded-tr-none"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
+      {/* Messages */}
+      <div className="space-y-6">
+        {messages.map((msg, idx) => (
+          <div key={idx}>
+            {msg.role === "assistant" && (
+              <div className="flex items-start gap-3">
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+                  <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold">Pace</span>
                   </div>
-                  
-                  <span className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(msg.timestamp, { addSuffix: true })}
-                  </span>
+                  <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3">
+                    <p className="text-sm text-foreground">{msg.content}</p>
+                  </div>
                 </div>
               </div>
-            ))}
+            )}
             
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] items-start flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs font-medium">Pace</span>
-                  </div>
-                  <div className="bg-muted rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Thinking...</span>
+            {msg.role === "user" && (
+              <div className="flex items-start gap-3 justify-end">
+                <div className="flex-1 flex justify-end">
+                  <div className="bg-primary text-primary-foreground rounded-lg rounded-tr-none px-4 py-3 max-w-[80%]">
+                    <p className="text-sm">{msg.content}</p>
                   </div>
                 </div>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Input */}
-        <div className="border-t border-border px-4 py-3 space-y-3">
-          <Textarea
-            placeholder="Ask me anything about chargebacks..."
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={isLoading}
-            className="resize-none text-sm min-h-[70px]"
-            rows={2}
-          />
-          <div className="flex gap-2">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              size="sm"
-              className="flex-1"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <Button
-              onClick={handleSendMessage}
-              disabled={isLoading || !inputMessage.trim()}
-              size="sm"
-              className="flex-1"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Asking...
-                </>
-              ) : (
-                "Ask Pace"
-              )}
-            </Button>
+        ))}
+        
+        {isLoading && (
+          <div className="flex items-start gap-3">
+            <Avatar className="w-10 h-10 flex-shrink-0">
+              <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+              <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold">Pace</span>
+              </div>
+              <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Thinking...</span>
+              </div>
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="mt-6 space-y-3">
+        <Textarea
+          placeholder="Type your question..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          disabled={isLoading}
+          className="resize-none text-sm min-h-[80px] bg-background"
+          rows={3}
+        />
+        <div className="flex gap-3">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <Button
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputMessage.trim()}
+            className="flex-1"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              "Continue"
+            )}
+          </Button>
         </div>
       </div>
     </div>
