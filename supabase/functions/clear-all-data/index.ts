@@ -67,6 +67,36 @@ Deno.serve(async (req) => {
     }
     console.log(`Deleted ${disputeCount} disputes`);
 
+    // 2.5. Reset all representment statuses to pending
+    const { error: representmentError } = await supabaseAdmin
+      .from('chargeback_representment_static')
+      .update({
+        representment_status: 'pending',
+        will_be_represented: true,
+        merchant_reason_text: 'Customer received the products as ordered. We have proof of delivery with customer signature on 2024-01-15. The customer used the service for 2 weeks before disputing. All items were delivered in perfect condition according to our courier records.'
+      })
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all records
+
+    if (representmentError) {
+      console.error('Error resetting representment statuses:', representmentError);
+      throw representmentError;
+    }
+    console.log('Reset all representment statuses to pending');
+
+    // 2.6. Reset transaction temporary credit reversal timestamps
+    const { error: transactionResetError } = await supabaseAdmin
+      .from('transactions')
+      .update({
+        temporary_credit_reversal_at: null
+      })
+      .not('temporary_credit_reversal_at', 'is', null);
+
+    if (transactionResetError) {
+      console.error('Error resetting transaction reversal timestamps:', transactionResetError);
+      throw transactionResetError;
+    }
+    console.log('Reset transaction temporary credit reversal timestamps');
+
     // 3. Delete all conversations
     const { error: conversationsError } = await supabaseAdmin
       .from('conversations')
