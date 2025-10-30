@@ -20,6 +20,7 @@ export type Database = {
           admin_message: string
           awaiting_merchant_refund: boolean
           awaiting_settlement: boolean
+          chargeback_case_id: string | null
           chargeback_filed: boolean
           created_at: string
           customer_id: string
@@ -48,6 +49,7 @@ export type Database = {
           admin_message: string
           awaiting_merchant_refund?: boolean
           awaiting_settlement?: boolean
+          chargeback_case_id?: string | null
           chargeback_filed?: boolean
           created_at?: string
           customer_id: string
@@ -76,6 +78,7 @@ export type Database = {
           admin_message?: string
           awaiting_merchant_refund?: boolean
           awaiting_settlement?: boolean
+          chargeback_case_id?: string | null
           chargeback_filed?: boolean
           created_at?: string
           customer_id?: string
@@ -330,6 +333,53 @@ export type Database = {
           },
         ]
       }
+      merchant_representments: {
+        Row: {
+          created_at: string | null
+          has_representment: boolean
+          id: string
+          representment_created_at: string | null
+          representment_document_url: string | null
+          representment_reason_code: string | null
+          representment_reason_text: string | null
+          representment_source: string | null
+          transaction_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_representment?: boolean
+          id?: string
+          representment_created_at?: string | null
+          representment_document_url?: string | null
+          representment_reason_code?: string | null
+          representment_reason_text?: string | null
+          representment_source?: string | null
+          transaction_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_representment?: boolean
+          id?: string
+          representment_created_at?: string | null
+          representment_document_url?: string | null
+          representment_reason_code?: string | null
+          representment_reason_text?: string | null
+          representment_source?: string | null
+          transaction_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_representments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -386,11 +436,57 @@ export type Database = {
         }
         Relationships: []
       }
+      representment_audit_log: {
+        Row: {
+          action: string
+          id: string
+          merchant_document_url: string | null
+          metadata: Json | null
+          note: string | null
+          performed_at: string | null
+          performed_by: string | null
+          reason: string | null
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          merchant_document_url?: string | null
+          metadata?: Json | null
+          note?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          merchant_document_url?: string | null
+          metadata?: Json | null
+          note?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representment_audit_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           acquirer_name: string
+          chargeback_case_id: string | null
           created_at: string | null
           customer_id: string
+          dispute_status: string | null
           id: string
           is_wallet_transaction: boolean
           local_transaction_amount: number
@@ -398,12 +494,17 @@ export type Database = {
           merchant_category_code: number
           merchant_id: number
           merchant_name: string
+          needs_attention: boolean | null
           pos_entry_mode: number
           refund_amount: number
           refund_received: boolean
           secured_indication: number
           settled: boolean
           settlement_date: string | null
+          temporary_credit_amount: number | null
+          temporary_credit_currency: string | null
+          temporary_credit_provided: boolean | null
+          temporary_credit_reversal_at: string | null
           transaction_amount: number
           transaction_currency: string
           transaction_id: number
@@ -412,8 +513,10 @@ export type Database = {
         }
         Insert: {
           acquirer_name: string
+          chargeback_case_id?: string | null
           created_at?: string | null
           customer_id: string
+          dispute_status?: string | null
           id?: string
           is_wallet_transaction?: boolean
           local_transaction_amount: number
@@ -421,12 +524,17 @@ export type Database = {
           merchant_category_code: number
           merchant_id: number
           merchant_name: string
+          needs_attention?: boolean | null
           pos_entry_mode: number
           refund_amount?: number
           refund_received?: boolean
           secured_indication: number
           settled?: boolean
           settlement_date?: string | null
+          temporary_credit_amount?: number | null
+          temporary_credit_currency?: string | null
+          temporary_credit_provided?: boolean | null
+          temporary_credit_reversal_at?: string | null
           transaction_amount: number
           transaction_currency: string
           transaction_id: number
@@ -435,8 +543,10 @@ export type Database = {
         }
         Update: {
           acquirer_name?: string
+          chargeback_case_id?: string | null
           created_at?: string | null
           customer_id?: string
+          dispute_status?: string | null
           id?: string
           is_wallet_transaction?: boolean
           local_transaction_amount?: number
@@ -444,12 +554,17 @@ export type Database = {
           merchant_category_code?: number
           merchant_id?: number
           merchant_name?: string
+          needs_attention?: boolean | null
           pos_entry_mode?: number
           refund_amount?: number
           refund_received?: boolean
           secured_indication?: number
           settled?: boolean
           settlement_date?: string | null
+          temporary_credit_amount?: number | null
+          temporary_credit_currency?: string | null
+          temporary_credit_provided?: boolean | null
+          temporary_credit_reversal_at?: string | null
           transaction_amount?: number
           transaction_currency?: string
           transaction_id?: number

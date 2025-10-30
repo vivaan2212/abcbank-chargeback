@@ -12,6 +12,7 @@ const MAGSTRIPE_POS_MODES = [90, 91];
 interface Transaction {
   id: string;
   transaction_amount: number;
+  transaction_currency: string;
   local_transaction_amount: number;
   local_transaction_currency: string;
   refund_amount: number;
@@ -42,6 +43,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
 
     if (!authHeader) {
@@ -217,6 +222,24 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error('Error inserting chargeback action:', insertError);
       throw insertError;
+    }
+
+    // Update transaction with chargeback details
+    if (chargeback_filed) {
+      const { error: txUpdateError } = await supabase
+        .from('transactions')
+        .update({
+          dispute_status: 'chargeback_filed',
+          chargeback_case_id: chargebackAction.id,
+          temporary_credit_provided: temporary_credit_issued,
+          temporary_credit_amount: temporary_credit_issued ? net_amount : 0,
+          temporary_credit_currency: tx.transaction_currency
+        })
+        .eq('id', transactionId);
+
+      if (txUpdateError) {
+        console.error('Error updating transaction status:', txUpdateError);
+      }
     }
 
     console.log(`Chargeback action created successfully: ${chargebackAction.id}`);

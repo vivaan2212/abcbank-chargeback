@@ -3,7 +3,9 @@ import { CheckCircle2, Circle, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { RepresentmentView } from "./RepresentmentView";
 
 interface DisputeDetailProps {
   dispute: {
@@ -19,6 +21,7 @@ interface DisputeDetailProps {
     created_at: string;
     updated_at: string;
     transaction?: {
+      id?: string;
       transaction_id?: number;
       transaction_time?: string;
       transaction_amount?: number;
@@ -36,15 +39,62 @@ interface DisputeDetailProps {
       wallet_type?: string | null;
       pos_entry_mode?: number;
       secured_indication?: number;
+      dispute_status?: string;
+      needs_attention?: boolean;
+      temporary_credit_provided?: boolean;
+      temporary_credit_amount?: number;
+      temporary_credit_currency?: string;
     };
   };
+  onUpdate?: () => void;
 }
 
-const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
+const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
+  const [representment, setRepresentment] = useState<any>(null);
+  const [isLoadingRepresentment, setIsLoadingRepresentment] = useState(true);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  useEffect(() => {
+    const fetchRepresentment = async () => {
+      if (!dispute.transaction?.id) {
+        setIsLoadingRepresentment(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('merchant_representments')
+          .select('*')
+          .eq('transaction_id', dispute.transaction.id)
+          .eq('has_representment', true)
+          .order('representment_created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching representment:', error);
+        } else if (data) {
+          setRepresentment(data);
+        }
+      } catch (error) {
+        console.error('Error fetching representment:', error);
+      } finally {
+        setIsLoadingRepresentment(false);
+      }
+    };
+
+    fetchRepresentment();
+  }, [dispute.transaction?.id]);
+
+  const handleRepresentmentActionComplete = () => {
+    setRepresentment(null);
+    if (onUpdate) {
+      onUpdate();
+    }
   };
 
   const getActivitySteps = () => {
@@ -199,6 +249,49 @@ const DisputeDetail = ({ dispute }: DisputeDetailProps) => {
   };
 
   const activitySteps = getActivitySteps();
+
+  // If there's a representment and transaction needs attention, show RepresentmentView
+  if (!isLoadingRepresentment && representment && dispute.transaction?.needs_attention) {
+    return (
+      <div className="space-y-6">
+        <RepresentmentView
+          transactionId={dispute.transaction.id!}
+          representment={representment}
+          temporaryCredit={{
+            provided: dispute.transaction.temporary_credit_provided || false,
+            amount: dispute.transaction.temporary_credit_amount || 0,
+            currency: dispute.transaction.temporary_credit_currency || 'USD'
+          }}
+          onActionComplete={handleRepresentmentActionComplete}
+        />
+        
+        {/* Show original dispute details below */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Original Dispute Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                <span className="font-medium">{dispute.status}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Reason</span>
+                <span className="font-medium">{dispute.reason_label || 'N/A'}</span>
+              </div>
+              {dispute.custom_reason && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Custom Reason</span>
+                  <span className="font-medium">{dispute.custom_reason}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -30,6 +30,7 @@ interface Dispute {
   created_at: string;
   updated_at: string;
   transaction?: {
+    id?: string;
     transaction_id?: number;
     transaction_time?: string;
     transaction_amount?: number;
@@ -48,6 +49,11 @@ interface Dispute {
     wallet_type?: string | null;
     pos_entry_mode?: number;
     secured_indication?: number;
+    dispute_status?: string;
+    needs_attention?: boolean;
+    temporary_credit_provided?: boolean;
+    temporary_credit_amount?: number;
+    temporary_credit_currency?: string;
   };
   chargeback_actions?: Array<{
     id: string;
@@ -121,6 +127,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         .select(`
           *,
           transaction:transactions(
+            id,
             transaction_id,
             transaction_time,
             transaction_amount,
@@ -138,7 +145,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
             is_wallet_transaction,
             wallet_type,
             pos_entry_mode,
-            secured_indication
+            secured_indication,
+            dispute_status,
+            needs_attention,
+            temporary_credit_provided,
+            temporary_credit_amount,
+            temporary_credit_currency
           ),
           chargeback_actions(
             id,
@@ -406,7 +418,13 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         >
           ← Back to list
         </Button>
-        <DisputeDetail dispute={selectedDispute} />
+        <DisputeDetail 
+          dispute={selectedDispute} 
+          onUpdate={() => {
+            loadDisputes();
+            setSelectedDispute(null);
+          }}
+        />
       </div>
     );
   }
@@ -626,7 +644,14 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
                   }}
                 >
                   <TableCell className="font-medium">
-                    {getStatusLabel(dispute.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusLabel(dispute.status)}
+                      {dispute.transaction?.needs_attention && (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md">
+                          Needs Attention
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{dispute.transaction?.acquirer_name ?? "-"}</TableCell>
                   <TableCell>{dispute.transaction?.merchant_category_code ?? "-"}</TableCell>
