@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
         : null;
 
       if (cardNetwork) {
-        const { data: video } = await supabaseClient
+        const { data: video } = await supabase
           .from('chargeback_videos')
           .select('id')
           .eq('card_network', cardNetwork)
@@ -189,8 +189,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert chargeback action record
-    const { data: chargebackAction, error: insertError } = await supabaseClient
+    // Insert chargeback action record using service role to bypass RLS
+    const { data: chargebackAction, error: insertError } = await supabase
       .from('chargeback_actions')
       .insert({
         dispute_id: disputeId,
