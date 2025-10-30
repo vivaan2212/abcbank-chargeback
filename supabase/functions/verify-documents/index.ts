@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to strip markdown code fences from JSON
+function stripMarkdownCodeFences(content: string): string {
+  // Remove ```json and ``` or just ``` from the content
+  return content
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/, '')
+    .replace(/\s*```$/, '')
+    .trim();
+}
+
 // Helper function to get VERY lenient document-type-specific guidance (for testing)
 function getDocumentTypeRequirements(requirementName: string): string {
   return `TESTING MODE - EXTREMELY LENIENT VERIFICATION:
@@ -256,7 +266,9 @@ Respond with JSON only:
       console.log('AI Response:', JSON.stringify(aiResponse, null, 2));
 
       const aiContent = aiResponse.choices[0].message.content;
-      const verification = JSON.parse(aiContent);
+      const cleanedContent = stripMarkdownCodeFences(aiContent);
+      console.log('Cleaned AI content:', cleanedContent);
+      const verification = JSON.parse(cleanedContent);
 
       verificationResults.push({
         requirementName: requirement.name,
