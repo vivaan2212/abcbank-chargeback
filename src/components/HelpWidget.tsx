@@ -69,11 +69,6 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
       };
       
       setMessages((prev) => [...prev, assistantMessage]);
-      
-      // Auto-collapse after 2 seconds
-      setTimeout(() => {
-        onClose();
-      }, 2000);
     } catch (error: any) {
       console.error("Failed to get help:", error);
       toast.error("Failed to get answer. Please try again.");
