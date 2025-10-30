@@ -80,8 +80,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         .from('disputes')
         .select(`
           *,
-          transaction:transactions(*),
-          chargeback_representment_static(*),
+          transaction:transactions(
+            *,
+            chargeback_representment_static(*)
+          ),
           chargeback_actions(
             *,
             video:chargeback_videos(id, card_network, video_path)
@@ -406,7 +408,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       // Add representment info after sorting if exists
-      const repData = (dispute as any).chargeback_representment_static;
+      const repData = (dispute.transaction as any)?.chargeback_representment_static;
       if (repData && repData.representment_status !== 'no_representment') {
         const repActivity: Activity = {
           id: 'representment-status',
