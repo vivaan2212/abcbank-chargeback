@@ -238,7 +238,7 @@ const Dashboard = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto pt-4">
+            <div className="flex-1 overflow-auto">
               <div className="border rounded-lg h-full flex flex-col" style={{ backgroundColor: '#ffffff' }}>
                 <Tabs defaultValue="in-progress" className="flex-1 flex flex-col">
                   <div className="border-b px-6">
