@@ -338,13 +338,14 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               
               // If no chargeback_actions but dispute is approved, fetch video by card network
               if (!dispute.chargeback_actions || dispute.chargeback_actions.length === 0) {
-                // Determine card network from transaction
-                // Common card BINs: Visa starts with 4, Mastercard 51-55 or 2221-2720
+                // Determine card network from transaction's acquirer_name
                 let cardNetwork = 'Visa'; // default
-                if (dispute.transaction?.transaction_id) {
-                  const txIdStr = String(dispute.transaction.transaction_id);
-                  if (txIdStr.startsWith('5') || txIdStr.startsWith('2')) {
+                if (dispute.transaction?.acquirer_name) {
+                  const acquirer = dispute.transaction.acquirer_name.toLowerCase();
+                  if (acquirer.includes('mastercard') || acquirer.includes('master card')) {
                     cardNetwork = 'Mastercard';
+                  } else if (acquirer.includes('visa')) {
+                    cardNetwork = 'Visa';
                   }
                 }
                 
