@@ -10,6 +10,7 @@ import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
+import paceAvatar from "@/assets/pace-avatar.png";
 
 interface Activity {
   id: string;
@@ -948,11 +949,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         <div className="border-t px-6 py-4 bg-background">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
+              <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
               <Input
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Work with Pace or anyone else"
+                placeholder="Have a question? Ask Pace right away"
                 className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
               />
               <Button

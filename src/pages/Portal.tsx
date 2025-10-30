@@ -23,6 +23,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import type { User, Session } from "@supabase/supabase-js";
+import paceAvatar from "@/assets/pace-avatar.png";
 
 interface Message {
   id: string;
@@ -1880,9 +1881,10 @@ Let me check if this transaction is eligible for a chargeback...`;
         {/* Input */}
         <div className="border-t border-border bg-card px-6 py-4">
           <div className="max-w-4xl mx-auto">
-            <div className="relative flex items-center bg-muted/30 rounded-lg border border-border">
+            <div className="relative flex items-center gap-2 bg-muted/30 rounded-lg border border-border pl-4">
+              <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
               <Textarea
-                placeholder={isReadOnly ? "This conversation is closed" : "Work with Pace or anyone else"}
+                placeholder={isReadOnly ? "This conversation is closed" : "Have a question? Ask Pace right away"}
                 value={inputMessage}
                 onChange={(e) => {
                   setInputMessage(e.target.value);
