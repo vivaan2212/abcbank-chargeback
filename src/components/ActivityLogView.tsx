@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
-import { RepresentmentView } from "@/components/RepresentmentView";
 
 interface Activity {
   id: string;
@@ -48,8 +47,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     url: string;
     cardNetwork: string;
   } | null>(null);
-  const [representment, setRepresentment] = useState<any>(null);
-  const [isLoadingRepresentment, setIsLoadingRepresentment] = useState(true);
 
   useEffect(() => {
     loadDisputeData();
@@ -74,12 +71,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     };
   }, [disputeId]);
 
-  // Auto-expand representment when it needs attention
-  useEffect(() => {
-    if (representment && !isLoadingRepresentment && transactionDetails?.needs_attention) {
-      setExpandedActivities(prev => new Set(prev).add('milestone-representment-received'));
-    }
-  }, [representment, isLoadingRepresentment, transactionDetails?.needs_attention]);
 
   const loadDisputeData = async () => {
     setLoading(true);
@@ -409,118 +400,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
-      // 9. Merchant response milestone (after chargeback filed)
-      if (dispute.transaction?.id) {
-        console.log('Checking for merchant response, transaction ID:', dispute.transaction.id);
-        
-        // Check audit log first to see what action was taken
-        const { data: auditRows, error: auditError } = await supabase
-          .from('representment_audit_log')
-          .select('*')
-          .eq('transaction_id', dispute.transaction.id)
-          .order('performed_at', { ascending: false })
-          .limit(1);
-
-        const auditLog = auditRows?.[0] || null;
-
-        if (auditLog) {
-          // Merchant responded - check if acceptance or representment
-          if (auditLog.action === 'merchant_accepted_chargeback') {
-            // Merchant accepted the chargeback
-            activityList.push({
-              id: 'milestone-merchant-accepted',
-              timestamp: auditLog.performed_at,
-              label: 'Merchant Accepted Chargeback',
-              expandable: true,
-              details: 'The merchant did not contest the chargeback. Customer retains the temporary credit and the dispute is closed in customer favor.',
-              activityType: 'success'
-            });
-          } else if (auditLog.action === 'accept') {
-            // Bank accepted merchant representment
-            const { data: repData } = await supabase
-              .from('merchant_representments')
-              .select('*')
-              .eq('transaction_id', dispute.transaction.id)
-              .order('representment_created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (repData) {
-              activityList.push({
-                id: 'milestone-representment-received',
-                timestamp: repData.representment_created_at,
-                label: 'Merchant has responded to chargeback',
-                expandable: true,
-                details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
-                activityType: 'human_action'
-              });
-
-              activityList.push({
-                id: 'milestone-representment-action',
-                timestamp: auditLog.performed_at,
-                label: 'Representment accepted - Merchant evidence approved',
-                expandable: auditLog.note ? true : false,
-                details: auditLog.note || undefined,
-                reviewer: 'Rohit Kapoor',
-                activityType: 'done'
-              });
-            }
-          } else if (auditLog.action === 'contest') {
-            // Bank contested merchant representment
-            const { data: repData } = await supabase
-              .from('merchant_representments')
-              .select('*')
-              .eq('transaction_id', dispute.transaction.id)
-              .order('representment_created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (repData) {
-              activityList.push({
-                id: 'milestone-representment-received',
-                timestamp: repData.representment_created_at,
-                label: 'Merchant has responded to chargeback',
-                expandable: true,
-                details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
-                activityType: 'human_action'
-              });
-
-              activityList.push({
-                id: 'milestone-representment-action',
-                timestamp: auditLog.performed_at,
-                label: 'Representment contested - Proceeding with chargeback',
-                expandable: auditLog.note ? true : false,
-                details: auditLog.note || undefined,
-                reviewer: 'Rohit Kapoor',
-                activityType: 'success'
-              });
-            }
-          }
-        } else if (dispute.transaction?.needs_attention) {
-          // Still awaiting bank action on representment
-          const { data: repData } = await supabase
-            .from('merchant_representments')
-            .select('*')
-            .eq('transaction_id', dispute.transaction.id)
-            .eq('has_representment', true)
-            .order('representment_created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (repData) {
-            setRepresentment(repData);
-            activityList.push({
-              id: 'milestone-representment-received',
-              timestamp: repData.representment_created_at,
-              label: 'Merchant has responded to chargeback',
-              expandable: true,
-              details: 'REPRESENTMENT_BLOCK',
-              activityType: 'needs_attention'
-            });
-          }
-        }
-      }
-      setIsLoadingRepresentment(false);
 
       // Sort by timestamp
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -768,24 +647,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         {/* Activity Timeline */}
         <div className="flex-1 overflow-auto px-6 py-6 bg-background">
           <div className="max-w-3xl space-y-8">
-            {/* Show active representment if it needs attention */}
-            {representment && transactionDetails?.needs_attention && (
-              <div className="mb-8">
-                <RepresentmentView
-                  transactionId={transactionDetails.id}
-                  representment={representment}
-                  temporaryCredit={{
-                    provided: transactionDetails.temporary_credit_provided || false,
-                    amount: transactionDetails.temporary_credit_amount || 0,
-                    currency: transactionDetails.temporary_credit_currency || 'USD'
-                  }}
-                  onActionComplete={async () => {
-                    // Reload the dispute data after action is taken
-                    await loadDisputeData();
-                  }}
-                />
-              </div>
-            )}
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Date Separator */}
@@ -845,27 +706,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
                           {/* Expanded Details */}
                           {expandedActivities.has(activity.id) && activity.details && (
-                            activity.details === 'REPRESENTMENT_BLOCK' ? (
-                              <div className="mt-3">
-                                <RepresentmentView
-                                  transactionId={transactionDetails?.id!}
-                                  representment={representment}
-                                  temporaryCredit={{
-                                    provided: transactionDetails?.temporary_credit_provided || false,
-                                    amount: transactionDetails?.temporary_credit_amount || 0,
-                                    currency: transactionDetails?.temporary_credit_currency || 'USD'
-                                  }}
-                                  onActionComplete={() => {
-                                    setRepresentment(null);
-                                    loadDisputeData();
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
-                                {activity.details}
-                              </div>
-                            )
+                            <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                              {activity.details}
+                            </div>
                           )}
 
                           {/* Attachments */}

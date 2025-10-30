@@ -208,15 +208,11 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Only show disputes on dashboard after transaction selection
       let filteredData = data?.filter(d => d.transaction_id !== null) || [];
 
-      // Special handling for needs_attention - include disputes with transaction.needs_attention = true
+      // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
         filteredData = filteredData.filter(dispute => 
-          dispute.transaction?.needs_attention === true ||
           ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status)
         );
-      } else if (statusFilter === 'done') {
-        // Exclude any rows that still have representment attention
-        filteredData = filteredData.filter(dispute => dispute.transaction?.needs_attention !== true);
       }
 
       // Apply additional filters from filter panel
@@ -423,11 +419,6 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
   // Derive a display status from logs and flags
   const getDerivedStatus = (dispute: Dispute): string => {
-    // Representment overrides everything
-    if (dispute.transaction?.needs_attention) {
-      return "Representment - Needs Attention";
-    }
-
     const actions = dispute.chargeback_actions || [];
 
     if (actions.some(a => a.awaiting_merchant_refund)) return "Awaiting Merchant Refund";

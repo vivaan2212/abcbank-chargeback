@@ -240,28 +240,6 @@ Deno.serve(async (req) => {
       if (txUpdateError) {
         console.error('Error updating transaction status:', txUpdateError);
       }
-
-      // Trigger merchant representment check
-      console.log(`Triggering merchant representment check for transaction: ${transactionId}`);
-      try {
-        const { data: repResponse, error: repError } = await supabase.functions.invoke(
-          'check-merchant-representment',
-          {
-            body: { transaction_id: transactionId },
-            headers: {
-              Authorization: authHeader,
-            }
-          }
-        );
-
-        if (repError) {
-          console.error('Error checking merchant representment:', repError);
-        } else {
-          console.log('Merchant representment check result:', repResponse);
-        }
-      } catch (repCheckError) {
-        console.error('Failed to invoke check-merchant-representment:', repCheckError);
-      }
     }
 
     console.log(`Chargeback action created successfully: ${chargebackAction.id}`);
