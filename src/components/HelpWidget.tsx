@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
@@ -88,30 +87,22 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-2xl h-[600px] flex flex-col">
+    <div className="mt-6 animate-fade-in">
+      <div className="bg-card border border-border rounded-lg shadow-sm">
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <div className="border-b border-border px-4 py-3 flex items-center gap-3">
           <Avatar className="w-8 h-8">
             <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
             <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
           </Avatar>
-          <div>
-            <h2 className="text-lg font-semibold">Ask Pace</h2>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold">Ask Pace</h2>
             <p className="text-xs text-muted-foreground">Chargeback Assistant</p>
           </div>
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 px-6 py-4">
+        <div className="px-4 py-4 max-h-[400px] overflow-y-auto">
           <div className="space-y-4">
             {messages.map((msg, idx) => (
               <div
@@ -164,10 +155,10 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Input */}
-        <div className="border-t border-border px-6 py-4 space-y-3">
+        <div className="border-t border-border px-4 py-3 space-y-3">
           <Textarea
             placeholder="Ask me anything about chargebacks..."
             value={inputMessage}
@@ -179,13 +170,14 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
               }
             }}
             disabled={isLoading}
-            className="resize-none text-sm min-h-[80px]"
-            rows={3}
+            className="resize-none text-sm min-h-[70px]"
+            rows={2}
           />
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button
               onClick={onClose}
               variant="outline"
+              size="sm"
               className="flex-1"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -194,6 +186,7 @@ export const HelpWidget = ({ onClose }: HelpWidgetProps) => {
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || !inputMessage.trim()}
+              size="sm"
               className="flex-1"
             >
               {isLoading ? (

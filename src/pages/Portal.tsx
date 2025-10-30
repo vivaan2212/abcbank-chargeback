@@ -1893,12 +1893,17 @@ Let me check if this transaction is eligible for a chargeback...`;
                      <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
                    </div>
                  )}
+
+                 {/* Help Widget inline */}
+                 {isHelpWidgetOpen && (
+                   <HelpWidget onClose={() => setIsHelpWidgetOpen(false)} />
+                 )}
               </div>
             </div>
           </ScrollArea>
 
           {/* Help button at bottom */}
-          {!isReadOnly && (
+          {!isReadOnly && !isHelpWidgetOpen && (
             <div 
               onClick={handleHelpRequest}
               className="w-full bg-card border-t border-border px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
@@ -1911,11 +1916,6 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* Help Widget Modal */}
-      {isHelpWidgetOpen && (
-        <HelpWidget onClose={() => setIsHelpWidgetOpen(false)} />
-      )}
     </div>
   );
 };
