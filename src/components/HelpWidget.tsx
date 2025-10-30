@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import paceAvatar from "@/assets/pace-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -127,60 +127,27 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
 
   return (
     <div className="mt-6 animate-fade-in">
-      {/* Messages */}
-      <div className="space-y-6">
-        {messages.map((msg, idx) => (
-          <div key={idx}>
-            {msg.role === "assistant" && (
-              <div className="flex items-start gap-3">
-                <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-                  <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold">Pace</span>
-                  </div>
-                  <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3">
-                    <p className="text-sm text-foreground">{msg.content}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {msg.role === "user" && (
-              <div className="flex items-start gap-3 justify-end">
-                <div className="flex-1 flex justify-end">
-                  <div className="bg-primary text-primary-foreground rounded-lg rounded-tr-none px-4 py-3 max-w-[80%]">
-                    <p className="text-sm">{msg.content}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        
-        {isLoading && (
-          <div className="flex items-start gap-3">
-            <Avatar className="w-10 h-10 flex-shrink-0">
-              <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-              <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-semibold">Pace</span>
-              </div>
-              <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3 flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm text-muted-foreground"><LoadingText /></span>
-              </div>
+      {/* Only show loading indicator when actively loading */}
+      {isLoading && (
+        <div className="flex items-start gap-3 mb-4">
+          <Avatar className="w-10 h-10 flex-shrink-0">
+            <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+            <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold">Pace</span>
+            </div>
+            <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm text-muted-foreground"><LoadingText /></span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Input or Follow-up buttons */}
-      <div className="mt-6 space-y-3">
+      <div className="space-y-3">
         {showFollowUp ? (
           // Show Yes/No buttons
           <div className="flex gap-3">
@@ -224,8 +191,7 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
                 variant="outline"
                 className="flex-1"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                Continue
               </Button>
               <Button
                 onClick={handleSendMessage}
@@ -238,7 +204,7 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
                     Sending...
                   </>
                 ) : (
-                  "Continue"
+                  "Send"
                 )}
               </Button>
             </div>
