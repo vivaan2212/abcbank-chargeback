@@ -15,6 +15,7 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
+import { HelpChatbot } from "@/components/HelpChatbot";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import {
@@ -95,6 +96,8 @@ const Portal = () => {
   const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
   const [orderDetails, setOrderDetails] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isHelpExpanded, setIsHelpExpanded] = useState(false);
+  const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
   const isCreatingChat = useRef(false);
@@ -254,6 +257,16 @@ const Portal = () => {
           setUser(currentSession.user);
           
           const userId = currentSession.user.id;
+          
+          // Fetch user's first name for personalization
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", userId)
+            .single();
+          
+          const firstName = profile?.full_name?.split(" ")[0] || "there";
+          setUserFirstName(firstName);
           
           // Check for fresh login flag
           const freshLoginFlag = sessionStorage.getItem('portal:freshLogin');
@@ -1673,42 +1686,57 @@ Let me check if this transaction is eligible for a chargeback...`;
           className="flex flex-col h-full"
         >
           <div className="flex-1 flex flex-col h-full bg-background">
-        {/* Header */}
-        <div className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsChatExpanded(!isChatExpanded)}
-                className="h-8 w-8"
-                aria-label={isChatExpanded ? "Exit full screen" : "Expand chat"}
-              >
-                {isChatExpanded ? (
-                  <X className="h-4 w-4" />
-                ) : (
-                  <Menu className="h-4 w-4" />
-                )}
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold">Chargeback Assistant</h1>
-                <p className="text-sm text-muted-foreground">Powered by Pace</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {uploadedDocuments.length > 0 && (
-                <UploadedDocumentsViewer documents={uploadedDocuments} />
-              )}
-              <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
-                End Session
-              </Button>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
+            {isHelpExpanded ? (
+              <HelpChatbot 
+                userName={userFirstName}
+                isExpanded={isHelpExpanded}
+                onToggle={() => setIsHelpExpanded(false)}
+              />
+            ) : (
+              <>
+                {/* Header */}
+                <div className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsChatExpanded(!isChatExpanded)}
+                        className="h-8 w-8"
+                        aria-label={isChatExpanded ? "Exit full screen" : "Expand chat"}
+                      >
+                        {isChatExpanded ? (
+                          <X className="h-4 w-4" />
+                        ) : (
+                          <Menu className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <div>
+                        <h1 className="text-xl font-semibold">Chargeback Assistant</h1>
+                        <p className="text-sm text-muted-foreground">Powered by Pace</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {uploadedDocuments.length > 0 && (
+                        <UploadedDocumentsViewer documents={uploadedDocuments} />
+                      )}
+                      <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
+                        End Session
+                      </Button>
+                      <Button variant="outline" onClick={handleLogout}>
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Help Chatbot Bar */}
+                <HelpChatbot 
+                  userName={userFirstName}
+                  isExpanded={isHelpExpanded}
+                  onToggle={() => setIsHelpExpanded(true)}
+                />
 
         {isReadOnly && (
           <div className="bg-muted/50 px-6 py-3 border-b border-border">
@@ -1920,6 +1948,8 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
           </div>
         </div>
+              </>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
