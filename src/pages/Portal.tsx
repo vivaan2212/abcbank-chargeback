@@ -496,14 +496,24 @@ const Portal = () => {
 
       const firstName = profile?.full_name?.split(" ")[0] || "there";
 
+      // Check if user is bank admin
+      const userRole = await getUserRole(userId);
+      const isBankAdmin = userRole === 'bank_admin';
+
       // Fetch transactions from last 120 days
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - 120);
 
-      const { data: txns, error: txnError } = await supabase
+      // Bank admins see all transactions, regular users see only their own
+      let transactionQuery = supabase
         .from("transactions")
-        .select("*")
-        .eq("customer_id", userId)
+        .select("*");
+      
+      if (!isBankAdmin) {
+        transactionQuery = transactionQuery.eq("customer_id", userId);
+      }
+      
+      const { data: txns, error: txnError } = await transactionQuery
         .gte("transaction_time", cutoffDate.toISOString())
         .order("transaction_time", { ascending: false })
         .limit(20);
@@ -565,10 +575,21 @@ const Portal = () => {
       if (conversation) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - 120);
-        const { data: txns } = await supabase
+        
+        // Check if user is bank admin
+        const userRole = await getUserRole(conversation.user_id);
+        const isBankAdmin = userRole === 'bank_admin';
+        
+        // Bank admins see all transactions, regular users see only their own
+        let transactionQuery = supabase
           .from("transactions")
-          .select("*")
-          .eq("customer_id", conversation.user_id)
+          .select("*");
+        
+        if (!isBankAdmin) {
+          transactionQuery = transactionQuery.eq("customer_id", conversation.user_id);
+        }
+        
+        const { data: txns } = await transactionQuery
           .gte("transaction_time", cutoffDate.toISOString())
           .order("transaction_time", { ascending: false })
           .limit(20);
