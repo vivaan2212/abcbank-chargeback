@@ -15,7 +15,7 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
-
+import { HelpWidget } from "@/components/HelpWidget";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import {
@@ -96,6 +96,7 @@ const Portal = () => {
   const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
   const [orderDetails, setOrderDetails] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [isHelpWidgetOpen, setIsHelpWidgetOpen] = useState(false);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1643,66 +1644,8 @@ Let me check if this transaction is eligible for a chargeback...`;
     setShowOrderDetailsInput(false);
   };
 
-  const handleHelpRequest = async () => {
-    if (!currentConversationId || isReadOnly || isSending) return;
-
-    setIsSending(true);
-
-    try {
-      // Add user help request message
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "user",
-          content: "I need help with this step",
-        });
-
-      // Get conversation history for context
-      const { data: messageHistory } = await supabase
-        .from("messages")
-        .select("role, content")
-        .eq("conversation_id", currentConversationId)
-        .order("created_at", { ascending: true })
-        .limit(10);
-
-      // Call edge function to get AI-powered answer
-      const { data: helpData, error: helpError } = await supabase.functions.invoke(
-        'answer-help-question',
-        {
-          body: {
-            question: "I need help with this step",
-            conversationHistory: messageHistory || []
-          }
-        }
-      );
-
-      if (helpError) throw helpError;
-
-      // Add assistant help response
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: helpData.answer || "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
-        });
-
-    } catch (error: any) {
-      console.error("Failed to send help request:", error);
-      toast.error("Failed to get help. Please try again.");
-      
-      // Fallback response
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
-        });
-    } finally {
-      setIsSending(false);
-    }
+  const handleHelpRequest = () => {
+    setIsHelpWidgetOpen(true);
   };
 
   // Show nothing while checking role to prevent flash
@@ -1968,6 +1911,11 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Help Widget Modal */}
+      {isHelpWidgetOpen && (
+        <HelpWidget onClose={() => setIsHelpWidgetOpen(false)} />
+      )}
     </div>
   );
 };
