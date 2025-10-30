@@ -783,7 +783,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
-        <div className="border-b px-6 py-3 bg-background">
+        <div className="border-b px-6 py-3 bg-muted/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
@@ -811,7 +811,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-3 bg-background">
+        <div className="border-b px-6 py-3 bg-muted/30">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
@@ -830,8 +830,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Activity Timeline */}
-        <div className="flex-1 overflow-auto px-6 py-6 bg-background">
-          <div className="max-w-3xl mx-auto space-y-8">
+        <div className="flex-1 overflow-auto px-6 py-6 bg-muted/30">
+          <div className="max-w-4xl space-y-8">
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Date Separator */}
@@ -957,7 +957,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Footer - Input Box */}
         <div className="border-t px-6 py-4 bg-background">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl">
             <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
               <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
               <Input
