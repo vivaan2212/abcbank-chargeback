@@ -48,6 +48,18 @@ const ChatMessage = ({ role, content, timestamp, documents }: ChatMessageProps) 
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const renderContent = (text: string) => {
+    // Split by bold markdown syntax **text**
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className={`flex ${isAssistant ? "justify-start" : "justify-end"} mb-4 animate-fade-in`}>
       <div className={`max-w-[70%] ${isAssistant ? "items-start" : "items-end"} flex flex-col`}>
@@ -68,7 +80,7 @@ const ChatMessage = ({ role, content, timestamp, documents }: ChatMessageProps) 
               : "bg-[hsl(var(--chat-user-bg))] text-[hsl(var(--chat-user-fg))] rounded-tr-none"
           }`}
         >
-          <p className="whitespace-pre-wrap break-words">{content}</p>
+          <p className="whitespace-pre-wrap break-words">{renderContent(content)}</p>
           
           {documents && documents.length > 0 && (
             <div className="mt-3 space-y-2">
