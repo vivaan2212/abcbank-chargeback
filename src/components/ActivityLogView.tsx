@@ -773,7 +773,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
-        <div className="border-b px-6 py-4 bg-background">
+        <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
@@ -801,7 +801,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-4 bg-background">
+        <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
