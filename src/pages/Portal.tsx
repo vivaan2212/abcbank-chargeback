@@ -1889,24 +1889,33 @@ Let me check if this transaction is eligible for a chargeback...`;
                  </>
                )}
                
-               {/* Show artifacts after successful completion */}
-               {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
-                 <div className="mt-6 flex justify-center">
-                   <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
-                 </div>
-               )}
-            </div>
-          </div>
-        </ScrollArea>
+                {/* Show artifacts after successful completion */}
+                {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
+                  <div className="mt-6 flex justify-center">
+                    <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
+                  </div>
+                )}
 
-        {/* Help Chatbot replacing input */}
-        <div className="relative">
-          <HelpChatbot 
-            userName={userFirstName}
-            isExpanded={isHelpExpanded}
-            onToggle={() => setIsHelpExpanded(!isHelpExpanded)}
-          />
-        </div>
+                {/* Help Chatbot inline with messages */}
+                {isHelpExpanded && (
+                  <HelpChatbot 
+                    userName={userFirstName}
+                    isExpanded={isHelpExpanded}
+                    onToggle={() => setIsHelpExpanded(false)}
+                  />
+                )}
+             </div>
+           </div>
+         </ScrollArea>
+
+         {/* Help Chatbot button at bottom (only when not expanded) */}
+         {!isHelpExpanded && (
+           <HelpChatbot 
+             userName={userFirstName}
+             isExpanded={isHelpExpanded}
+             onToggle={() => setIsHelpExpanded(true)}
+           />
+         )}
               </>
             )}
           </div>

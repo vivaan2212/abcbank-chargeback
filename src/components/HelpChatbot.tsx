@@ -29,13 +29,6 @@ export const HelpChatbot = ({ userName, isExpanded, onToggle }: HelpChatbotProps
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isSending) return;
@@ -75,79 +68,73 @@ export const HelpChatbot = ({ userName, isExpanded, onToggle }: HelpChatbotProps
   }
 
   return (
-    <div className="absolute inset-0 bg-background z-50 flex flex-col">
-      {/* Messages */}
-      <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
-        <div className="max-w-4xl mx-auto space-y-4">
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "assistant" ? "justify-start" : "justify-end"} animate-fade-in`}
-            >
-              <div className={`max-w-[70%] ${msg.role === "assistant" ? "items-start" : "items-end"} flex flex-col`}>
-                {msg.role === "assistant" && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">Pace</span>
-                  </div>
-                )}
-                
-                <div
-                  className={`rounded-2xl px-4 py-3 ${
-                    msg.role === "assistant"
-                      ? "bg-[hsl(var(--chat-assistant-bg))] text-foreground rounded-tl-none"
-                      : "bg-[hsl(var(--chat-user-bg))] text-[hsl(var(--chat-user-fg))] rounded-tr-none"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
-                </div>
-                
-                <span className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(msg.timestamp, { addSuffix: true })}
-                </span>
+    <div className="mt-6 space-y-4 animate-fade-in">
+      {/* Help messages inline */}
+      {messages.map((msg, idx) => (
+        <div
+          key={idx}
+          className={`flex ${msg.role === "assistant" ? "justify-start" : "justify-end"}`}
+        >
+          <div className={`max-w-[70%] ${msg.role === "assistant" ? "items-start" : "items-end"} flex flex-col`}>
+            {msg.role === "assistant" && (
+              <div className="flex items-center gap-2 mb-2">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">Pace</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium">Pace</span>
               </div>
+            )}
+            
+            <div
+              className={`rounded-2xl px-4 py-3 ${
+                msg.role === "assistant"
+                  ? "bg-[hsl(var(--chat-assistant-bg))] text-foreground rounded-tl-none"
+                  : "bg-[hsl(var(--chat-user-bg))] text-[hsl(var(--chat-user-fg))] rounded-tr-none"
+              }`}
+            >
+              <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
             </div>
-          ))}
-        </div>
-      </ScrollArea>
-
-      {/* Input */}
-      <div className="border-t border-border bg-card px-6 py-4 flex-shrink-0">
-        <div className="max-w-4xl mx-auto space-y-3">
-          <Textarea
-            placeholder="Type your question..."
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={isSending}
-            className="resize-none text-sm min-h-[44px]"
-            rows={1}
-          />
-          <div className="flex gap-3">
-            <Button
-              onClick={onToggle}
-              variant="outline"
-              className="flex-1 max-w-[200px]"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <Button
-              onClick={handleSendMessage}
-              disabled={isSending || !inputMessage.trim()}
-              className="flex-1"
-            >
-              Continue
-            </Button>
+            
+            <span className="text-xs text-muted-foreground mt-1">
+              {formatDistanceToNow(msg.timestamp, { addSuffix: true })}
+            </span>
           </div>
+        </div>
+      ))}
+
+      {/* Input inline */}
+      <div className="space-y-3">
+        <Textarea
+          placeholder="Type your question..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          disabled={isSending}
+          className="resize-none text-sm min-h-[80px]"
+          rows={3}
+        />
+        <div className="flex gap-3">
+          <Button
+            onClick={onToggle}
+            variant="outline"
+            className="flex-1"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <Button
+            onClick={handleSendMessage}
+            disabled={isSending || !inputMessage.trim()}
+            className="flex-1"
+          >
+            Continue
+          </Button>
         </div>
       </div>
     </div>
