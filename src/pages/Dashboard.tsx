@@ -217,7 +217,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Top Bar */}
-            <div className="px-6 py-3 flex items-center justify-between">
+            <div className="px-6 py-3 flex items-center justify-between" style={{ backgroundColor: '#fbfbfb' }}>
               <div className="flex items-center gap-4">
                 <h1 className="text-xl font-semibold">Chargebacks</h1>
               </div>
