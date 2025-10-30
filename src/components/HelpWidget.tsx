@@ -33,6 +33,7 @@ const addClosingMessage = (setMessages: React.Dispatch<React.SetStateAction<Mess
 export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showFollowUp, setShowFollowUp] = useState(false);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -75,6 +76,17 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
       };
       
       setMessages((prev) => [...prev, assistantMessage]);
+      
+      // Add follow-up question after a brief delay
+      setTimeout(() => {
+        const followUpMessage: Message = {
+          role: "assistant",
+          content: "Do you have any other questions?",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, followUpMessage]);
+        setShowFollowUp(true);
+      }, 500);
     } catch (error: any) {
       console.error("Failed to get help:", error);
       toast.error("Failed to get answer. Please try again.");
@@ -88,6 +100,27 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
       setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFollowUpResponse = (hasMoreQuestions: boolean) => {
+    if (hasMoreQuestions) {
+      // User wants to ask another question
+      setShowFollowUp(false);
+    } else {
+      // User is done asking questions
+      const closingMessage: Message = {
+        role: "assistant",
+        content: "I hope I have answered your questions well. Let's get back to helping you raise a dispute!",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, closingMessage]);
+      setShowFollowUp(false);
+      
+      // Close after showing the message
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     }
   };
 
@@ -145,49 +178,71 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
         )}
       </div>
 
-      {/* Input */}
+      {/* Input or Follow-up buttons */}
       <div className="mt-6 space-y-3">
-        <Textarea
-          placeholder="Type your question..."
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isLoading}
-          className="resize-none text-sm min-h-[80px] bg-background"
-          rows={3}
-        />
-        <div className="flex gap-3">
-          <Button
-            onClick={() => {
-              addClosingMessage(setMessages);
-              setTimeout(() => onClose(), 100);
-            }}
-            variant="outline"
-            className="flex-1"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button
-            onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
-            className="flex-1"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              "Continue"
-            )}
-          </Button>
-        </div>
+        {showFollowUp ? (
+          // Show Yes/No buttons
+          <div className="flex gap-3">
+            <Button
+              onClick={() => handleFollowUpResponse(true)}
+              className="flex-1"
+            >
+              Yes
+            </Button>
+            <Button
+              onClick={() => handleFollowUpResponse(false)}
+              variant="outline"
+              className="flex-1"
+            >
+              No
+            </Button>
+          </div>
+        ) : (
+          // Show regular input
+          <>
+            <Textarea
+              placeholder="Type your question..."
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isLoading}
+              className="resize-none text-sm min-h-[80px] bg-background"
+              rows={3}
+            />
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  addClosingMessage(setMessages);
+                  setTimeout(() => onClose(), 100);
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                disabled={isLoading || !inputMessage.trim()}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Continue"
+                )}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
