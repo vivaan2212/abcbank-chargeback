@@ -224,12 +224,7 @@ const Dashboard = () => {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
-                <UploadToStorageButton
-                  bucket="chargeback-videos"
-                  label="Upload Video"
-                  accept="video/*,application/pdf,image/*"
-                />
-                <Button 
+                <Button
                   variant="destructive" 
                   size="sm"
                   onClick={handleClearAllData}
