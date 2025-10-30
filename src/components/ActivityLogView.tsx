@@ -811,7 +811,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-3 bg-muted/30">
+        <div className="border-b px-6 py-4 bg-muted/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
@@ -982,7 +982,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Key Details Sidebar */}
       <div className="w-80 border-l bg-card flex flex-col">
         {/* Knowledge Base and Share buttons at top */}
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-4 py-4">
           <div className="flex items-center gap-2 justify-end">
             <Button 
               variant="ghost" 
@@ -1001,7 +1001,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Key Details Header */}
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-4 py-4">
           <div className="flex items-center gap-2 font-semibold text-sm">
             <Database className="h-4 w-4" />
             Key details
