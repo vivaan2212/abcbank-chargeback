@@ -821,7 +821,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Activity Timeline */}
         <div className="flex-1 overflow-auto px-6 py-6 bg-background">
-          <div className="max-w-3xl space-y-8">
+          <div className="max-w-3xl mx-auto space-y-8">
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Date Separator */}
@@ -947,7 +947,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Footer - Input Box */}
         <div className="border-t px-6 py-4 bg-background">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
               <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
               <Input
