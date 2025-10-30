@@ -62,7 +62,6 @@ Deno.serve(async (req) => {
     const transactionUpdates: any = {
       dispute_status: 'closed_lost',
       needs_attention: false,
-      updated_at: new Date().toISOString(),
     };
 
     // Handle temporary credit reversal if credit was provided

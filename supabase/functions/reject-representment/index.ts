@@ -71,7 +71,6 @@ Deno.serve(async (req) => {
       .update({
         dispute_status: 'awaiting_customer_info',
         needs_attention: false,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', transaction_id);
 
