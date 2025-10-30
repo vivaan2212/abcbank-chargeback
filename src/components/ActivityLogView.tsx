@@ -261,27 +261,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             });
           }
           
-          // Credit decision milestone (only if no temp credit)
-          if (action.action_type && !action.temporary_credit_issued) {
-            let label = 'Not recommended for temporary credit';
-            
-            if (action.awaiting_settlement) {
-              label = 'Awaiting settlement before credit decision';
-            } else if (action.awaiting_merchant_refund) {
-              label = 'Awaiting merchant refund';
-            } else if (action.requires_manual_review) {
-              label = `Not recommended for write-off as it's unsettled >${action.days_since_transaction} days`;
-            }
-            
-            activityList.push({
-              id: `action-${idx}-credit`,
-              timestamp: action.created_at,
-              label,
-              expandable: reasoningDetails ? true : false,
-              details: reasoningDetails,
-              activityType: action.requires_manual_review ? 'needs_attention' : 'human_action'
-            });
-          }
           
           // Merchant refund awaiting milestone (enhanced)
           if (action.awaiting_merchant_refund) {
