@@ -417,7 +417,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       // Add representment info after sorting if exists
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
-      if (repData && repData.representment_status !== 'no_representment') {
+      if (repData) {
         const repActivity: Activity = {
           id: 'representment-status',
           timestamp: repData.updated_at || dispute.updated_at,
@@ -428,6 +428,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         };
 
         switch (repData.representment_status) {
+          case 'no_representment':
+            repActivity.label = 'No Merchant Representment';
+            repActivity.details = 'The merchant did not contest this chargeback. Your case proceeds as approved.';
+            repActivity.activityType = 'done';
+            break;
           case 'pending':
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
