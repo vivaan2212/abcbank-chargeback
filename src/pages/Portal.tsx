@@ -1516,17 +1516,53 @@ Let me check if this transaction is eligible for a chargeback...`;
               if (decisionData.success && decisionData.decision) {
                 const decision = decisionData.decision;
                 
-                  // Map decision to user-friendly message
-                  let statusMessage = '';
-                  let finalStatus = 'approved';
+                let statusMessage = '';
+                let finalStatus = 'approved';
                 
+                // If a chargeback should be filed, trigger backend action first to get card network info
+                let cardNetwork = '';
+                if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision)) {
+                  try {
+                    console.log('Invoking process-chargeback-action...');
+                    const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
+                      body: {
+                        disputeId: currentDisputeId,
+                        transactionId: selectedTransaction.id,
+                      }
+                    });
+                    if (cbError) {
+                      console.error('process-chargeback-action error:', cbError);
+                    } else {
+                      console.log('process-chargeback-action result:', cbData);
+                      cardNetwork = cbData?.cardNetwork || 'the card network';
+                    }
+                  } catch (err) {
+                    console.error('Failed to invoke process-chargeback-action:', err);
+                  }
+                }
+                
+                // Get currency symbol
+                const getCurrencySymbol = (currency: string) => {
+                  const symbols: { [key: string]: string } = {
+                    'INR': '₹',
+                    'USD': '$',
+                    'EUR': '€',
+                    'GBP': '£',
+                  };
+                  return symbols[currency] || currency + ' ';
+                };
+                
+                const currencySymbol = getCurrencySymbol(selectedTransaction.transaction_currency);
+                const amount = selectedTransaction.transaction_amount.toFixed(2);
+                
+                // Map decision to user-friendly message
                 switch (decision.decision) {
                   case 'FILE_CHARGEBACK':
-                    statusMessage = `✅ Your dispute has been approved! We've filed a chargeback with the card network for $${decision.remaining_amount_usd.toFixed(2)} USD.\n\n${decision.reason_summary}`;
-                    finalStatus = 'approved';
-                    break;
                   case 'FILE_CHARGEBACK_WITH_TEMP_CREDIT':
-                    statusMessage = `✅ Great news! We've approved your dispute and issued a temporary credit of $${decision.remaining_amount_usd.toFixed(2)} USD to your account. We've also filed a chargeback with the card network.\n\n${decision.reason_summary}`;
+                    const tempCreditNote = decision.decision === 'FILE_CHARGEBACK_WITH_TEMP_CREDIT' 
+                      ? `\n\n💳 We've also issued a temporary credit of ${currencySymbol}${amount} to your account while we resolve this.` 
+                      : '';
+                    statusMessage = `✅ We've reviewed your documents and everything is in order.\n\nWe've now filed your chargeback for ${currencySymbol}${amount} with ${cardNetwork} and notified the merchant.${tempCreditNote}\n\nWe know disputed charges can be stressful, Pace is on it, and we'll keep you updated at every step.`;
                     finalStatus = 'approved';
                     break;
                   case 'WAIT_FOR_SETTLEMENT':
@@ -1541,10 +1577,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                     statusMessage = `❌ Unfortunately, your dispute is not eligible for a chargeback. ${decision.reason_summary}`;
                     finalStatus = 'denied';
                     break;
-                    case 'MANUAL_REVIEW':
-                      statusMessage = `🔍 Your case requires additional review by our team. ${decision.reason_summary} We'll get back to you within 2-3 business days.`;
-                      finalStatus = 'pending';
-                      break;
+                  case 'MANUAL_REVIEW':
+                    statusMessage = `🔍 Your case requires additional review by our team. ${decision.reason_summary} We'll get back to you within 2-3 business days.`;
+                    finalStatus = 'pending';
+                    break;
                   default:
                     statusMessage = '✅ Your dispute has been submitted and is approved.';
                 }
@@ -1554,26 +1590,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .from("disputes")
                   .update({ status: finalStatus })
                   .eq("id", currentDisputeId);
-
-                  // If a chargeback should be filed, trigger backend action now
-                  if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision)) {
-                  try {
-                    console.log('Invoking process-chargeback-action...');
-                    const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
-                      body: {
-                        disputeId: currentDisputeId,
-                        transactionId: selectedTransaction.id,
-                      }
-                    });
-                    if (cbError) {
-                      console.error('process-chargeback-action error:', cbError);
-                    } else {
-                      console.log('process-chargeback-action result:', cbData);
-                    }
-                  } catch (err) {
-                    console.error('Failed to invoke process-chargeback-action:', err);
-                  }
-                }
 
                   // Insert final message
                   await supabase

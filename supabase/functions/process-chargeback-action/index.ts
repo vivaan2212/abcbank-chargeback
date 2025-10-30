@@ -179,8 +179,9 @@ Deno.serve(async (req) => {
 
     // Get video reference for chargeback filing
     let video_id: string | null = null;
+    let cardNetwork: string | null = null;
     if (chargeback_filed) {
-      const cardNetwork = tx.acquirer_name?.toLowerCase().includes('visa') 
+      cardNetwork = tx.acquirer_name?.toLowerCase().includes('visa') 
         ? 'Visa' 
         : tx.acquirer_name?.toLowerCase().includes('mastercard') 
         ? 'Mastercard' 
@@ -279,6 +280,7 @@ Deno.serve(async (req) => {
         actionId: chargebackAction.id,
         temporaryCreditIssued: temporary_credit_issued,
         chargebackFiled: chargeback_filed,
+        cardNetwork: cardNetwork || 'the card network',
       }),
       {
         status: 200,
