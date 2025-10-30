@@ -238,8 +238,8 @@ const Dashboard = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto pl-4 pt-4">
-              <div className="border rounded-lg bg-background h-full flex flex-col">
+            <div className="flex-1 overflow-auto pl-4 pt-4 pr-4">
+              <div className="border rounded-lg h-full flex flex-col" style={{ backgroundColor: '#fbfbfb' }}>
                 <Tabs defaultValue="in-progress" className="flex-1 flex flex-col">
                   <div className="border-b px-6">
                     <TabsList className="h-12 bg-transparent gap-1">
