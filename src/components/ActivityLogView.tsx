@@ -321,6 +321,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           let label = '';
           let activityType: Activity['activityType'] = 'done';
           let details = '';
+          let attachments: Activity['attachments'] | undefined = undefined;
           
           switch (dispute.status.toLowerCase()) {
             case 'completed':
@@ -331,7 +332,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
               
               // Add video attachment for approved cases - fetch video based on card network
-              const attachments: Activity['attachments'] = [
+              attachments = [
                 { label: 'View Document', icon: '📄', action: 'document' }
               ];
               
@@ -364,16 +365,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                   });
                 }
               }
-              
-              activityList.push({
-                id: 'milestone-final-status',
-                timestamp: dispute.updated_at,
-                label,
-                expandable: true,
-                details,
-                attachments,
-                activityType
-              });
               break;
               
             case 'rejected':
@@ -399,6 +390,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label,
               expandable: true,
               details,
+              attachments,
               activityType
             });
           }
