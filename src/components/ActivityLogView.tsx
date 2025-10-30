@@ -1019,20 +1019,27 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Transaction Date</span>
                   <span className="font-medium">
-                    {transactionDetails.transaction_date 
-                      ? format(new Date(transactionDetails.transaction_date), "dd/MM/yyyy")
+                    {transactionDetails.transaction_time 
+                      ? format(new Date(transactionDetails.transaction_time), "dd/MM/yyyy")
                       : "N/A"}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Reference No.</span>
-                  <span className="font-medium">{transactionDetails.arn || "N/A"}</span>
+                  <span className="font-medium">{transactionDetails.chargeback_case_id?.substring(0, 10) || "N/A"}</span>
                 </div>
 
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">₹{transactionDetails.transaction_amount?.toLocaleString() || "0"}</span>
+                  <span className="font-medium">
+                    {transactionDetails.transaction_currency === 'INR' ? '₹' : 
+                     transactionDetails.transaction_currency === 'USD' ? '$' :
+                     transactionDetails.transaction_currency === 'EUR' ? '€' :
+                     transactionDetails.transaction_currency === 'GBP' ? '£' :
+                     transactionDetails.transaction_currency + ' '}
+                    {transactionDetails.transaction_amount?.toLocaleString() || "0"}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-[120px_1fr] gap-2">
@@ -1042,7 +1049,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Card Network</span>
-                  <span className="font-medium">{transactionDetails.card_type || "N/A"}</span>
+                  <span className="font-medium">{transactionDetails.acquirer_name || "N/A"}</span>
                 </div>
               </div>
             </div>
