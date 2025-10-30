@@ -1,6 +1,6 @@
 import { Database, Users, TrendingUp, ChevronUp, Trash2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import zampLogo from "@/assets/zamp-logo.png";
+import zampLogo from "@/assets/zamp-logo-new.png";
 import {
   DropdownMenu,
   DropdownMenuContent,
