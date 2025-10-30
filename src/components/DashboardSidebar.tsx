@@ -1,4 +1,4 @@
-import { Database, Users, TrendingUp, ChevronUp, Trash2 } from "lucide-react";
+import { Database, Users, TrendingUp, ChevronUp, Trash2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import zampLogo from "@/assets/zamp-logo.png";
 import {
@@ -6,15 +6,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface DashboardSidebarProps {
   activeSection?: string;
+  onLogout?: () => void;
 }
 
-const DashboardSidebar = ({ activeSection = "chargebacks" }: DashboardSidebarProps) => {
+const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: DashboardSidebarProps) => {
   const handleClearAllData = async () => {
     if (!confirm('⚠️ WARNING: This will permanently delete ALL disputes, conversations, and messages. This action cannot be undone. Are you absolutely sure?')) {
       return;
@@ -101,6 +103,14 @@ const DashboardSidebar = ({ activeSection = "chargebacks" }: DashboardSidebarPro
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear All Data
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={onLogout}
+              className="cursor-pointer"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

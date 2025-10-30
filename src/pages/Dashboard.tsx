@@ -171,7 +171,7 @@ const Dashboard = () => {
         "transition-all duration-300 ease-in-out",
         selectedDispute ? "w-0 opacity-0 overflow-hidden" : "w-56 opacity-100"
       )}>
-        <DashboardSidebar activeSection="chargebacks" />
+        <DashboardSidebar activeSection="chargebacks" onLogout={handleLogout} />
       </div>
 
       {/* Main Content */}
@@ -199,9 +199,6 @@ const Dashboard = () => {
                 <Button variant="ghost" size="sm">
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
-                  <LogOut className="h-5 w-5" />
                 </Button>
               </div>
             </div>
