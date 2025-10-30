@@ -614,7 +614,6 @@ const Portal = () => {
           
           // Hide all UI elements for final/completed states
           const isFinalState = [
-            "under_review",
             "awaiting_investigation", 
             "chargeback_filed",
             "awaiting_merchant_refund",
@@ -1359,16 +1358,75 @@ Let me check if this transaction is eligible for a chargeback...`;
           console.log('Verification result:', verificationData);
 
           if (verificationData.success) {
-            // All documents are valid - now evaluate decision
+            // All documents are valid - check if transaction is unsecured (no OTP)
             if (currentDisputeId && selectedTransaction) {
-              console.log('Calling evaluate-decision function...');
+              const SECURED_INDICATIONS = [2, 212];
+              const isUnsecured = !SECURED_INDICATIONS.includes(selectedTransaction.secured_indication) && 
+                                  !selectedTransaction.is_wallet_transaction;
               
-              // Prepare docCheck from verification results
-              const docCheck = verificationData.results.map((r: any) => ({
-                key: r.requirement,
-                isValid: r.isValid,
-                reason: r.reason
-              }));
+              // For unsecured transactions, directly file chargeback with temporary credit
+              if (isUnsecured) {
+                console.log('Unsecured transaction detected - directly filing chargeback with temp credit');
+                
+                // Update dispute status to approved immediately
+                await supabase
+                  .from("disputes")
+                  .update({ status: 'approved' })
+                  .eq("id", currentDisputeId);
+                
+                // Call process-chargeback-action to file the chargeback
+                try {
+                  console.log('Invoking process-chargeback-action for unsecured transaction...');
+                  const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
+                    body: {
+                      disputeId: currentDisputeId,
+                      transactionId: selectedTransaction.id,
+                    }
+                  });
+                  
+                  if (cbError) {
+                    console.error('process-chargeback-action error:', cbError);
+                    throw cbError;
+                  }
+                  
+                  console.log('process-chargeback-action result:', cbData);
+                  
+                  // Show success message
+                  const amount = selectedTransaction.transaction_amount;
+                  const currency = selectedTransaction.transaction_currency;
+                  const statusMessage = `✅ Great news! We've approved your dispute and issued a temporary credit of ${amount.toFixed(2)} ${currency} to your account. We've also filed a chargeback with the card network.\n\nYour case has been automatically approved since this was an unsecured transaction.`;
+                  
+                  await supabase
+                    .from("messages")
+                    .insert({
+                      conversation_id: currentConversationId,
+                      role: "assistant",
+                      content: statusMessage,
+                    });
+                } catch (err) {
+                  console.error('Failed to process unsecured transaction:', err);
+                  toast.error('Failed to process chargeback');
+                }
+                
+                // Reset state
+                setSelectedTransaction(null);
+                setSelectedReason(null);
+                setAiClassification(null);
+                setUploadedDocuments([]);
+                setShowReasonPicker(false);
+                setShowDocumentUpload(false);
+                setShowTransactions(false);
+                setShowContinueOrEndButtons(false);
+              } else {
+                // For secured transactions, use the decision engine
+                console.log('Secured transaction - using evaluate-decision function...');
+                
+                // Prepare docCheck from verification results
+                const docCheck = verificationData.results.map((r: any) => ({
+                  key: r.requirement,
+                  isValid: r.isValid,
+                  reason: r.reason
+                }));
 
               // Get session for auth
               const { data: { session } } = await supabase.auth.getSession();
@@ -1406,9 +1464,9 @@ Let me check if this transaction is eligible for a chargeback...`;
               if (decisionData.success && decisionData.decision) {
                 const decision = decisionData.decision;
                 
-                // Map decision to user-friendly message
-                let statusMessage = '';
-                let finalStatus = 'under_review';
+                  // Map decision to user-friendly message
+                  let statusMessage = '';
+                  let finalStatus = 'approved';
                 
                 switch (decision.decision) {
                   case 'FILE_CHARGEBACK':
@@ -1431,12 +1489,12 @@ Let me check if this transaction is eligible for a chargeback...`;
                     statusMessage = `❌ Unfortunately, your dispute is not eligible for a chargeback. ${decision.reason_summary}`;
                     finalStatus = 'denied';
                     break;
-                  case 'MANUAL_REVIEW':
-                    statusMessage = `🔍 Your case requires additional review by our team. ${decision.reason_summary} We'll get back to you within 2-3 business days.`;
-                    finalStatus = 'under_review';
-                    break;
+                    case 'MANUAL_REVIEW':
+                      statusMessage = `🔍 Your case requires additional review by our team. ${decision.reason_summary} We'll get back to you within 2-3 business days.`;
+                      finalStatus = 'pending';
+                      break;
                   default:
-                    statusMessage = '✅ Your dispute has been submitted and is under review.';
+                    statusMessage = '✅ Your dispute has been submitted and is approved.';
                 }
 
                 // Update dispute status
@@ -1445,8 +1503,8 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .update({ status: finalStatus })
                   .eq("id", currentDisputeId);
 
-                // If a chargeback should be filed, trigger backend action now
-                if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision) && selectedTransaction) {
+                  // If a chargeback should be filed, trigger backend action now
+                  if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision)) {
                   try {
                     console.log('Invoking process-chargeback-action...');
                     const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
@@ -1465,26 +1523,27 @@ Let me check if this transaction is eligible for a chargeback...`;
                   }
                 }
 
-                // Insert final message
-                await supabase
-                  .from("messages")
-                  .insert({
-                    conversation_id: currentConversationId,
-                    role: "assistant",
-                    content: statusMessage,
-                  });
+                  // Insert final message
+                  await supabase
+                    .from("messages")
+                    .insert({
+                      conversation_id: currentConversationId,
+                      role: "assistant",
+                      content: statusMessage,
+                    });
 
-                // Reset state
-                setSelectedTransaction(null);
-                setSelectedReason(null);
-                setAiClassification(null);
-                setUploadedDocuments([]);
-                setShowReasonPicker(false);
-                setShowDocumentUpload(false);
-                setShowTransactions(false);
-                setShowContinueOrEndButtons(false);
-              } else {
-                throw new Error('Decision evaluation failed');
+                  // Reset state
+                  setSelectedTransaction(null);
+                  setSelectedReason(null);
+                  setAiClassification(null);
+                  setUploadedDocuments([]);
+                  setShowReasonPicker(false);
+                  setShowDocumentUpload(false);
+                  setShowTransactions(false);
+                  setShowContinueOrEndButtons(false);
+                } else {
+                  throw new Error('Decision evaluation failed');
+                }
               }
             }
           } else {
@@ -1525,7 +1584,7 @@ Let me check if this transaction is eligible for a chargeback...`;
           if (currentDisputeId) {
             await supabase
               .from("disputes")
-              .update({ status: "under_review" })
+              .update({ status: "approved" })
               .eq("id", currentDisputeId);
 
             setSelectedTransaction(null);
