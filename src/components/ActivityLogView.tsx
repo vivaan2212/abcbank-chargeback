@@ -257,7 +257,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label: `Temporary credit approved`,
               expandable: true,
               details: `Credit amount: ₹${creditAmount.toLocaleString()}\n\nA temporary credit has been issued to your account while we investigate the dispute. This credit will be made permanent if the chargeback is successful.`,
-              reviewer: 'Rohit Kapoor',
               activityType: 'done'
             });
           }
@@ -280,7 +279,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label,
               expandable: reasoningDetails ? true : false,
               details: reasoningDetails,
-              reviewer: 'Rohit Kapoor',
               activityType: action.requires_manual_review ? 'needs_attention' : 'human_action'
             });
           }
@@ -310,7 +308,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               label: 'Case requires manual review',
               expandable: reasoningDetails ? true : false,
               details: reasoningDetails,
-              reviewer: 'Rohit Kapoor',
               activityType: 'needs_attention'
             });
           }
@@ -321,7 +318,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               id: `action-${idx}-reviewed`,
               timestamp: action.updated_at,
               label: 'Marked as reviewed',
-              reviewer: 'Rohit Kapoor',
               activityType: 'success'
             });
           }
