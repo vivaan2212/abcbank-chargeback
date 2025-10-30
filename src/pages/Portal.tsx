@@ -1450,6 +1450,26 @@ Let me check if this transaction is eligible for a chargeback...`;
                   .update({ status: finalStatus })
                   .eq("id", currentDisputeId);
 
+                // If a chargeback should be filed, trigger backend action now
+                if (['FILE_CHARGEBACK', 'FILE_CHARGEBACK_WITH_TEMP_CREDIT'].includes(decision.decision) && selectedTransaction) {
+                  try {
+                    console.log('Invoking process-chargeback-action...');
+                    const { data: cbData, error: cbError } = await supabase.functions.invoke('process-chargeback-action', {
+                      body: {
+                        disputeId: currentDisputeId,
+                        transactionId: selectedTransaction.id,
+                      }
+                    });
+                    if (cbError) {
+                      console.error('process-chargeback-action error:', cbError);
+                    } else {
+                      console.log('process-chargeback-action result:', cbData);
+                    }
+                  } catch (err) {
+                    console.error('Failed to invoke process-chargeback-action:', err);
+                  }
+                }
+
                 // Insert final message
                 await supabase
                   .from("messages")
