@@ -65,12 +65,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update transaction
+    // Update transaction - keep in needs attention until workflow complete
     const { error: updateError } = await supabase
       .from('transactions')
       .update({
         dispute_status: 'awaiting_customer_info',
-        needs_attention: false,
+        needs_attention: true,
       })
       .eq('id', transaction_id);
 
