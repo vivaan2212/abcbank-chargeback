@@ -18,6 +18,7 @@ import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { HelpWidget } from "@/components/HelpWidget";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -1918,16 +1919,52 @@ Let me check if this transaction is eligible for a chargeback...`;
                    <div className="mt-6 flex justify-center">
                      <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
                    </div>
-                 )}
-
-                  {/* Help Widget inline */}
-                  {isHelpWidgetOpen && (
-                    <HelpWidget 
-                      onClose={() => setIsHelpWidgetOpen(false)}
-                      messages={helpWidgetMessages}
-                      setMessages={setHelpWidgetMessages}
-                    />
                   )}
+
+                  {/* Help Widget messages - always visible when there's conversation */}
+                  {helpWidgetMessages.length > 1 && (
+                    <div className="mt-6 space-y-6">
+                      {helpWidgetMessages.map((msg, idx) => (
+                        <div key={idx}>
+                          {msg.role === "assistant" && (
+                            <div className="flex items-start gap-3">
+                              <Avatar className="w-10 h-10 flex-shrink-0">
+                                <AvatarImage src={paceAvatar} alt="Pace" className="object-contain" />
+                                <AvatarFallback className="bg-primary text-primary-foreground">P</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-semibold">Pace</span>
+                                </div>
+                                <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3">
+                                  <p className="text-sm text-foreground">{msg.content}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {msg.role === "user" && (
+                            <div className="flex items-start gap-3 justify-end">
+                              <div className="flex-1 flex justify-end">
+                                <div className="bg-primary text-primary-foreground rounded-lg rounded-tr-none px-4 py-3 max-w-[80%]">
+                                  <p className="text-sm">{msg.content}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                   {/* Help Widget inline */}
+                   {isHelpWidgetOpen && (
+                     <HelpWidget 
+                       onClose={() => setIsHelpWidgetOpen(false)}
+                       messages={helpWidgetMessages}
+                       setMessages={setHelpWidgetMessages}
+                     />
+                   )}
               </div>
             </div>
           </ScrollArea>

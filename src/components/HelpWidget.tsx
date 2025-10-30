@@ -117,10 +117,10 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
       setMessages((prev) => [...prev, closingMessage]);
       setShowFollowUp(false);
       
-      // Close after showing the message
+      // Just close the widget, messages stay visible
       setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 100);
     }
   };
 
