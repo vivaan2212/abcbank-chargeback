@@ -440,21 +440,17 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
-      // 9. Add representment info BEFORE sorting (so it appears in chronological order)
+      // 9. Add representment info ONLY after chargeback has been filed
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
-      if (repData) {
-        // Place representment just after Temporary Credit if it's pending/awaiting so it's visible at the end
-        const tempCreditAction = (dispute.chargeback_actions as any[])?.find(a => a.temporary_credit_issued);
-        const tempCreditTs = tempCreditAction ? new Date(tempCreditAction.updated_at || tempCreditAction.created_at).getTime() : undefined;
+      const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
+      const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
+      
+      if (repData && chargebackFiledOrApproved && repData.representment_status !== 'no_representment') {
+        // Only show representment milestone after chargeback was filed
         const finalTs = dispute.updated_at ? new Date(dispute.updated_at).getTime() : undefined;
         const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
-        let repTsNum = repBaseTs;
-        if ((repData.representment_status === 'pending' || repData.representment_status === 'awaiting_customer_info') && tempCreditTs) {
-          repTsNum = tempCreditTs + 500; // just after temp credit
-        } else if (finalTs && repBaseTs < finalTs && (repData.representment_status === 'pending' || repData.representment_status === 'awaiting_customer_info')) {
-          repTsNum = (finalTs as number) - 1000; // fallback near final status
-        }
-        const repTs = new Date(repTsNum).toISOString();
+        // Ensure representment appears AFTER the final status
+        const repTs = (finalTs && repBaseTs > finalTs) ? repData.updated_at : new Date(Math.max(repBaseTs, finalTs || repBaseTs)).toISOString();
 
         const repActivity: Activity = {
           id: 'representment-status',
@@ -466,11 +462,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         };
 
         switch (repData.representment_status) {
-          case 'no_representment':
-            repActivity.label = 'No Merchant Representment';
-            repActivity.details = 'The merchant did not contest this chargeback. Your case proceeds as approved.';
-            repActivity.activityType = 'done';
-            break;
           case 'pending':
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
