@@ -506,12 +506,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             break;
           case 'accepted_by_bank':
             repActivity.label = 'Representment Accepted - Merchant Wins';
-            let acceptDetails = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
-            // Check if temporary credit was reversed
-            if (dispute.transaction.temporary_credit_reversal_at) {
-              acceptDetails += '\n\nTemporary credit has been reversed and deducted from your account.';
-            }
-            repActivity.details = acceptDetails;
+            repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
             repActivity.activityType = 'error';
             break;
           case 'rejected_by_bank':
@@ -522,6 +517,20 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
 
         activityList.push(repActivity);
+
+        // Add temporary credit reversal entry if representment was accepted and credit was reversed
+        if (repData.representment_status === 'accepted_by_bank' && dispute.transaction.temporary_credit_reversal_at) {
+          const reversalTs = new Date(dispute.transaction.temporary_credit_reversal_at).toISOString();
+          const creditAmount = dispute.transaction.temporary_credit_amount || 0;
+          activityList.push({
+            id: 'temp-credit-reversal',
+            timestamp: reversalTs,
+            label: 'Temporary credit reversed',
+            expandable: true,
+            details: `Amount reversed: ₹${creditAmount.toLocaleString()}\n\nThe temporary credit has been reversed and deducted from your account as the merchant won the representment.`,
+            activityType: 'human_action'
+          });
+        }
       }
 
 
