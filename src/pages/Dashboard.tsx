@@ -247,7 +247,7 @@ const Dashboard = () => {
                       className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-sm border-2 border-[#ff8c00] bg-transparent" />
+                        <span className="w-3 h-3 rounded-sm border-2 border-[#ff8c00] bg-transparent" />
                         Needs attention <span className="text-muted-foreground">{counts.needs_attention}</span>
                       </span>
                     </TabsTrigger>
@@ -256,7 +256,7 @@ const Dashboard = () => {
                       className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-sm border-2 border-gray-400 bg-transparent" />
+                        <span className="w-3 h-3 rounded-sm border-2 border-gray-400 bg-transparent" />
                         Void <span className="text-muted-foreground">{counts.void}</span>
                       </span>
                     </TabsTrigger>
@@ -265,7 +265,7 @@ const Dashboard = () => {
                       className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-sm border-2 border-[#4169e1] bg-transparent" />
+                        <span className="w-3 h-3 rounded-sm border-2 border-[#4169e1] bg-transparent" />
                         In progress <span className="text-muted-foreground">{counts.in_progress}</span>
                       </span>
                     </TabsTrigger>
@@ -274,7 +274,7 @@ const Dashboard = () => {
                       className="rounded-md data-[state=active]:bg-[#f2f2f2] data-[state=active]:shadow-none"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 rounded-sm border-2 border-[#22c55e] bg-transparent" />
+                        <span className="w-3 h-3 rounded-sm border-2 border-[#22c55e] bg-transparent" />
                         Done <span className="text-muted-foreground">{counts.done}</span>
                       </span>
                     </TabsTrigger>

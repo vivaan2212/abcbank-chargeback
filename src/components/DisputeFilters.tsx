@@ -17,7 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Filter, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 
 export interface DisputeFiltersType {
   currentStatus?: string;
@@ -69,7 +69,7 @@ const DisputeFilters = ({ filters, onFiltersChange, onApply }: DisputeFiltersPro
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm">
-          <Filter className="h-4 w-4 mr-2" />
+          <SlidersHorizontal className="h-4 w-4 mr-2" />
           Filter
           {activeFilterCount > 0 && (
             <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
