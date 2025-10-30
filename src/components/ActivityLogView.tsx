@@ -77,6 +77,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     checkBankAdmin();
   }, []);
 
+  // Reload activities when bank admin status changes
+  useEffect(() => {
+    if (disputeId) {
+      loadDisputeData();
+    }
+  }, [isBankAdmin]);
+
   // Realtime updates for dispute status and chargeback actions
   useEffect(() => {
     if (!disputeId) return;
