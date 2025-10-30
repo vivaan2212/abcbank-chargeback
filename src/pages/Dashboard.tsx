@@ -238,9 +238,9 @@ const Dashboard = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-auto px-6 pt-4">
-              <div className="border rounded-lg bg-background">
-                <Tabs defaultValue="in-progress" className="h-full flex flex-col">
+            <div className="flex-1 overflow-auto pl-4 pt-4">
+              <div className="border rounded-lg bg-background h-full flex flex-col">
+                <Tabs defaultValue="in-progress" className="flex-1 flex flex-col">
                   <div className="border-b px-6">
                     <TabsList className="h-12 bg-transparent gap-1">
                     <TabsTrigger 
@@ -282,7 +282,7 @@ const Dashboard = () => {
                   </TabsList>
                 </div>
 
-                <div className="px-6 py-4">
+                <div className="flex-1 overflow-auto px-6 py-4">
                   <div className="mb-4">
                     <DisputeFilters
                       filters={filters}
