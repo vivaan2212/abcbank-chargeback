@@ -771,14 +771,43 @@ const Portal = () => {
         setIsReadOnly(true);
         toast.success("Chat ended successfully");
       } else {
-        // Default response for other messages
+        // Check if dispute is in a final state
+        let shouldSendClosingMessage = false;
+        if (currentDisputeId) {
+          const { data: dispute } = await supabase
+            .from("disputes")
+            .select("status")
+            .eq("id", currentDisputeId)
+            .maybeSingle();
+          
+          const finalStates = [
+            "approved",
+            "pending", 
+            "denied",
+            "awaiting_investigation", 
+            "chargeback_filed",
+            "awaiting_merchant_refund",
+            "awaiting_settlement",
+            "pending_manual_review",
+            "expired",
+            "closed"
+          ];
+          
+          shouldSendClosingMessage = dispute && finalStates.includes(dispute.status);
+        }
+        
+        // Send appropriate response
         setTimeout(async () => {
+          const responseContent = shouldSendClosingMessage
+            ? "I hope I have answered your questions well. We will keep you updated with your chargeback status."
+            : "Thank you for that information. I'm processing your chargeback request. Could you provide more details about the merchant and transaction date?";
+          
           const { error: assistantMsgError } = await supabase
             .from("messages")
             .insert({
               conversation_id: currentConversationId,
               role: "assistant",
-              content: "Thank you for that information. I'm processing your chargeback request. Could you provide more details about the merchant and transaction date?",
+              content: responseContent,
             });
 
           if (assistantMsgError) throw assistantMsgError;
