@@ -33,7 +33,7 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('disputes')
-        .select('status, transaction_id');
+        .select('status, transaction_id, transaction:transactions(needs_attention)');
       
       if (error) throw error;
       
@@ -53,7 +53,7 @@ const Dashboard = () => {
         // Map database statuses to display categories
         if (['started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 'documents_uploaded', 'under_review'].includes(status)) {
           newCounts.in_progress++;
-        } else if (status === 'needs_attention' || status === 'requires_action') {
+        } else if (status === 'needs_attention' || status === 'requires_action' || (dispute as any).transaction?.needs_attention === true) {
           newCounts.needs_attention++;
         } else if (status === 'void' || status === 'rejected' || status === 'cancelled') {
           newCounts.void++;

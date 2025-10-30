@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
+import { RepresentmentView } from "@/components/RepresentmentView";
 
 interface Activity {
   id: string;
@@ -47,6 +48,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     url: string;
     cardNetwork: string;
   } | null>(null);
+  const [representment, setRepresentment] = useState<any>(null);
+  const [isLoadingRepresentment, setIsLoadingRepresentment] = useState(true);
 
   useEffect(() => {
     loadDisputeData();
@@ -70,6 +73,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       supabase.removeChannel(channel);
     };
   }, [disputeId]);
+
+  // Auto-expand representment when it needs attention
+  useEffect(() => {
+    if (representment && !isLoadingRepresentment && transactionDetails?.needs_attention) {
+      setExpandedActivities(prev => new Set(prev).add('milestone-representment-received'));
+    }
+  }, [representment, isLoadingRepresentment, transactionDetails?.needs_attention]);
 
   const loadDisputeData = async () => {
     setLoading(true);
@@ -399,6 +409,31 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
+      // 9. Merchant representment milestone (after chargeback filed)
+      if (dispute.transaction?.id) {
+        const { data: repData } = await supabase
+          .from('merchant_representments')
+          .select('*')
+          .eq('transaction_id', dispute.transaction.id)
+          .eq('has_representment', true)
+          .order('representment_created_at', { ascending: false })
+          .maybeSingle();
+        
+        setRepresentment(repData);
+        
+        if (repData && dispute.transaction?.needs_attention) {
+          activityList.push({
+            id: 'milestone-representment-received',
+            timestamp: repData.representment_created_at,
+            label: 'Merchant has responded to chargeback',
+            expandable: true,
+            details: 'REPRESENTMENT_BLOCK',
+            activityType: 'needs_attention'
+          });
+        }
+      }
+      setIsLoadingRepresentment(false);
+
       // Sort by timestamp
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
@@ -704,9 +739,27 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
                           {/* Expanded Details */}
                           {expandedActivities.has(activity.id) && activity.details && (
-                            <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
-                              {activity.details}
-                            </div>
+                            activity.details === 'REPRESENTMENT_BLOCK' ? (
+                              <div className="mt-3">
+                                <RepresentmentView
+                                  transactionId={transactionDetails?.id!}
+                                  representment={representment}
+                                  temporaryCredit={{
+                                    provided: transactionDetails?.temporary_credit_provided || false,
+                                    amount: transactionDetails?.temporary_credit_amount || 0,
+                                    currency: transactionDetails?.temporary_credit_currency || 'USD'
+                                  }}
+                                  onActionComplete={() => {
+                                    setRepresentment(null);
+                                    loadDisputeData();
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                                {activity.details}
+                              </div>
+                            )
                           )}
 
                           {/* Attachments */}

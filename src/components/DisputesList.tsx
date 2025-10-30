@@ -208,6 +208,14 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Only show disputes on dashboard after transaction selection
       let filteredData = data?.filter(d => d.transaction_id !== null) || [];
 
+      // Special handling for needs_attention - include disputes with transaction.needs_attention = true
+      if (statusFilter === 'needs_attention') {
+        filteredData = filteredData.filter(dispute => 
+          dispute.transaction?.needs_attention === true ||
+          ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status)
+        );
+      }
+
       // Apply additional filters from filter panel
       if (filters) {
         filteredData = filteredData.filter((dispute) => {
