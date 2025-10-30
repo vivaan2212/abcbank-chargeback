@@ -18,6 +18,7 @@ import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { HelpWidget } from "@/components/HelpWidget";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { LoadingText } from "@/components/LoadingText";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -1790,7 +1791,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 <div className="mt-6 flex items-center justify-center">
                   <Card className="p-6 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Checking eligibility...</span>
+                    <LoadingText />
                   </Card>
                 </div>
               )}
@@ -1798,7 +1799,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 <div className="mt-6 flex items-center justify-center">
                   <Card className="p-6 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Verifying documents...</span>
+                    <LoadingText />
                   </Card>
                 </div>
               )}
@@ -1894,7 +1895,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <p className="text-sm">Pace is analyzing your reason...</p>
+                      <p className="text-sm"><LoadingText /></p>
                     </div>
                   </Card>
                 </div>

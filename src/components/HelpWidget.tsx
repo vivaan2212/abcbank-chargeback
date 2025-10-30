@@ -6,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import paceAvatar from "@/assets/pace-avatar.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { LoadingText } from "@/components/LoadingText";
 
 interface Message {
   role: "user" | "assistant";
@@ -171,7 +172,7 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
               </div>
               <div className="bg-muted rounded-lg rounded-tl-none px-4 py-3 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm text-muted-foreground">Thinking...</span>
+                <span className="text-sm text-muted-foreground"><LoadingText /></span>
               </div>
             </div>
           </div>
