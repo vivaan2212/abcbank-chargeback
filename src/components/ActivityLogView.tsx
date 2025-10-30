@@ -411,7 +411,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
       // 9. Merchant representment milestone (after chargeback filed)
       if (dispute.transaction?.id) {
-        const { data: repData } = await supabase
+        console.log('Checking for representment, transaction ID:', dispute.transaction.id);
+        const { data: repData, error: repError } = await supabase
           .from('merchant_representments')
           .select('*')
           .eq('transaction_id', dispute.transaction.id)
@@ -419,11 +420,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           .order('representment_created_at', { ascending: false })
           .maybeSingle();
         
+        console.log('Representment data:', repData, 'Error:', repError);
         setRepresentment(repData);
         
         if (repData) {
           // Check if representment action was taken
-          const { data: auditLog } = await supabase
+          const { data: auditLog, error: auditError } = await supabase
             .from('representment_audit_log')
             .select('*')
             .eq('transaction_id', dispute.transaction.id)
@@ -431,7 +433,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             .order('performed_at', { ascending: false })
             .maybeSingle();
 
+          console.log('Audit log data:', auditLog, 'Error:', auditError);
+
           if (auditLog) {
+            console.log('Adding completed representment milestones');
             // Show completed representment action
             activityList.push({
               id: 'milestone-representment-received',
@@ -454,6 +459,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               activityType: auditLog.action === 'accept' ? 'done' : 'success'
             });
           } else if (dispute.transaction?.needs_attention) {
+            console.log('Adding awaiting action representment milestone');
             // Still awaiting action
             activityList.push({
               id: 'milestone-representment-received',
@@ -463,7 +469,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               details: 'REPRESENTMENT_BLOCK',
               activityType: 'needs_attention'
             });
+          } else {
+            console.log('Representment exists but no action and not needs_attention');
           }
+        } else {
+          console.log('No representment data found for this transaction');
         }
       }
       setIsLoadingRepresentment(false);
