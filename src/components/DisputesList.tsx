@@ -150,15 +150,15 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
             needs_attention,
             temporary_credit_provided,
             temporary_credit_amount,
-            temporary_credit_currency
-          ),
-          chargeback_representment_static(
-            id,
-            will_be_represented,
-            representment_status,
-            merchant_document_url,
-            merchant_reason_text,
-            source
+            temporary_credit_currency,
+            chargeback_representment_static(
+              id,
+              will_be_represented,
+              representment_status,
+              merchant_document_url,
+              merchant_reason_text,
+              source
+            )
           ),
           chargeback_actions(
             id,
@@ -219,7 +219,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
         filteredData = filteredData.filter(dispute => {
-          const repStatus = (dispute as any).chargeback_representment_static?.representment_status;
+          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'pending' || 
                  ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status);
         });
@@ -228,7 +228,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for awaiting_customer filter
       if (statusFilter === 'awaiting_customer') {
         filteredData = filteredData.filter(dispute => {
-          const repStatus = (dispute as any).chargeback_representment_static?.representment_status;
+          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'awaiting_customer_info';
         });
       }
@@ -236,7 +236,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for done
       if (statusFilter === 'done') {
         filteredData = filteredData.filter(dispute => {
-          const repStatus = (dispute as any).chargeback_representment_static?.representment_status;
+          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'no_representment' || 
                  repStatus === 'accepted_by_bank' ||
                  dispute.transaction?.dispute_status === 'closed_won' ||
