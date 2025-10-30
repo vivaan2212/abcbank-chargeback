@@ -482,31 +482,18 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     return getStatusLabel(dispute.status);
   };
 
-  // Get the color for the status square
+  // Get the color for the status square based on current tab filter
   const getStatusColor = (dispute: Dispute): string => {
-    const status = dispute.status;
-    const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
-
-    // Needs attention (orange)
-    if (repStatus === 'pending' || ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(status)) {
-      return 'text-[#ff8c00] fill-[#ff8c00]';
+    // Use the active tab filter to determine color
+    if (statusFilter === 'needs_attention') {
+      return 'text-[#ff8c00] fill-[#ff8c00]'; // Orange
+    } else if (statusFilter === 'void') {
+      return 'text-gray-400 fill-gray-400'; // Gray
+    } else if (statusFilter === 'done') {
+      return 'text-[#22c55e] fill-[#22c55e]'; // Green
+    } else {
+      return 'text-[#4169e1] fill-[#4169e1]'; // Blue (in progress)
     }
-
-    // Void (gray)
-    if (['rejected', 'cancelled', 'expired'].includes(status)) {
-      return 'text-gray-400 fill-gray-400';
-    }
-
-    // Done (green)
-    if (repStatus === 'no_representment' || repStatus === 'accepted_by_bank' || 
-        ['approved', 'completed', 'ineligible', 'closed_lost', 'representment_contested'].includes(status) ||
-        dispute.transaction?.dispute_status === 'closed_won' || 
-        dispute.transaction?.dispute_status === 'closed_lost') {
-      return 'text-[#22c55e] fill-[#22c55e]';
-    }
-
-    // In progress (blue) - default
-    return 'text-[#4169e1] fill-[#4169e1]';
   };
 
   if (selectedDispute) {
