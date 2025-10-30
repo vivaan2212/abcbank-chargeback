@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -44,9 +43,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Checking merchant representment for transaction: ${transaction_id}`);
+    console.log(`[CHECK-REPRESENTMENT] Checking merchant response for transaction: ${transaction_id}`);
 
-    // Fetch transaction
+    // Step 1: Fetch transaction and verify chargeback was filed
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .select('*')
@@ -54,31 +53,44 @@ Deno.serve(async (req) => {
       .single();
 
     if (txError || !transaction) {
-      console.error('TRANSACTION_NOT_FOUND:', txError);
+      console.error('[CHECK-REPRESENTMENT] Transaction not found:', txError);
       return new Response(JSON.stringify({ error: 'Transaction not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Fetch merchant representment
-    const { data: representment, error: repError } = await supabase
-      .from('merchant_representments')
-      .select('*')
-      .eq('transaction_id', transaction_id)
-      .order('representment_created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (repError) {
-      console.error('Error fetching representment:', repError);
+    // Verify chargeback has been filed
+    if (transaction.dispute_status !== 'chargeback_filed') {
+      console.log(`[CHECK-REPRESENTMENT] Transaction ${transaction_id} has not reached chargeback_filed status. Current: ${transaction.dispute_status}`);
+      return new Response(JSON.stringify({ 
+        message: 'Chargeback not yet filed for this transaction',
+        current_status: transaction.dispute_status
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // If no representment or has_representment is false, exit gracefully
-    if (!representment || !representment.has_representment) {
-      console.log('No representment found for transaction:', transaction_id);
+    // Step 2: Check static merchant response config
+    const { data: config, error: configError } = await supabase
+      .from('merchant_response_config')
+      .select('*')
+      .eq('transaction_id', transaction_id)
+      .maybeSingle();
+
+    if (configError) {
+      console.error('[CHECK-REPRESENTMENT] Error fetching config:', configError);
+      return new Response(JSON.stringify({ error: 'Database error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!config) {
+      console.warn('[CHECK-REPRESENTMENT] No merchant response config found for transaction:', transaction_id);
       return new Response(JSON.stringify({ 
-        message: 'No representment found',
+        message: 'No merchant response configuration found',
         needs_attention: false 
       }), {
         status: 200,
@@ -86,8 +98,137 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update transaction record
-    const { error: updateError } = await supabase
+    console.log(`[CHECK-REPRESENTMENT] Config found - will_representment: ${config.will_representment}`);
+
+    // Step 3A: Merchant ACCEPTS chargeback (will_representment = false)
+    if (!config.will_representment) {
+      console.log('[CHECK-REPRESENTMENT] Merchant accepts chargeback - processing acceptance');
+
+      // Update transaction status to closed_won
+      const { error: txUpdateError } = await supabase
+        .from('transactions')
+        .update({
+          dispute_status: 'closed_won',
+          needs_attention: false
+        })
+        .eq('id', transaction_id);
+
+      if (txUpdateError) {
+        console.error('[CHECK-REPRESENTMENT] Failed to update transaction:', txUpdateError);
+        return new Response(JSON.stringify({ error: 'Failed to update transaction' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Update dispute status
+      const { error: disputeUpdateError } = await supabase
+        .from('disputes')
+        .update({ status: 'closed_won' })
+        .eq('transaction_id', transaction_id);
+
+      if (disputeUpdateError) {
+        console.error('[CHECK-REPRESENTMENT] Failed to update dispute:', disputeUpdateError);
+      }
+
+      // Create audit log entry
+      const { error: auditError } = await supabase
+        .from('representment_audit_log')
+        .insert({
+          transaction_id,
+          action: 'merchant_accepted_chargeback',
+          reason: 'Merchant did not contest the chargeback',
+          performed_by: null, // System action
+          metadata: { config_id: config.id }
+        });
+
+      if (auditError) {
+        console.error('[CHECK-REPRESENTMENT] Failed to create audit log:', auditError);
+      }
+
+      console.log('[CHECK-REPRESENTMENT] Merchant acceptance processed successfully');
+
+      return new Response(JSON.stringify({
+        success: true,
+        merchant_accepted: true,
+        transaction_id,
+        message: 'Merchant accepted the chargeback. Customer retains the temporary credit.',
+        needs_attention: false
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Step 3B: Merchant REPRESENTMENTS (will_representment = true)
+    console.log('[CHECK-REPRESENTMENT] Merchant will representment - creating representment record');
+
+    // Create/update merchant_representments record
+    const { data: existingRep, error: checkRepError } = await supabase
+      .from('merchant_representments')
+      .select('id')
+      .eq('transaction_id', transaction_id)
+      .maybeSingle();
+
+    if (checkRepError) {
+      console.error('[CHECK-REPRESENTMENT] Error checking existing representment:', checkRepError);
+    }
+
+    let representmentRecord;
+
+    if (existingRep) {
+      // Update existing
+      const { data: updatedRep, error: updateRepError } = await supabase
+        .from('merchant_representments')
+        .update({
+          has_representment: true,
+          representment_reason_code: config.response_reason_code,
+          representment_reason_text: config.response_reason_text,
+          representment_document_url: config.response_document_url,
+          representment_source: 'merchant_portal',
+          representment_created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingRep.id)
+        .select()
+        .single();
+
+      if (updateRepError) {
+        console.error('[CHECK-REPRESENTMENT] Failed to update representment:', updateRepError);
+        return new Response(JSON.stringify({ error: 'Failed to update representment' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      representmentRecord = updatedRep;
+    } else {
+      // Insert new
+      const { data: newRep, error: insertRepError } = await supabase
+        .from('merchant_representments')
+        .insert({
+          transaction_id,
+          has_representment: true,
+          representment_reason_code: config.response_reason_code,
+          representment_reason_text: config.response_reason_text,
+          representment_document_url: config.response_document_url,
+          representment_source: 'merchant_portal',
+          representment_created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertRepError) {
+        console.error('[CHECK-REPRESENTMENT] Failed to create representment:', insertRepError);
+        return new Response(JSON.stringify({ error: 'Failed to create representment' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      representmentRecord = newRep;
+    }
+
+    // Update transaction to representment_received
+    const { error: txRepUpdateError } = await supabase
       .from('transactions')
       .update({
         dispute_status: 'representment_received',
@@ -95,13 +236,25 @@ Deno.serve(async (req) => {
       })
       .eq('id', transaction_id);
 
-    if (updateError) {
-      console.error('Error updating transaction:', updateError);
+    if (txRepUpdateError) {
+      console.error('[CHECK-REPRESENTMENT] Failed to update transaction status:', txRepUpdateError);
       return new Response(JSON.stringify({ error: 'Failed to update transaction' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Update dispute status
+    const { error: disputeRepUpdateError } = await supabase
+      .from('disputes')
+      .update({ status: 'representment_received' })
+      .eq('transaction_id', transaction_id);
+
+    if (disputeRepUpdateError) {
+      console.error('[CHECK-REPRESENTMENT] Failed to update dispute:', disputeRepUpdateError);
+    }
+
+    console.log('[CHECK-REPRESENTMENT] Representment created successfully');
 
     // Build dashboard payload
     const dashboardPayload = {
@@ -109,11 +262,11 @@ Deno.serve(async (req) => {
       status_badge: 'Needs Attention',
       representment: {
         present: true,
-        reason_code: representment.representment_reason_code || 'N/A',
-        reason_text: representment.representment_reason_text || 'No reason provided',
-        document_url: representment.representment_document_url || null,
-        created_at: representment.representment_created_at,
-        source: representment.representment_source
+        reason_code: config.response_reason_code || 'N/A',
+        reason_text: config.response_reason_text || 'No reason provided',
+        document_url: config.response_document_url || null,
+        created_at: representmentRecord.representment_created_at,
+        source: 'merchant_portal'
       },
       actions: {
         can_contest: true,
@@ -126,8 +279,6 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log('Representment detected and transaction updated:', dashboardPayload);
-
     return new Response(JSON.stringify({
       success: true,
       ...dashboardPayload
@@ -137,7 +288,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in check-merchant-representment:', error);
+    console.error('[CHECK-REPRESENTMENT] Unexpected error:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'

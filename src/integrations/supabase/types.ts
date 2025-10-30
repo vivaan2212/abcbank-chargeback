@@ -380,6 +380,47 @@ export type Database = {
           },
         ]
       }
+      merchant_response_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          response_delay_days: number | null
+          response_document_url: string | null
+          response_reason_code: string | null
+          response_reason_text: string | null
+          transaction_id: string
+          will_representment: boolean
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          response_delay_days?: number | null
+          response_document_url?: string | null
+          response_reason_code?: string | null
+          response_reason_text?: string | null
+          transaction_id: string
+          will_representment: boolean
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          response_delay_days?: number | null
+          response_document_url?: string | null
+          response_reason_code?: string | null
+          response_reason_text?: string | null
+          transaction_id?: string
+          will_representment?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_response_config_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

@@ -409,61 +409,106 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
-      // 9. Merchant representment milestone (after chargeback filed)
+      // 9. Merchant response milestone (after chargeback filed)
       if (dispute.transaction?.id) {
-        console.log('Checking for representment, transaction ID:', dispute.transaction.id);
-        const { data: repDataArray, error: repError } = await supabase
-          .from('merchant_representments')
+        console.log('Checking for merchant response, transaction ID:', dispute.transaction.id);
+        
+        // Check audit log first to see what action was taken
+        const { data: auditRows, error: auditError } = await supabase
+          .from('representment_audit_log')
           .select('*')
           .eq('transaction_id', dispute.transaction.id)
-          .eq('has_representment', true)
-          .order('representment_created_at', { ascending: false })
+          .order('performed_at', { ascending: false })
           .limit(1);
-        
-        const repData = repDataArray?.[0] || null;
-        console.log('Representment data:', repData, 'Error:', repError);
-        setRepresentment(repData);
-        
-        if (repData) {
-          // Check if representment action was taken
-          const { data: auditRows, error: auditError } = await supabase
-            .from('representment_audit_log')
+
+        const auditLog = auditRows?.[0] || null;
+
+        if (auditLog) {
+          // Merchant responded - check if acceptance or representment
+          if (auditLog.action === 'merchant_accepted_chargeback') {
+            // Merchant accepted the chargeback
+            activityList.push({
+              id: 'milestone-merchant-accepted',
+              timestamp: auditLog.performed_at,
+              label: 'Merchant Accepted Chargeback',
+              expandable: true,
+              details: 'The merchant did not contest the chargeback. Customer retains the temporary credit and the dispute is closed in customer favor.',
+              activityType: 'success'
+            });
+          } else if (auditLog.action === 'accept') {
+            // Bank accepted merchant representment
+            const { data: repData } = await supabase
+              .from('merchant_representments')
+              .select('*')
+              .eq('transaction_id', dispute.transaction.id)
+              .order('representment_created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (repData) {
+              activityList.push({
+                id: 'milestone-representment-received',
+                timestamp: repData.representment_created_at,
+                label: 'Merchant has responded to chargeback',
+                expandable: true,
+                details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
+                activityType: 'human_action'
+              });
+
+              activityList.push({
+                id: 'milestone-representment-action',
+                timestamp: auditLog.performed_at,
+                label: 'Representment accepted - Merchant evidence approved',
+                expandable: auditLog.note ? true : false,
+                details: auditLog.note || undefined,
+                reviewer: 'Rohit Kapoor',
+                activityType: 'done'
+              });
+            }
+          } else if (auditLog.action === 'contest') {
+            // Bank contested merchant representment
+            const { data: repData } = await supabase
+              .from('merchant_representments')
+              .select('*')
+              .eq('transaction_id', dispute.transaction.id)
+              .order('representment_created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (repData) {
+              activityList.push({
+                id: 'milestone-representment-received',
+                timestamp: repData.representment_created_at,
+                label: 'Merchant has responded to chargeback',
+                expandable: true,
+                details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
+                activityType: 'human_action'
+              });
+
+              activityList.push({
+                id: 'milestone-representment-action',
+                timestamp: auditLog.performed_at,
+                label: 'Representment contested - Proceeding with chargeback',
+                expandable: auditLog.note ? true : false,
+                details: auditLog.note || undefined,
+                reviewer: 'Rohit Kapoor',
+                activityType: 'success'
+              });
+            }
+          }
+        } else if (dispute.transaction?.needs_attention) {
+          // Still awaiting bank action on representment
+          const { data: repData } = await supabase
+            .from('merchant_representments')
             .select('*')
             .eq('transaction_id', dispute.transaction.id)
-            .in('action', ['accept', 'contest'])
-            .order('performed_at', { ascending: false })
-            .limit(1);
+            .eq('has_representment', true)
+            .order('representment_created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          const auditLog = auditRows?.[0] || null;
-
-          console.log('Audit log data:', auditLog, 'Error:', auditError);
-
-          if (auditLog) {
-            console.log('Adding completed representment milestones');
-            // Show completed representment action
-            activityList.push({
-              id: 'milestone-representment-received',
-              timestamp: repData.representment_created_at,
-              label: 'Merchant has responded to chargeback',
-              expandable: true,
-              details: `Merchant provided evidence:\n${repData.representment_reason_text || 'No reason provided'}`,
-              activityType: 'human_action'
-            });
-
-            activityList.push({
-              id: 'milestone-representment-action',
-              timestamp: auditLog.performed_at,
-              label: auditLog.action === 'accept' 
-                ? 'Representment accepted - Merchant evidence approved' 
-                : 'Representment contested - Proceeding with chargeback',
-              expandable: auditLog.note ? true : false,
-              details: auditLog.note || undefined,
-              reviewer: 'Rohit Kapoor',
-              activityType: auditLog.action === 'accept' ? 'done' : 'success'
-            });
-          } else if (dispute.transaction?.needs_attention) {
-            console.log('Adding awaiting action representment milestone');
-            // Still awaiting action
+          if (repData) {
+            setRepresentment(repData);
             activityList.push({
               id: 'milestone-representment-received',
               timestamp: repData.representment_created_at,
@@ -472,11 +517,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               details: 'REPRESENTMENT_BLOCK',
               activityType: 'needs_attention'
             });
-          } else {
-            console.log('Representment exists but no action and not needs_attention');
           }
-        } else {
-          console.log('No representment data found for this transaction');
         }
       }
       setIsLoadingRepresentment(false);
