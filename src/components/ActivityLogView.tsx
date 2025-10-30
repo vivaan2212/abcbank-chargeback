@@ -426,13 +426,15 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         
         if (repData) {
           // Check if representment action was taken
-          const { data: auditLog, error: auditError } = await supabase
+          const { data: auditRows, error: auditError } = await supabase
             .from('representment_audit_log')
             .select('*')
             .eq('transaction_id', dispute.transaction.id)
             .in('action', ['accept', 'contest'])
             .order('performed_at', { ascending: false })
-            .maybeSingle();
+            .limit(1);
+
+          const auditLog = auditRows?.[0] || null;
 
           console.log('Audit log data:', auditLog, 'Error:', auditError);
 
