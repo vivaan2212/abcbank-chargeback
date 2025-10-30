@@ -292,6 +292,10 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
         filteredData = filteredData.filter(dispute => {
+          // Exclude write-off approved disputes from needs attention
+          const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
+          if (hasWriteOffDecision) return false;
+          
           const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'pending' || 
                  ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status);
@@ -309,6 +313,10 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for done
       if (statusFilter === 'done') {
         filteredData = filteredData.filter(dispute => {
+          // Include write-off approved disputes in done
+          const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
+          if (hasWriteOffDecision) return true;
+          
           const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'no_representment' || 
                  repStatus === 'accepted_by_bank' ||
