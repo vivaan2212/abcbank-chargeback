@@ -68,14 +68,16 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
       {/* Processes Section */}
       <div className="px-4">
         <div className="text-xs font-medium text-muted-foreground mb-2">Processes</div>
-        <div 
-          className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer",
-            activeSection === "chargebacks" ? "bg-muted" : "hover:bg-muted/50"
-          )}
-        >
-          <TrendingUp className="h-4 w-4" />
-          <span className="text-sm">Chargebacks</span>
+        <div className="border rounded-lg bg-card">
+          <div 
+            className={cn(
+              "flex items-center gap-2 px-2 py-1.5 cursor-pointer",
+              activeSection === "chargebacks" ? "bg-muted" : "hover:bg-muted/50"
+            )}
+          >
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-sm">Chargebacks</span>
+          </div>
         </div>
       </div>
 
