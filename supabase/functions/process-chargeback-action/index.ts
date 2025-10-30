@@ -66,12 +66,21 @@ Deno.serve(async (req) => {
       }
     );
 
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
+    // Derive user id from verified JWT (gateway verifies since verify_jwt=true)
+    const token = authHeader.replace('Bearer', '').trim();
+    let userId: string | null = null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1] || ''));
+      userId = payload?.sub ?? null;
+    } catch (_) {
+      userId = null;
+    }
 
-    if (!user) {
-      throw new Error('Not authenticated');
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Not authenticated' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { disputeId, transactionId } = await req.json();
@@ -87,7 +96,7 @@ Deno.serve(async (req) => {
       .from('transactions')
       .select('*')
       .eq('id', transactionId)
-      .eq('customer_id', user.id)
+      .eq('customer_id', userId)
       .single();
 
     if (txError || !transaction) {
@@ -195,7 +204,7 @@ Deno.serve(async (req) => {
       .insert({
         dispute_id: disputeId,
         transaction_id: transactionId,
-        customer_id: user.id,
+        customer_id: userId,
         action_type,
         net_amount,
         days_since_transaction,
