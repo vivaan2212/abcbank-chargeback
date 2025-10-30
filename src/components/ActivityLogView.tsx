@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, Menu, ArrowUp, Check, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -792,7 +792,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="h-8 w-8"
               >
-                <Menu className="h-4 w-4" />
+                <PanelLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
