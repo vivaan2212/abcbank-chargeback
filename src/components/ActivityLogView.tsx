@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
 import paceAvatar from "@/assets/pace-logo-grey.png";
-
 interface Activity {
   id: string;
   timestamp: string;
@@ -19,9 +18,9 @@ interface Activity {
   expandable?: boolean;
   expanded?: boolean;
   details?: string;
-  attachments?: Array<{ 
-    label: string; 
-    icon: string; 
+  attachments?: Array<{
+    label: string;
+    icon: string;
     action?: string;
     videoData?: any;
     docUrl?: string;
@@ -31,15 +30,18 @@ interface Activity {
   showRepresentmentActions?: boolean;
   representmentTransactionId?: string;
 }
-
 interface ActivityLogViewProps {
   disputeId: string;
   transactionId: string | null;
   status: string;
   onBack: () => void;
 }
-
-const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityLogViewProps) => {
+const ActivityLogView = ({
+  disputeId,
+  transactionId,
+  status,
+  onBack
+}: ActivityLogViewProps) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
@@ -55,8 +57,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   const [processingRepresentment, setProcessingRepresentment] = useState(false);
   const [isKnowledgeBaseOpen, setIsKnowledgeBaseOpen] = useState(false);
   const [isKnowledgeBaseClosing, setIsKnowledgeBaseClosing] = useState(false);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleCloseKnowledgeBase = () => {
     setIsKnowledgeBaseClosing(true);
     setTimeout(() => {
@@ -64,7 +67,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       setIsKnowledgeBaseClosing(false);
     }, 400); // Match the animation duration
   };
-
   useEffect(() => {
     loadDisputeData();
   }, [disputeId]);
@@ -72,19 +74,17 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   // Check if user is bank admin
   useEffect(() => {
     const checkBankAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'bank_admin')
-        .maybeSingle();
-
+      const {
+        data: roles
+      } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'bank_admin').maybeSingle();
       setIsBankAdmin(!!roles);
     };
-
     checkBankAdmin();
   }, []);
 
@@ -98,33 +98,39 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
   // Realtime updates for dispute status and chargeback actions
   useEffect(() => {
     if (!disputeId) return;
-
-    const channel = supabase
-      .channel(`activity-log-${disputeId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chargeback_actions', filter: `dispute_id=eq.${disputeId}` }, () => {
-        loadDisputeData();
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'disputes', filter: `id=eq.${disputeId}` }, () => {
-        loadDisputeData();
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chargeback_representment_static' }, () => {
-        loadDisputeData();
-      })
-      .subscribe();
-
+    const channel = supabase.channel(`activity-log-${disputeId}`).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'chargeback_actions',
+      filter: `dispute_id=eq.${disputeId}`
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'disputes',
+      filter: `id=eq.${disputeId}`
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'chargeback_representment_static'
+    }, () => {
+      loadDisputeData();
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [disputeId]);
-
-
   const loadDisputeData = async () => {
     setLoading(true);
     try {
       // Load dispute with all related data
-      const { data: dispute, error } = await supabase
-        .from('disputes')
-        .select(`
+      const {
+        data: dispute,
+        error
+      } = await supabase.from('disputes').select(`
           *,
           transaction:transactions(
             *,
@@ -134,10 +140,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             *,
             video:chargeback_videos(id, card_network, video_path)
           )
-        `)
-        .eq('id', disputeId)
-        .single();
-
+        `).eq('id', disputeId).single();
       if (error) throw error;
 
       // Build activities from dispute data - milestone-based approach
@@ -148,7 +151,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         id: 'milestone-received',
         timestamp: dispute.created_at,
         label: 'Received a disputed transaction',
-        attachments: dispute.documents ? [{ label: 'Disputed transaction', icon: '📄' }] : undefined,
+        attachments: dispute.documents ? [{
+          label: 'Disputed transaction',
+          icon: '📄'
+        }] : undefined,
         activityType: 'human_action'
       });
 
@@ -157,7 +163,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         const isSecured = dispute.transaction.secured_indication === 1;
         const posEntryMode = String(dispute.transaction.pos_entry_mode || '').padStart(2, '0');
         const walletType = dispute.transaction.wallet_type || 'None';
-        
         activityList.push({
           id: 'milestone-security',
           timestamp: dispute.created_at,
@@ -173,15 +178,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
         let eligibilityLabel = 'Transaction is eligible for chargeback';
         let eligibilityDetails = '';
-        
         if (!isEligible) {
           eligibilityLabel = 'Transaction is not eligible for chargeback';
         }
-        
         if (dispute.eligibility_reasons && Array.isArray(dispute.eligibility_reasons)) {
           eligibilityDetails = dispute.eligibility_reasons.join('\n');
         }
-        
         activityList.push({
           id: 'milestone-eligibility',
           timestamp: dispute.created_at,
@@ -236,29 +238,23 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         dispute.chargeback_actions.forEach((action: any, idx: number) => {
           // Build reasoning details from action data
           let reasoningDetails = '';
-          
           if (action.requires_manual_review) {
             const reasons: string[] = [];
-            
             if (action.days_since_transaction > 21 && !action.dispute?.transaction?.settled) {
               reasons.push(`The transaction is older than 21 days and is not settled`);
             }
-            
             if (action.is_restricted_mcc) {
               reasons.push(`Merchant category code ${action.merchant_category_code} requires additional review`);
             }
-            
             if (action.is_facebook_meta) {
               reasons.push(`Transaction with high-risk merchant (Facebook/Meta)`);
             }
-            
             if (action.admin_message) {
               reasons.push(action.admin_message);
             }
-            
             reasoningDetails = reasons.join('\n\n');
           }
-          
+
           // Temporary credit issued milestone
           if (action.temporary_credit_issued) {
             const creditAmount = action.net_amount || dispute.transaction?.transaction_amount || 0;
@@ -271,25 +267,21 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               activityType: 'done'
             });
           }
-          
-          
+
           // Merchant refund awaiting milestone (enhanced)
           if (action.awaiting_merchant_refund) {
             const daysSince = action.days_since_transaction || 0;
             const daysRemaining = Math.max(0, 14 - daysSince);
-            
             activityList.push({
               id: `action-${idx}-awaiting-refund`,
               timestamp: action.created_at,
               label: 'Awaiting merchant refund',
               expandable: true,
-              details: action.is_facebook_meta 
-                ? `Transaction with Facebook/Meta detected. These merchants typically issue refunds within 14 days.\n\nDays elapsed: ${daysSince}\nEstimated days remaining: ${daysRemaining}\n\nWe'll automatically monitor for the refund and update the case accordingly.`
-                : `The merchant has been contacted for a refund. This is often faster than filing a chargeback.\n\nDays elapsed: ${daysSince}\n\nWe'll monitor for the refund and proceed with chargeback filing if no refund is received.`,
+              details: action.is_facebook_meta ? `Transaction with Facebook/Meta detected. These merchants typically issue refunds within 14 days.\n\nDays elapsed: ${daysSince}\nEstimated days remaining: ${daysRemaining}\n\nWe'll automatically monitor for the refund and update the case accordingly.` : `The merchant has been contacted for a refund. This is often faster than filing a chargeback.\n\nDays elapsed: ${daysSince}\n\nWe'll monitor for the refund and proceed with chargeback filing if no refund is received.`,
               activityType: 'needs_attention'
             });
           }
-          
+
           // Manual review milestone (enhanced)
           if (action.requires_manual_review) {
             activityList.push({
@@ -301,7 +293,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               activityType: 'needs_attention'
             });
           }
-          
+
           // Review status milestone
           if (action.updated_at !== action.created_at) {
             activityList.push({
@@ -315,12 +307,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           // Chargeback filed milestone - only show if dispute is NOT in final approved state
           // (to avoid duplicate "Chargeback filed" and "Chargeback approved" entries)
           const isFinalApproved = ['completed', 'approved', 'closed_won'].includes(dispute.status?.toLowerCase() || '');
-          
           if (action.chargeback_filed && !isFinalApproved) {
-            const attachments: Activity['attachments'] = [
-              { label: 'View Document', icon: '📄', action: 'document' }
-            ];
-            
+            const attachments: Activity['attachments'] = [{
+              label: 'View Document',
+              icon: '📄',
+              action: 'document'
+            }];
+
             // Add video recording if available
             if (action.video) {
               attachments.push({
@@ -330,7 +323,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 videoData: action.video
               });
             }
-            
             activityList.push({
               id: `action-${idx}-filed`,
               timestamp: action.updated_at || action.created_at,
@@ -345,13 +337,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // 8. Final dispute outcome milestones  
       if (dispute.status) {
         const finalStatuses = ['completed', 'approved', 'rejected', 'void', 'cancelled', 'closed_won', 'closed_lost'];
-        
         if (finalStatuses.includes(dispute.status.toLowerCase())) {
           let label = '';
           let activityType: Activity['activityType'] = 'done';
           let details = '';
           let attachments: Activity['attachments'] | undefined = undefined;
-          
           switch (dispute.status.toLowerCase()) {
             case 'completed':
             case 'approved':
@@ -360,12 +350,14 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
               details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
-              
+
               // Add video attachment for approved cases - fetch video based on card network
-              attachments = [
-                { label: 'View Document', icon: '📄', action: 'document' }
-              ];
-              
+              attachments = [{
+                label: 'View Document',
+                icon: '📄',
+                action: 'document'
+              }];
+
               // Check if video exists in chargeback_actions
               if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0 && dispute.chargeback_actions[0].video) {
                 attachments.push({
@@ -386,15 +378,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                     cardNetwork = 'Visa';
                   }
                 }
-                
+
                 // Fetch video from database
-                const { data: videoData } = await supabase
-                  .from('chargeback_videos')
-                  .select('*')
-                  .eq('card_network', cardNetwork)
-                  .eq('is_active', true)
-                  .single();
-                
+                const {
+                  data: videoData
+                } = await supabase.from('chargeback_videos').select('*').eq('card_network', cardNetwork).eq('is_active', true).single();
                 if (videoData) {
                   attachments.push({
                     label: 'Video Recording',
@@ -405,15 +393,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 }
               }
               break;
-              
             case 'rejected':
               label = 'Chargeback rejected';
               activityType = 'error';
               const action = dispute.chargeback_actions?.[0];
-              details = action?.admin_message || 
-                'The chargeback was not approved by the card network. This may be due to insufficient evidence or the transaction being outside the dispute window.\n\nIf you have additional evidence, you may be able to file a new dispute.';
+              details = action?.admin_message || 'The chargeback was not approved by the card network. This may be due to insufficient evidence or the transaction being outside the dispute window.\n\nIf you have additional evidence, you may be able to file a new dispute.';
               break;
-              
             case 'void':
             case 'cancelled':
               label = 'Case voided';
@@ -421,7 +406,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
               details = 'This dispute case has been voided or cancelled. This may happen if a merchant refund was received or if the dispute was withdrawn.';
               break;
           }
-          
           if (label) {
             activityList.push({
               id: 'milestone-final-status',
@@ -440,7 +424,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
       const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
       const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
-      
       if (repData && chargebackFiledOrApproved) {
         // Calculate chargeback filing timestamp - find the last chargeback filed action
         let chargebackFiledTs: number | null = null;
@@ -451,11 +434,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             chargebackFiledTs = new Date(lastFiled.updated_at || lastFiled.created_at).getTime();
           }
         }
-        
+
         // Ensure representment appears AFTER chargeback filing
         const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
         let repTs: string;
-        
         if (chargebackFiledTs) {
           // If we have a chargeback filing time, ensure representment is at least 1ms after it
           repTs = new Date(Math.max(repBaseTs, chargebackFiledTs + 1)).toISOString();
@@ -463,7 +445,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           // Fallback to using dispute updated_at
           repTs = new Date(repBaseTs).toISOString();
         }
-
         const repActivity: Activity = {
           id: 'representment-status',
           timestamp: repTs,
@@ -472,7 +453,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           details: '',
           activityType: 'needs_attention'
         };
-
         switch (repData.representment_status) {
           case 'no_representment':
             repActivity.label = 'Merchant Representment Period Closed';
@@ -505,7 +485,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             repActivity.activityType = 'done';
             break;
         }
-
         activityList.push(repActivity);
 
         // Add temporary credit reversal entry if representment was accepted and credit was reversed
@@ -523,10 +502,8 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         }
       }
 
-
       // Sort by timestamp
       activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);
     } catch (error) {
@@ -535,7 +512,6 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       setTimeout(() => setLoading(false), 500);
     }
   };
-
   const toggleExpand = (id: string) => {
     setExpandedActivities(prev => {
       const newSet = new Set(prev);
@@ -547,17 +523,16 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       return newSet;
     });
   };
-
   const handleAttachmentClick = async (attachment: Activity['attachments'][number]) => {
     if (attachment.action === 'video' && attachment.videoData) {
       try {
         // Generate signed URL for video
-        const { data, error } = await supabase.storage
-          .from('chargeback-videos')
-          .createSignedUrl(attachment.videoData.video_path, 3600); // 1 hour expiry
-        
+        const {
+          data,
+          error
+        } = await supabase.storage.from('chargeback-videos').createSignedUrl(attachment.videoData.video_path, 3600); // 1 hour expiry
+
         if (error) throw error;
-        
         setSelectedVideo({
           url: data.signedUrl,
           cardNetwork: attachment.videoData.card_network
@@ -570,72 +545,68 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       // Handle document view (existing functionality)
     }
   };
-
   const handleAcceptRepresentment = async (transactionId: string) => {
     if (!confirm('Accept merchant representment? This will close the case in favor of the merchant and reverse any temporary credit.')) {
       return;
     }
-
     setProcessingRepresentment(true);
     try {
-      const { error } = await supabase.functions.invoke('accept-representment', {
-        body: { transaction_id: transactionId }
+      const {
+        error
+      } = await supabase.functions.invoke('accept-representment', {
+        body: {
+          transaction_id: transactionId
+        }
       });
-
       if (error) throw error;
-
       toast({
         title: "Representment Accepted",
-        description: "Merchant wins. Temporary credit has been reversed.",
+        description: "Merchant wins. Temporary credit has been reversed."
       });
-
       await loadDisputeData();
     } catch (error) {
       console.error('Error accepting representment:', error);
       toast({
         title: "Error",
         description: "Failed to accept representment. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setProcessingRepresentment(false);
     }
   };
-
   const handleRejectRepresentment = async (transactionId: string) => {
     if (!confirm('Reject merchant representment? This will ask the customer for additional evidence.')) {
       return;
     }
-
     setProcessingRepresentment(true);
     try {
-      const { error } = await supabase.functions.invoke('reject-representment', {
-        body: { transaction_id: transactionId }
+      const {
+        error
+      } = await supabase.functions.invoke('reject-representment', {
+        body: {
+          transaction_id: transactionId
+        }
       });
-
       if (error) throw error;
-
       toast({
         title: "Representment Rejected",
-        description: "Customer has been asked for additional evidence.",
+        description: "Customer has been asked for additional evidence."
       });
-
       await loadDisputeData();
     } catch (error) {
       console.error('Error rejecting representment:', error);
       toast({
         title: "Error",
         description: "Failed to reject representment. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setProcessingRepresentment(false);
     }
   };
-
   const handleSubmitComment = () => {
     if (!inputText.trim()) return;
-
     const newActivity: Activity = {
       id: `comment-${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -643,20 +614,16 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       reviewer: "Adam Smith",
       activityType: 'message'
     };
-
     setActivities(prev => [...prev, newActivity]);
     setInputText("");
   };
-
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSubmitComment();
     }
   };
-
   const getActivityIcon = (type?: Activity['activityType']) => {
     const iconClasses = "h-2.5 w-2.5 flex-shrink-0";
-    
     switch (type) {
       case 'error':
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-red-500 bg-background")} />;
@@ -679,25 +646,22 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         return <div className={cn(iconClasses, "rounded border-2 border-gray-400 bg-background")} />;
     }
   };
-
   const groupActivitiesByDate = () => {
     // Sort activities by timestamp ascending (oldest first)
-    const sortedActivities = [...activities].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-
-    const groups: Array<{ label: string; activities: Activity[]; sortKey: number }> = [];
+    const sortedActivities = [...activities].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const groups: Array<{
+      label: string;
+      activities: Activity[];
+      sortKey: number;
+    }> = [];
     const groupMap: Record<string, Activity[]> = {};
-    
     sortedActivities.forEach(activity => {
       const date = new Date(activity.timestamp);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-
       let dateLabel: string;
       let sortKey: number;
-      
       if (date.toDateString() === today.toDateString()) {
         dateLabel = "Today";
         sortKey = 2; // Today last
@@ -708,10 +672,13 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         dateLabel = format(date, "dd MMM yyyy");
         sortKey = 0 - date.getTime(); // Older dates first (more negative = earlier date = lower sort key)
       }
-
       if (!groupMap[dateLabel]) {
         groupMap[dateLabel] = [];
-        groups.push({ label: dateLabel, activities: groupMap[dateLabel], sortKey });
+        groups.push({
+          label: dateLabel,
+          activities: groupMap[dateLabel],
+          sortKey
+        });
       }
       groupMap[dateLabel].push(activity);
     });
@@ -719,29 +686,68 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
     // Sort groups by sortKey (older dates first, then Yesterday, then Today)
     return groups.sort((a, b) => a.sortKey - b.sortKey);
   };
-
   const getStatusBadge = () => {
-    const statusMap: Record<string, { label: string; color: string }> = {
-      completed: { label: "Done", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-      approved: { label: "Approved", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-      chargeback_filed: { label: "Chargeback filed", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-      under_review: { label: "Under review", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-      awaiting_merchant_refund: { label: "Awaiting refund", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-      awaiting_settlement: { label: "Awaiting settlement", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" },
-      pending_manual_review: { label: "Manual review", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-      rejected: { label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-      void: { label: "Void", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
-      cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
-      ineligible: { label: "Ineligible", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400" },
-      in_progress: { label: "In progress", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-      needs_attention: { label: "Needs attention", color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400" }
+    const statusMap: Record<string, {
+      label: string;
+      color: string;
+    }> = {
+      completed: {
+        label: "Done",
+        color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+      },
+      approved: {
+        label: "Approved",
+        color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+      },
+      chargeback_filed: {
+        label: "Chargeback filed",
+        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      },
+      under_review: {
+        label: "Under review",
+        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      },
+      awaiting_merchant_refund: {
+        label: "Awaiting refund",
+        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+      },
+      awaiting_settlement: {
+        label: "Awaiting settlement",
+        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+      },
+      pending_manual_review: {
+        label: "Manual review",
+        color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+      },
+      rejected: {
+        label: "Rejected",
+        color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+      },
+      void: {
+        label: "Void",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+      },
+      cancelled: {
+        label: "Cancelled",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+      },
+      ineligible: {
+        label: "Ineligible",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+      },
+      in_progress: {
+        label: "In progress",
+        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      },
+      needs_attention: {
+        label: "Needs attention",
+        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+      }
     };
     return statusMap[status] || statusMap.in_progress;
   };
-
   if (loading) {
-    return (
-      <div className="animate-fade-in">
+    return <div className="animate-fade-in">
         <div className="border-b px-6 py-4">
           <div className="flex items-center gap-3">
             <Skeleton className="h-8 w-8 rounded" />
@@ -752,31 +758,22 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
           </div>
         </div>
         <div className="p-6 space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="flex gap-4">
               <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
               </div>
               <Skeleton className="h-4 w-16" />
-            </div>
-          ))}
+            </div>)}
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const groupedActivities = groupActivitiesByDate();
   const statusBadge = getStatusBadge();
-
-  return (
-    <div className="h-full flex animate-fade-in">
+  return <div className="h-full flex animate-fade-in">
       {/* Left Sidebar */}
-      <div className={cn(
-        "transition-all duration-300 ease-in-out overflow-hidden",
-        isSidebarOpen ? "w-56" : "w-0"
-      )}>
+      <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", isSidebarOpen ? "w-56" : "w-0")}>
         <DashboardSidebar activeSection="chargebacks" />
       </div>
 
@@ -786,20 +783,10 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="h-8 w-8">
                 <PanelLeft className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onBack}
-                className="h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="text-sm text-muted-foreground">
@@ -830,8 +817,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         {/* Activity Timeline */}
         <div className="flex-1 overflow-auto px-6 py-6 bg-background">
           <div className="max-w-4xl space-y-8">
-            {groupedActivities.map((group, groupIndex) => (
-              <div key={group.label}>
+            {groupedActivities.map((group, groupIndex) => <div key={group.label}>
                 {/* Date Separator */}
                 <div className="flex items-center gap-4 mb-6">
                   <div className="h-px flex-1 bg-border" />
@@ -842,13 +828,11 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 {/* Activities for this date */}
                 <div className="space-y-6">
                   {group.activities.map((activity, index) => {
-                    const isFirstActivity = groupIndex === 0 && index === 0;
-                    const isLastInGroup = index === group.activities.length - 1;
-                    const isLastGroup = groupIndex === groupedActivities.length - 1;
-                    const isLastActivity = isLastInGroup && isLastGroup;
-
-                    return (
-                      <div key={activity.id} className="flex gap-4 relative">
+                const isFirstActivity = groupIndex === 0 && index === 0;
+                const isLastInGroup = index === group.activities.length - 1;
+                const isLastGroup = groupIndex === groupedActivities.length - 1;
+                const isLastActivity = isLastInGroup && isLastGroup;
+                return <div key={activity.id} className="flex gap-4 relative">
                         {/* Time */}
                         <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
                           {format(new Date(activity.timestamp), "h:mm a")}
@@ -857,16 +841,12 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                         {/* Icon with connecting line */}
                         <div className="flex-shrink-0 pt-0.5 relative">
                           {/* Connecting line above */}
-                          {!isFirstActivity && (
-                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />
-                          )}
+                          {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />}
                           
                           {getActivityIcon(activity.activityType)}
                           
                           {/* Connecting line below */}
-                          {!isLastActivity && (
-                            <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />
-                          )}
+                          {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />}
                         </div>
 
                         {/* Content */}
@@ -874,82 +854,46 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                           <div className="font-medium text-sm mb-1">{activity.label}</div>
                           
                           {/* Expandable Details */}
-                          {activity.expandable && (
-                            <button
-                              onClick={() => toggleExpand(activity.id)}
-                              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
-                            >
+                          {activity.expandable && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
                               <span>See reasoning</span>
-                              <ChevronRight className={cn(
-                                "h-3 w-3 transition-transform",
-                                expandedActivities.has(activity.id) && "rotate-90"
-                              )} />
-                            </button>
-                          )}
+                              <ChevronRight className={cn("h-3 w-3 transition-transform", expandedActivities.has(activity.id) && "rotate-90")} />
+                            </button>}
 
                           {/* Expanded Details */}
-                          {expandedActivities.has(activity.id) && activity.details && (
-                            <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                          {expandedActivities.has(activity.id) && activity.details && <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
                               {activity.details}
-                            </div>
-                          )}
+                            </div>}
 
                           {/* Representment Action Buttons */}
-                          {activity.showRepresentmentActions && activity.representmentTransactionId && (
-                            <div className="mt-3 flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleAcceptRepresentment(activity.representmentTransactionId!)}
-                                disabled={processingRepresentment}
-                                className="gap-2"
-                              >
+                          {activity.showRepresentmentActions && activity.representmentTransactionId && <div className="mt-3 flex gap-2">
+                              <Button size="sm" variant="destructive" onClick={() => handleAcceptRepresentment(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
                                 <Check className="h-4 w-4" />
                                 Accept Representment
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleRejectRepresentment(activity.representmentTransactionId!)}
-                                disabled={processingRepresentment}
-                                className="gap-2"
-                              >
+                              <Button size="sm" variant="default" onClick={() => handleRejectRepresentment(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
                                 <X className="h-4 w-4" />
                                 Reject & Request Info
                               </Button>
-                            </div>
-                          )}
+                            </div>}
 
                           {/* Attachments */}
-                          {activity.attachments && activity.attachments.length > 0 && (
-                            <div className="mt-3 space-y-2">
-                              {activity.attachments.map((attachment, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => handleAttachmentClick(attachment)}
-                                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
-                                >
+                          {activity.attachments && activity.attachments.length > 0 && <div className="mt-3 space-y-2">
+                              {activity.attachments.map((attachment, i) => <button key={i} onClick={() => handleAttachmentClick(attachment)} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm">
                                   <span>{attachment.icon}</span>
                                   <span>{attachment.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                                </button>)}
+                            </div>}
 
                           {/* Reviewer */}
-                          {activity.reviewer && (
-                            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {activity.reviewer && <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span>✓</span>
                               <span>Reviewed by {activity.reviewer}</span>
-                            </div>
-                          )}
+                            </div>}
                         </div>
-                      </div>
-                    );
-                  })}
+                      </div>;
+              })}
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
@@ -957,21 +901,9 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         <div className="border-t px-6 py-4 bg-background">
           <div className="max-w-4xl">
             <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
-              <img src={paceAvatar} alt="Pace" className="w-5 h-5 object-contain flex-shrink-0" />
-              <Input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Have a question? Ask Pace right away"
-                className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-              />
-              <Button
-                onClick={handleSubmitComment}
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground"
-                disabled={!inputText.trim()}
-              >
+              
+              <Input value={inputText} onChange={e => setInputText(e.target.value)} onKeyPress={handleKeyPress} placeholder="Have a question? Ask Pace right away" className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm" />
+              <Button onClick={handleSubmitComment} size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground" disabled={!inputText.trim()}>
                 <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
@@ -984,12 +916,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         {/* Knowledge Base and Share buttons at top */}
         <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2 justify-end">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 gap-2"
-              onClick={() => setIsKnowledgeBaseOpen(true)}
-            >
+            <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={() => setIsKnowledgeBaseOpen(true)}>
               <BookOpen className="h-4 w-4" />
               <span>Knowledge Base</span>
             </Button>
@@ -1001,7 +928,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Key Details Header */}
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-4.2 py-3 rounded-none">
           <div className="flex items-center gap-2 font-semibold text-sm">
             <Database className="h-4 w-4" />
             Key details
@@ -1010,8 +937,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
 
         {/* Key Details Content */}
         <div className="flex-1 overflow-auto px-4 py-4">
-          {transactionDetails ? (
-            <div className="space-y-4">
+          {transactionDetails ? <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Database className="h-4 w-4" />
                 <span>Disputed transaction</span>
@@ -1026,9 +952,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Transaction Date</span>
                   <span className="font-medium">
-                    {transactionDetails.transaction_time 
-                      ? format(new Date(transactionDetails.transaction_time), "dd/MM/yyyy")
-                      : "N/A"}
+                    {transactionDetails.transaction_time ? format(new Date(transactionDetails.transaction_time), "dd/MM/yyyy") : "N/A"}
                   </span>
                 </div>
 
@@ -1040,11 +964,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-medium">
-                    {transactionDetails.transaction_currency === 'INR' ? '₹' : 
-                     transactionDetails.transaction_currency === 'USD' ? '$' :
-                     transactionDetails.transaction_currency === 'EUR' ? '€' :
-                     transactionDetails.transaction_currency === 'GBP' ? '£' :
-                     transactionDetails.transaction_currency + ' '}
+                    {transactionDetails.transaction_currency === 'INR' ? '₹' : transactionDetails.transaction_currency === 'USD' ? '$' : transactionDetails.transaction_currency === 'EUR' ? '€' : transactionDetails.transaction_currency === 'GBP' ? '£' : transactionDetails.transaction_currency + ' '}
                     {transactionDetails.transaction_amount?.toLocaleString() || "0"}
                   </span>
                 </div>
@@ -1059,38 +979,20 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                   <span className="font-medium">{transactionDetails.acquirer_name || "N/A"}</span>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">No transaction details available</div>
-          )}
+            </div> : <div className="text-sm text-muted-foreground">No transaction details available</div>}
         </div>
       </div>
 
       {/* Video Modal */}
-      <ChargebackVideoModal
-        isOpen={videoModalOpen}
-        onClose={() => setVideoModalOpen(false)}
-        videoUrl={selectedVideo?.url || null}
-        cardNetwork={selectedVideo?.cardNetwork || null}
-      />
+      <ChargebackVideoModal isOpen={videoModalOpen} onClose={() => setVideoModalOpen(false)} videoUrl={selectedVideo?.url || null} cardNetwork={selectedVideo?.cardNetwork || null} />
 
       {/* Knowledge Base Overlay */}
-      {isKnowledgeBaseOpen && (
-        <>
+      {isKnowledgeBaseOpen && <>
           {/* Dark Backdrop */}
-          <div 
-            className={cn(
-              "fixed inset-0 bg-black/50 z-40",
-              isKnowledgeBaseClosing ? "animate-fade-out" : "animate-fade-in"
-            )}
-            onClick={handleCloseKnowledgeBase}
-          />
+          <div className={cn("fixed inset-0 bg-black/50 z-40", isKnowledgeBaseClosing ? "animate-fade-out" : "animate-fade-in")} onClick={handleCloseKnowledgeBase} />
           
           {/* Sliding Panel */}
-          <div className={cn(
-            "fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col",
-            isKnowledgeBaseClosing ? "animate-slide-out-right" : "animate-slide-in-right"
-          )}>
+          <div className={cn("fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col", isKnowledgeBaseClosing ? "animate-slide-out-right" : "animate-slide-in-right")}>
             {/* Header */}
             <div className="border-b px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1107,12 +1009,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
                   <span className="text-sm">💬</span>
                   <span className="text-sm">2</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCloseKnowledgeBase}
-                  className="h-8 w-8"
-                >
+                <Button variant="ghost" size="icon" onClick={handleCloseKnowledgeBase} className="h-8 w-8">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -1201,25 +1098,14 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
             <div className="border-t px-6 py-4">
               <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
                 <span className="text-2xl">⚡</span>
-                <input
-                  type="text"
-                  placeholder="Ask anything to ⚡ Pace"
-                  className="flex-1 bg-transparent border-0 outline-none text-sm"
-                />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground"
-                >
+                <input type="text" placeholder="Ask anything to ⚡ Pace" className="flex-1 bg-transparent border-0 outline-none text-sm" />
+                <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground">
                   <ArrowUp className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
-        </>
-      )}
-    </div>
-  );
+        </>}
+    </div>;
 };
-
 export default ActivityLogView;
