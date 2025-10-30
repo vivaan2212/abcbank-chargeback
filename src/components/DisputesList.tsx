@@ -509,7 +509,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg overflow-x-auto">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-b">
