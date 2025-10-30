@@ -22,6 +22,7 @@ interface Activity {
     icon: string; 
     action?: string;
     videoData?: any;
+    docUrl?: string;
   }>;
   reviewer?: string;
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
