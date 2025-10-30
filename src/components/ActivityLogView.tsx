@@ -10,7 +10,7 @@ import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
-import paceAvatar from "@/assets/pace-avatar.png";
+import paceAvatar from "@/assets/pace-logo-grey.png";
 
 interface Activity {
   id: string;
@@ -783,7 +783,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
-        <div className="border-b px-6 py-3 bg-muted/30">
+        <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button
@@ -811,7 +811,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Status Info */}
-        <div className="border-b px-6 py-3 bg-muted/30">
+        <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
@@ -828,7 +828,7 @@ const ActivityLogView = ({ disputeId, transactionId, status, onBack }: ActivityL
         </div>
 
         {/* Activity Timeline */}
-        <div className="flex-1 overflow-auto px-6 py-6 bg-muted/30">
+        <div className="flex-1 overflow-auto px-6 py-6 bg-background">
           <div className="max-w-4xl space-y-8">
             {groupedActivities.map((group, groupIndex) => (
               <div key={group.label}>
