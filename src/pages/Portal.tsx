@@ -5,7 +5,7 @@ import { getUserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, Send, ArrowUp, Menu, X } from "lucide-react";
+import { LogOut, Send, ArrowUp, Menu, X, MessageCircleQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
@@ -15,7 +15,7 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
-import { HelpChatbot } from "@/components/HelpChatbot";
+
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import {
@@ -96,7 +96,7 @@ const Portal = () => {
   const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
   const [orderDetails, setOrderDetails] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
-  const [isHelpExpanded, setIsHelpExpanded] = useState(false);
+  
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasBootstrapped = useRef(false);
@@ -1643,6 +1643,35 @@ Let me check if this transaction is eligible for a chargeback...`;
     setShowOrderDetailsInput(false);
   };
 
+  const handleHelpRequest = async () => {
+    if (!currentConversationId || isReadOnly) return;
+
+    try {
+      // Add user help request message
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "user",
+          content: "I need help with this step",
+        });
+
+      // Add assistant help response
+      setTimeout(async () => {
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "I'm here to help! Could you please let me know what you need assistance with regarding the current step?",
+          });
+      }, 500);
+    } catch (error: any) {
+      console.error("Failed to send help request:", error);
+      toast.error("Failed to send help request");
+    }
+  };
+
   // Show nothing while checking role to prevent flash
   if (isCheckingRole) {
     return null;
@@ -1686,13 +1715,6 @@ Let me check if this transaction is eligible for a chargeback...`;
           className="flex flex-col h-full"
         >
           <div className="flex-1 flex flex-col h-full bg-background">
-            {isHelpExpanded ? (
-              <HelpChatbot 
-                userName={userFirstName}
-                isExpanded={isHelpExpanded}
-                onToggle={() => setIsHelpExpanded(false)}
-              />
-            ) : (
               <>
                 {/* Header */}
                 <div className="border-b border-border bg-card px-6 py-4 flex-shrink-0">
@@ -1889,36 +1911,28 @@ Let me check if this transaction is eligible for a chargeback...`;
                  </>
                )}
                
-                {/* Show artifacts after successful completion */}
-                {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
-                  <div className="mt-6 flex justify-center">
-                    <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
-                  </div>
-                )}
+                 {/* Show artifacts after successful completion */}
+                 {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
+                   <div className="mt-6 flex justify-center">
+                     <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
+                   </div>
+                 )}
+              </div>
+            </div>
+          </ScrollArea>
 
-                {/* Help Chatbot inline with messages */}
-                {isHelpExpanded && (
-                  <HelpChatbot 
-                    userName={userFirstName}
-                    isExpanded={isHelpExpanded}
-                    onToggle={() => setIsHelpExpanded(false)}
-                  />
-                )}
-             </div>
-           </div>
-         </ScrollArea>
-
-         {/* Help Chatbot button at bottom (only when not expanded) */}
-         {!isHelpExpanded && (
-           <HelpChatbot 
-             userName={userFirstName}
-             isExpanded={isHelpExpanded}
-             onToggle={() => setIsHelpExpanded(true)}
-           />
-         )}
+          {/* Help button at bottom */}
+          {!isReadOnly && (
+            <div 
+              onClick={handleHelpRequest}
+              className="w-full bg-card border-t border-border px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
+            >
+              <MessageCircleQuestion className="w-5 h-5 text-primary" />
+              <span className="text-sm font-semibold">Have a question? Ask Pace right away.</span>
+            </div>
+          )}
               </>
-            )}
-          </div>
+            </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
