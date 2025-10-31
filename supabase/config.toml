@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.answer-help-question]
 verify_jwt = true
+
+[functions.chargeback-precheck]
+verify_jwt = true

@@ -97,6 +97,13 @@ const Portal = () => {
   const [showOrderDetailsInput, setShowOrderDetailsInput] = useState(false);
   const [orderDetails, setOrderDetails] = useState("");
   const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [questionStep, setQuestionStep] = useState<1 | 2 | 3 | null>(null);
+  const [answer1, setAnswer1] = useState("");
+  const [answer2, setAnswer2] = useState("");
+  const [answer3, setAnswer3] = useState("");
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
+  const [precheckResult, setPrecheckResult] = useState<{ chargeback_possible: boolean; reasoning: string; customer_message: string } | null>(null);
   const [isHelpWidgetOpen, setIsHelpWidgetOpen] = useState(false);
   const [helpWidgetMessages, setHelpWidgetMessages] = useState<Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>>([
     {
@@ -131,6 +138,12 @@ const Portal = () => {
       uploadedDocuments,
       artifacts,
       aiClassification,
+      questionStep,
+      answer1,
+      answer2,
+      answer3,
+      currentQuestion,
+      precheckResult,
       timestamp: new Date().toISOString()
     };
     
@@ -169,6 +182,12 @@ const Portal = () => {
       if (uiState.uploadedDocuments) setUploadedDocuments(uiState.uploadedDocuments);
       if (uiState.artifacts) setArtifacts(uiState.artifacts);
       if (uiState.aiClassification) setAiClassification(uiState.aiClassification);
+      if (uiState.questionStep) setQuestionStep(uiState.questionStep);
+      if (uiState.answer1) setAnswer1(uiState.answer1);
+      if (uiState.answer2) setAnswer2(uiState.answer2);
+      if (uiState.answer3) setAnswer3(uiState.answer3);
+      if (uiState.currentQuestion) setCurrentQuestion(uiState.currentQuestion);
+      if (uiState.precheckResult) setPrecheckResult(uiState.precheckResult);
       
       return true;
     } catch (e) {
@@ -203,6 +222,12 @@ const Portal = () => {
     uploadedDocuments,
     artifacts,
     aiClassification,
+    questionStep,
+    answer1,
+    answer2,
+    answer3,
+    currentQuestion,
+    precheckResult,
     isSwitchingConversation
   ]);
   
@@ -469,6 +494,12 @@ const Portal = () => {
       setUploadedDocuments([]);
       setArtifacts([]);
       setAiClassification(null);
+      setQuestionStep(null);
+      setAnswer1("");
+      setAnswer2("");
+      setAnswer3("");
+      setCurrentQuestion("");
+      setPrecheckResult(null);
       setShowContinueOrEndButtons(false);
       setShowOrderDetailsInput(false);
       setOrderDetails("");
@@ -857,10 +888,17 @@ const Portal = () => {
     setUploadedDocuments([]);
     setArtifacts([]);
     setOrderDetails("");
-    setAiClassification(null);
-    setIsAnalyzingReason(false);
-    setIsCheckingDocuments(false);
-    setIsCheckingEligibility(false);
+      setAiClassification(null);
+      setIsAnalyzingReason(false);
+      setIsCheckingDocuments(false);
+      setIsCheckingEligibility(false);
+      setQuestionStep(null);
+      setAnswer1("");
+      setAnswer2("");
+      setAnswer3("");
+      setCurrentQuestion("");
+      setPrecheckResult(null);
+      setIsGeneratingQuestion(false);
     
     // Then update conversation and load new data
     setCurrentConversationId(conversationId);
@@ -954,6 +992,12 @@ const Portal = () => {
       setAiClassification(null);
       setOrderDetails("");
       setShowOrderDetailsInput(false);
+      setQuestionStep(null);
+      setAnswer1("");
+      setAnswer2("");
+      setAnswer3("");
+      setCurrentQuestion("");
+      setPrecheckResult(null);
 
       // Update dispute with transaction selection
       const { error: updateError } = await supabase
@@ -1069,8 +1113,8 @@ Let me check if this transaction is eligible for a chargeback...`;
           // The dispute is now in terminal "ineligible" state
           // No transaction list, no buttons - conversation ends here for this dispute
         } else {
-          // Show eligibility message with request for order details
-          const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nBefore we proceed, can you please tell us what was your transaction about and what is the issue you are facing? This will help us better understand the situation and process your request.`;
+          // Start the 3-question AI conversation
+          const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nTo help us understand your situation better, I'll need to ask you a few questions.`;
 
           await supabase
             .from("messages")
@@ -1080,7 +1124,19 @@ Let me check if this transaction is eligible for a chargeback...`;
               content: eligibleMessage,
             });
 
-          setTimeout(() => {
+          // Start question 1 after delay
+          setTimeout(async () => {
+            const q1 = "Could you please tell us what this transaction was about and what went wrong?";
+            await supabase
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: q1,
+              });
+            
+            setCurrentQuestion(q1);
+            setQuestionStep(1);
             setShowOrderDetailsInput(true);
           }, 500);
         }
@@ -1097,7 +1153,7 @@ Let me check if this transaction is eligible for a chargeback...`;
     if (!currentConversationId || !currentDisputeId || !orderDetails.trim()) return;
 
     try {
-      // Add user's order details message
+      // Add user's answer message
       await supabase
         .from("messages")
         .insert({
@@ -1106,33 +1162,175 @@ Let me check if this transaction is eligible for a chargeback...`;
           content: orderDetails,
         });
 
-      // Update dispute with order details
-      await supabase
-        .from("disputes")
-        .update({
-          order_details: orderDetails,
-        })
-        .eq("id", currentDisputeId);
-
-      // Hide order details input
       setShowOrderDetailsInput(false);
 
-      // Show acknowledgment message
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: "Thank you for providing those details. Now, please choose the reason that best describes your dispute.",
-        });
+      if (questionStep === 1) {
+        // Store answer 1 and generate question 2
+        setAnswer1(orderDetails);
+        setIsGeneratingQuestion(true);
 
-      // Show reason picker after a delay
-      setTimeout(() => {
-        setShowReasonPicker(true);
-      }, 500);
+        // Show "analyzing" message
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "Thank you. Let me ask you a follow-up question...",
+          });
+
+        // Call edge function to generate Q2
+        const { data: q2Data, error: q2Error } = await supabase.functions.invoke(
+          'chargeback-precheck',
+          {
+            body: {
+              step: 'generate_q2',
+              answer1: orderDetails,
+              merchantName: selectedTransaction?.merchant_name,
+              transactionAmount: `${selectedTransaction?.transaction_amount} ${selectedTransaction?.transaction_currency}`,
+              transactionDate: selectedTransaction?.transaction_time ? format(new Date(selectedTransaction.transaction_time), "dd MMM yyyy") : ''
+            }
+          }
+        );
+
+        setIsGeneratingQuestion(false);
+
+        if (q2Error) throw q2Error;
+
+        // Show Q2 to user
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: q2Data.question,
+          });
+
+        setCurrentQuestion(q2Data.question);
+        setQuestionStep(2);
+        setOrderDetails("");
+        setTimeout(() => {
+          setShowOrderDetailsInput(true);
+        }, 300);
+
+      } else if (questionStep === 2) {
+        // Store answer 2 and generate question 3
+        setAnswer2(orderDetails);
+        setIsGeneratingQuestion(true);
+
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "I see. One more question...",
+          });
+
+        // Call edge function to generate Q3
+        const { data: q3Data, error: q3Error } = await supabase.functions.invoke(
+          'chargeback-precheck',
+          {
+            body: {
+              step: 'generate_q3',
+              answer1: answer1,
+              answer2: orderDetails,
+              merchantName: selectedTransaction?.merchant_name,
+              transactionAmount: `${selectedTransaction?.transaction_amount} ${selectedTransaction?.transaction_currency}`,
+              transactionDate: selectedTransaction?.transaction_time ? format(new Date(selectedTransaction.transaction_time), "dd MMM yyyy") : ''
+            }
+          }
+        );
+
+        setIsGeneratingQuestion(false);
+
+        if (q3Error) throw q3Error;
+
+        // Show Q3 to user
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: q3Data.question,
+          });
+
+        setCurrentQuestion(q3Data.question);
+        setQuestionStep(3);
+        setOrderDetails("");
+        setTimeout(() => {
+          setShowOrderDetailsInput(true);
+        }, 300);
+
+      } else if (questionStep === 3) {
+        // Store answer 3 and evaluate
+        setAnswer3(orderDetails);
+        setIsGeneratingQuestion(true);
+
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: "Thank you for providing all the details. Let me review your situation...",
+          });
+
+        // Call edge function to evaluate all 3 answers
+        const { data: evaluation, error: evalError } = await supabase.functions.invoke(
+          'chargeback-precheck',
+          {
+            body: {
+              step: 'evaluate',
+              answer1: answer1,
+              answer2: answer2,
+              answer3: orderDetails,
+              merchantName: selectedTransaction?.merchant_name,
+              transactionAmount: `${selectedTransaction?.transaction_amount} ${selectedTransaction?.transaction_currency}`,
+              transactionDate: selectedTransaction?.transaction_time ? format(new Date(selectedTransaction.transaction_time), "dd MMM yyyy") : ''
+            }
+          }
+        );
+
+        setIsGeneratingQuestion(false);
+
+        if (evalError) throw evalError;
+
+        setPrecheckResult(evaluation);
+
+        // Store all answers in dispute record
+        const allAnswers = `Q1: Could you please tell us what this transaction was about and what went wrong?\nA1: ${answer1}\n\nQ2: ${currentQuestion}\nA2: ${answer2}\n\nQ3: [dynamic]\nA3: ${orderDetails}`;
+        
+        await supabase
+          .from("disputes")
+          .update({
+            order_details: allAnswers,
+            status: evaluation.chargeback_possible ? "precheck_passed" : "precheck_failed"
+          })
+          .eq("id", currentDisputeId);
+
+        // Show result to customer
+        await supabase
+          .from("messages")
+          .insert({
+            conversation_id: currentConversationId,
+            role: "assistant",
+            content: evaluation.customer_message,
+          });
+
+        if (evaluation.chargeback_possible) {
+          // Proceed to reason picker
+          setTimeout(() => {
+            setQuestionStep(null);
+            setShowReasonPicker(true);
+          }, 500);
+        } else {
+          // End the flow - chargeback not possible
+          setQuestionStep(null);
+          // Conversation ends here
+        }
+      }
     } catch (error: any) {
-      console.error("Failed to submit order details:", error);
-      toast.error("Failed to submit order details");
+      console.error("Failed to submit answer:", error);
+      toast.error("Failed to submit answer");
+      setIsGeneratingQuestion(false);
     }
   };
 
@@ -1891,17 +2089,26 @@ Let me check if this transaction is eligible for a chargeback...`;
                 <div key={`order-details-${currentConversationId}`} className="mt-6">
                   <Card className="p-6 space-y-4">
                     <div className="space-y-2">
+                      {questionStep && (
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Question {questionStep} of 3</span>
+                        </div>
+                      )}
                       <label className="text-sm font-medium">
-                        Please describe more about your transaction
+                        {questionStep 
+                          ? "Your answer" 
+                          : "Please describe more about your transaction"}
                       </label>
-                      <p className="text-sm text-muted-foreground">
-                        For example, you can share:
-                        • What was your transaction about
-                        • The issue you are facing (e.g., incorrect product, damaged goods, unauthorized charge)
-                        • Any additional information that will help us understand the situation better
-                      </p>
+                      {!questionStep && (
+                        <p className="text-sm text-muted-foreground">
+                          For example, you can share:
+                          • What was your transaction about
+                          • The issue you are facing (e.g., incorrect product, damaged goods, unauthorized charge)
+                          • Any additional information that will help us understand the situation better
+                        </p>
+                      )}
                       <Textarea
-                        placeholder="Describe your transaction and the issue..."
+                        placeholder={questionStep ? "Type your answer here..." : "Describe your transaction and the issue..."}
                         value={orderDetails}
                         onChange={(e) => {
                           setOrderDetails(e.target.value);
@@ -1917,15 +2124,33 @@ Let me check if this transaction is eligible for a chargeback...`;
                         }}
                         rows={4}
                         className="resize-none"
+                        disabled={isGeneratingQuestion}
                       />
                     </div>
                     <Button 
                       onClick={handleOrderDetailsSubmit}
-                      disabled={!orderDetails.trim()}
+                      disabled={!orderDetails.trim() || isGeneratingQuestion}
                       className="w-full"
                     >
-                      Continue
+                      {isGeneratingQuestion ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        questionStep === 3 ? "Submit Final Answer" : "Continue"
+                      )}
                     </Button>
+                  </Card>
+                </div>
+              )}
+              {isGeneratingQuestion && (
+                <div key={`generating-question-${currentConversationId}`} className="mt-6">
+                  <Card className="p-6">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <p className="text-sm">Analyzing your response...</p>
+                    </div>
                   </Card>
                 </div>
               )}
