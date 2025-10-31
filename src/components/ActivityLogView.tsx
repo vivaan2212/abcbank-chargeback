@@ -171,6 +171,12 @@ const ActivityLogView = ({
     }).on('postgres_changes', {
       event: '*',
       schema: 'public',
+      table: 'chargeback_actions'
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
       table: 'dispute_customer_evidence'
     }, () => {
       loadDisputeData();
