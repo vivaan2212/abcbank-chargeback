@@ -804,7 +804,7 @@ const ActivityLogView = ({
           timestamp: new Date(writeOffTs).toISOString(),
           label: 'Write-off approved - Permanent credit issued',
           expandable: true,
-          details: `Credit amount: ${currency === 'USD' ? '$' : '₹'}${writeOffAmount.toLocaleString()}\n\nThis transaction is below $15 and has been automatically approved for write-off after document verification.\n\nA permanent credit has been issued to your account. No chargeback will be filed for this transaction.\n\nCase is now closed.`,
+          details: `Credit amount: ${currency === 'USD' ? '$' : '₹'}${writeOffAmount.toLocaleString()}\n\nThis transaction is below $15 and has been automatically approved for write-off after document verification.\n\nA permanent credit will be issued to the customer's account. No chargeback will be filed for this transaction.\n\nCase is now closed.`,
           activityType: 'done'
         });
       }
