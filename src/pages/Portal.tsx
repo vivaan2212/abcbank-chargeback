@@ -1169,15 +1169,6 @@ Let me check if this transaction is eligible for a chargeback...`;
         setAnswer1(orderDetails);
         setIsGeneratingQuestion(true);
 
-        // Show "analyzing" message
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: "Thank you. Let me ask you a follow-up question...",
-          });
-
         // Call edge function to generate Q2
         const { data: q2Data, error: q2Error } = await supabase.functions.invoke(
           'chargeback-precheck',
@@ -1216,14 +1207,6 @@ Let me check if this transaction is eligible for a chargeback...`;
         // Store answer 2 and generate question 3
         setAnswer2(orderDetails);
         setIsGeneratingQuestion(true);
-
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: "I see. One more question...",
-          });
 
         // Call edge function to generate Q3
         const { data: q3Data, error: q3Error } = await supabase.functions.invoke(
