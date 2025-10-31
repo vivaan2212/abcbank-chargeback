@@ -1317,14 +1317,14 @@ const ActivityLogView = ({
                           {/* Attachments */}
                           {activity.attachments && activity.attachments.length > 0 && <div className="mt-3 space-y-2">
                               {activity.attachments.map((attachment, i) => {
-                                // Video attachments with visaonline URL should be clickable pills
+                                // Video attachments with visaonline URL should be clickable artifact buttons
                                 if (attachment.action === 'video' && attachment.label?.includes('visaonline')) {
                                   return <button 
                                     key={i}
                                     onClick={() => handleAttachmentClick(attachment)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
                                   >
-                                    <img src={videoIcon} alt="video" className="h-3.5 w-3.5" />
+                                    <img src={videoIcon} alt="video" className="h-4 w-4" />
                                     <span>{attachment.label}</span>
                                   </button>;
                                 }
