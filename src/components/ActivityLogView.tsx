@@ -11,6 +11,43 @@ import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
 import paceAvatar from "@/assets/pace-logo-grey.png";
+
+// Stage priority map for enforcing activity order
+const stagePriorityMap: Record<string, number> = {
+  'milestone-received': 1,
+  'milestone-security': 2,
+  'milestone-eligibility': 3,
+  'milestone-docs-requested': 4,
+  'milestone-docs-uploaded': 5,
+  'milestone-reason': 6,
+  // Chargeback actions
+  'action-temp-credit': 7,
+  'action-awaiting-refund': 8,
+  'action-manual-review': 9,
+  'action-reviewed': 10,
+  'action-filed': 11,
+  // Network representment flow
+  'representment-status': 12,
+  'rep-evidence-reviewed': 13,
+  'rep-chargeback-recalled': 14,
+  'rep-credit-reversed': 15,
+  // Final closure stages
+  'write-off': 90,
+  'milestone-final-status': 100
+};
+
+// Helper to extract stage order from activity ID
+const getStageOrder = (id: string): number => {
+  // Direct match
+  if (stagePriorityMap[id]) return stagePriorityMap[id];
+  
+  // Check for prefixes like "action-0-temp-credit" or "write-off-timestamp"
+  for (const [key, priority] of Object.entries(stagePriorityMap)) {
+    if (id.startsWith(key)) return priority;
+  }
+  
+  return 999; // Default for unknown stages
+};
 interface Activity {
   id: string;
   timestamp: string;
@@ -601,8 +638,13 @@ const ActivityLogView = ({
         });
       }
       
-      // Sort by timestamp
-      activityList.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      // Sort by stage order first, then timestamp
+      activityList.sort((a, b) => {
+        const orderDiff = getStageOrder(a.id) - getStageOrder(b.id);
+        if (orderDiff !== 0) return orderDiff;
+        
+        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      });
       
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);
