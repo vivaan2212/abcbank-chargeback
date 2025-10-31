@@ -1,4 +1,4 @@
-import { BookOpen, X, ArrowUp, MessageSquare } from "lucide-react";
+import { BookOpen, X, ArrowUp, MessageSquare, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import KnowledgeBaseChat from "./KnowledgeBaseChat";
+import KnowledgeBaseUpdateHistory from "./KnowledgeBaseUpdateHistory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
@@ -126,64 +128,83 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
         {/* Content */}
         <div className="flex-1 overflow-auto px-6 py-6">
-          {isLoadingContent ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-sm text-muted-foreground">Loading knowledge base...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-3xl space-y-6 prose prose-sm max-w-none">
-              <div 
-                className="text-xs leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mb-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:mb-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_p]:mb-4 [&_ul]:text-xs [&_ul]:text-muted-foreground [&_ul]:space-y-1 [&_ol]:text-xs [&_ol]:text-muted-foreground [&_ol]:space-y-3 [&_li]:text-xs [&_strong]:text-foreground"
-                dangerouslySetInnerHTML={{ __html: content }}
-              />
-            </div>
-          )}
+          <Tabs defaultValue="content" className="h-full flex flex-col">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+              <TabsTrigger value="content" className="text-xs">
+                <BookOpen className="h-3 w-3 mr-2" />
+                Content
+              </TabsTrigger>
+              <TabsTrigger value="history" className="text-xs">
+                <History className="h-3 w-3 mr-2" />
+                Update History
+              </TabsTrigger>
+            </TabsList>
 
-          {/* AI Question Interface at Bottom */}
-          <div className="border-t px-6 py-4 bg-muted/30">
-            <div className="mb-3">
-              {answer && (
-                <div className="mb-4 p-4 bg-background rounded-lg border">
-                  <p className="text-xs font-semibold mb-2">Answer:</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{answer}</p>
+            <TabsContent value="content" className="mt-0 flex-1 overflow-auto">
+              {isLoadingContent ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-sm text-muted-foreground">Loading knowledge base...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-3xl space-y-6 prose prose-sm max-w-none">
+                  <div 
+                    className="text-xs leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mb-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:mb-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_p]:mb-4 [&_ul]:text-xs [&_ul]:text-muted-foreground [&_ul]:space-y-1 [&_ol]:text-xs [&_ol]:text-muted-foreground [&_ol]:space-y-3 [&_li]:text-xs [&_strong]:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: content }}
+                  />
                 </div>
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
-                <span className="text-xl">⚡</span>
-                <Input
-                  type="text"
-                  placeholder="Ask anything to ⚡ Pace"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                  className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
-                  onClick={handleAskQuestion}
-                  disabled={isLoading || !question.trim()}
-                >
-                  <ArrowUp className="h-4 w-4" />
-                </Button>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-0 flex-1 overflow-auto">
+              <KnowledgeBaseUpdateHistory />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* AI Question Interface at Bottom */}
+        <div className="border-t px-6 py-4 bg-muted/30">
+          <div className="mb-3">
+            {answer && (
+              <div className="mb-4 p-4 bg-background rounded-lg border">
+                <p className="text-xs font-semibold mb-2">Answer:</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{answer}</p>
               </div>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setIsChatOpen(true)}
-                className="gap-2"
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
+              <span className="text-xl">⚡</span>
+              <Input
+                type="text"
+                placeholder="Ask anything to ⚡ Pace"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
+                className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                onClick={handleAskQuestion}
+                disabled={isLoading || !question.trim()}
               >
-                <MessageSquare className="h-4 w-4" />
-                Chat
+                <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setIsChatOpen(true)}
+              className="gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat
+            </Button>
           </div>
         </div>
       </div>
