@@ -33,31 +33,53 @@ const Dashboard = () => {
 
   const loadCounts = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch disputes first (no implicit joins)
+      const { data: disputesData, error } = await supabase
         .from('disputes')
-        .select('status, transaction_id, transaction:transactions(needs_attention)');
+        .select('id, status, transaction_id');
       
       if (error) throw error;
-      
+
       const newCounts = {
         needs_attention: 0,
         void: 0,
         in_progress: 0,
         done: 0
       };
-      
-      // Count all disputes
-      (data || []).forEach(dispute => {
+
+      const transactionIds = (disputesData || [])
+        .map((d: any) => d.transaction_id)
+        .filter((id: string | null): id is string => !!id);
+
+      // Fetch transactions' needs_attention flag in bulk
+      let needsAttentionByTxn: Record<string, boolean> = {};
+      if (transactionIds.length > 0) {
+        const { data: txData } = await supabase
+          .from('transactions')
+          .select('id, needs_attention')
+          .in('id', transactionIds);
+        (txData || []).forEach((t: any) => {
+          needsAttentionByTxn[t.id] = !!t.needs_attention;
+        });
+      }
+
+      // Count all disputes locally
+      (disputesData || []).forEach((dispute: any) => {
         const status = dispute.status;
+        const txnNeedsAttention = dispute.transaction_id ? needsAttentionByTxn[dispute.transaction_id] === true : false;
         
-        // Map database statuses to display categories
-        if (['started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 'documents_uploaded', 'under_review'].includes(status)) {
+        if ([
+          'started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 'documents_uploaded', 'under_review',
+          'awaiting_investigation', 'chargeback_filed', 'awaiting_merchant_refund'
+        ].includes(status)) {
           newCounts.in_progress++;
-        } else if (status === 'needs_attention' || status === 'requires_action' || (dispute as any).transaction?.needs_attention === true) {
+        } else if (status === 'needs_attention' || status === 'requires_action' || txnNeedsAttention) {
           newCounts.needs_attention++;
-        } else if (status === 'void' || status === 'rejected' || status === 'cancelled') {
+        } else if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
           newCounts.void++;
-        } else if (status === 'done' || status === 'completed' || status === 'approved' || status === 'ineligible' || status === 'closed_lost' || status === 'closed_won' || status === 'representment_contested') {
+        } else if ([
+          'done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'
+        ].includes(status)) {
           newCounts.done++;
         }
       });

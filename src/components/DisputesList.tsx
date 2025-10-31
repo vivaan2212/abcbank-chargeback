@@ -192,69 +192,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       
       let query = supabase
         .from("disputes")
-      .select(`
-        *,
-        transaction:transactions(
-          id,
-          transaction_id,
-          transaction_time,
-          transaction_amount,
-          transaction_currency,
-          merchant_name,
-          merchant_id,
-          merchant_category_code,
-          acquirer_name,
-          refund_amount,
-          refund_received,
-          settled,
-          settlement_date,
-          local_transaction_amount,
-          local_transaction_currency,
-          is_wallet_transaction,
-          wallet_type,
-          pos_entry_mode,
-          secured_indication,
-          dispute_status,
-          needs_attention,
-          temporary_credit_provided,
-          temporary_credit_amount,
-          temporary_credit_currency,
-          chargeback_representment_static(
-            id,
-            will_be_represented,
-            representment_status,
-            merchant_document_url,
-            merchant_reason_text,
-            source
-          )
-        ),
-        chargeback_actions(
-          id,
-          action_type,
-          admin_message,
-          temporary_credit_issued,
-          chargeback_filed,
-          awaiting_settlement,
-          awaiting_merchant_refund,
-          requires_manual_review,
-          net_amount,
-          days_since_transaction,
-          days_since_settlement,
-          is_secured_otp,
-          is_unsecured,
-          merchant_category_code,
-          is_restricted_mcc,
-          is_facebook_meta,
-          created_at,
-          updated_at
-        ),
-        dispute_decisions(
-          id,
-          decision,
-          reason_summary,
-          created_at
-        )
-      `)
+        .select("*")
         .order("updated_at", { ascending: false });
       
       // Only filter by customer_id if userId is provided (customer view)
@@ -262,7 +200,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         query = query.eq("customer_id", userId);
       }
 
-      // Filter by status category
+      // Filter by status category (only where safe to do server-side)
       if (statusFilter === "in_progress") {
         query = query.in("status", [
           "started",
@@ -275,11 +213,6 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           "chargeback_filed",
           "awaiting_merchant_refund"
         ]);
-      } else if (statusFilter === "done") {
-        // Do not restrict by status here; we'll compute "done" client-side based on decisions,
-        // representment, and transaction statuses
-      } else if (statusFilter === "needs_attention") {
-        // Intentionally do not restrict by status; we'll compute from logs and flags
       } else if (statusFilter === "void") {
         query = query.in("status", ["rejected", "cancelled", "expired"]);
       }
@@ -287,39 +220,92 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       const { data, error } = await query;
 
       if (error) throw error;
-      
-      // Fetch dispute decisions separately for all disputes
-      const disputeIds = data?.map(d => d.id) || [];
-      let decisionsMap: Record<string, any[]> = {};
-      
-      if (disputeIds.length > 0) {
-        const { data: decisionsData } = await supabase
-          .from('dispute_decisions')
-          .select('dispute_id, decision')
-          .in('dispute_id', disputeIds);
-        
-        if (decisionsData) {
-          decisionsData.forEach((decision: any) => {
-            if (!decisionsMap[decision.dispute_id]) {
-              decisionsMap[decision.dispute_id] = [];
-            }
-            decisionsMap[decision.dispute_id].push({ decision: decision.decision });
-          });
-        }
-      }
-      
-      // Attach decisions to disputes
-      const dataWithDecisions = data?.map(dispute => ({
-        ...dispute,
-        dispute_decisions: decisionsMap[dispute.id] || []
-      })) || [];
-      
+
+      // Gather IDs for related lookups
+      const disputeIds = (data || []).map((d: any) => d.id);
+      const transactionIds = (data || [])
+        .map((d: any) => d.transaction_id)
+        .filter((id: string | null): id is string => !!id);
+
+      // Fetch related records in parallel (no implicit joins required)
+      const [
+        txnsRes,
+        repsRes,
+        actionsRes,
+        decisionsRes
+      ] = await Promise.all([
+        transactionIds.length > 0
+          ? supabase
+              .from("transactions")
+              .select(
+                "id, transaction_id, transaction_time, transaction_amount, transaction_currency, merchant_name, merchant_id, merchant_category_code, acquirer_name, refund_amount, refund_received, settled, settlement_date, local_transaction_amount, local_transaction_currency, is_wallet_transaction, wallet_type, pos_entry_mode, secured_indication, dispute_status, needs_attention, temporary_credit_provided, temporary_credit_amount, temporary_credit_currency, chargeback_case_id"
+              )
+              .in("id", transactionIds)
+          : Promise.resolve({ data: [], error: null }),
+        transactionIds.length > 0
+          ? supabase
+              .from("chargeback_representment_static")
+              .select(
+                "id, transaction_id, will_be_represented, representment_status, merchant_document_url, merchant_reason_text, source, created_at, updated_at"
+              )
+              .in("transaction_id", transactionIds)
+          : Promise.resolve({ data: [], error: null }),
+        disputeIds.length > 0
+          ? supabase
+              .from("chargeback_actions")
+              .select(
+                "id, dispute_id, action_type, admin_message, temporary_credit_issued, chargeback_filed, awaiting_settlement, awaiting_merchant_refund, requires_manual_review, net_amount, days_since_transaction, days_since_settlement, is_secured_otp, is_unsecured, merchant_category_code, is_restricted_mcc, is_facebook_meta, created_at, updated_at"
+              )
+              .in("dispute_id", disputeIds)
+          : Promise.resolve({ data: [], error: null }),
+        disputeIds.length > 0
+          ? supabase
+              .from("dispute_decisions")
+              .select("dispute_id, decision, created_at")
+              .in("dispute_id", disputeIds)
+          : Promise.resolve({ data: [], error: null })
+      ]);
+
+      // Build maps for quick attachment
+      const txMap: Record<string, any> = {};
+      (txnsRes.data || []).forEach((t: any) => (txMap[t.id] = t));
+
+      const repByTxn: Record<string, any[]> = {};
+      (repsRes.data || []).forEach((r: any) => {
+        if (!repByTxn[r.transaction_id]) repByTxn[r.transaction_id] = [];
+        repByTxn[r.transaction_id].push(r);
+      });
+
+      const actionsByDispute: Record<string, any[]> = {};
+      (actionsRes.data || []).forEach((a: any) => {
+        if (!actionsByDispute[a.dispute_id]) actionsByDispute[a.dispute_id] = [];
+        actionsByDispute[a.dispute_id].push(a);
+      });
+
+      const decisionsMap: Record<string, any[]> = {};
+      (decisionsRes.data || []).forEach((d: any) => {
+        if (!decisionsMap[d.dispute_id]) decisionsMap[d.dispute_id] = [];
+        decisionsMap[d.dispute_id].push({ decision: d.decision, created_at: d.created_at });
+      });
+
+      // Attach related data
+      const dataWithRelations = (data || []).map((dispute: any) => {
+        const txn = dispute.transaction_id ? txMap[dispute.transaction_id] : undefined;
+        const rep = dispute.transaction_id ? repByTxn[dispute.transaction_id] : undefined;
+        return {
+          ...dispute,
+          transaction: txn ? { ...txn, chargeback_representment_static: rep?.length === 1 ? rep[0] : (rep || []) } : undefined,
+          chargeback_actions: actionsByDispute[dispute.id] || [],
+          dispute_decisions: decisionsMap[dispute.id] || []
+        } as Dispute;
+      });
+
       // Only show disputes on dashboard after transaction selection
-      let filteredData = dataWithDecisions.filter(d => d.transaction_id !== null);
+      let filteredData = dataWithRelations.filter((d: any) => d.transaction_id !== null);
 
       // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
-        filteredData = filteredData.filter(dispute => {
+        filteredData = filteredData.filter((dispute: any) => {
           // Exclude write-off approved disputes from needs attention
           const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
           if (hasWriteOffDecision) return false;
@@ -334,7 +320,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
       // Special handling for awaiting_customer filter
       if (statusFilter === 'awaiting_customer') {
-        filteredData = filteredData.filter(dispute => {
+        filteredData = filteredData.filter((dispute: any) => {
           const repRel = (dispute.transaction as any)?.chargeback_representment_static;
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'awaiting_customer_info';
@@ -343,7 +329,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
       // Special handling for done
       if (statusFilter === 'done') {
-        filteredData = filteredData.filter(dispute => {
+        filteredData = filteredData.filter((dispute: any) => {
           // Include write-off approved disputes in done
           const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
           if (hasWriteOffDecision) return true;
@@ -357,6 +343,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
                  dispute.transaction?.dispute_status === 'closed_lost';
         });
       }
+
 
       // Apply additional filters from filter panel
       if (filters) {
