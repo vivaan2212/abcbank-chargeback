@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
 import { RepresentmentPanel } from "./RepresentmentPanel";
 import { useQueryClient } from "@tanstack/react-query";
@@ -255,15 +256,16 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
     const repStatus = dispute.chargeback_representment_static?.representment_status;
     
     if (evidenceRequest && (repStatus === 'awaiting_customer_info' || customerEvidence)) {
+      const submitted = evidenceRequest.status === 'submitted';
       steps.push({
-        label: "Waiting for customer response",
-        description: "Requested additional evidence from customer",
+        label: submitted ? "Customer evidence submitted" : "Waiting for customer response",
+        description: submitted ? "Evidence received from customer" : "Requested additional evidence from customer",
         completed: true,
         timestamp: evidenceRequest.requested_at || evidenceRequest.created_at,
         hasDetails: true,
         details: {
           items: [
-            { label: "Status", value: evidenceRequest.status === 'submitted' ? 'Evidence submitted' : 'Awaiting response' }
+            { label: "Status", value: submitted ? 'Evidence submitted' : 'Awaiting response' }
           ]
         }
       });
@@ -328,6 +330,14 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
                 </CardTitle>
               </div>
             </div>
+            {evidenceRequest?.status === 'submitted' && (
+              <Alert className="mt-3">
+                <AlertTitle>Documents uploaded successfully</AlertTitle>
+                <AlertDescription>
+                  We are now reviewing your case and will get back to you shortly.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
