@@ -142,6 +142,9 @@ function evaluateDecision(
   const matched_rules: string[] = [];
   const idempotencyKey = crypto.randomUUID();
   
+  // Normalize reason to uppercase to match rule constants
+  const reasonCode = (dispute.reason_id || '').toUpperCase();
+  
   // =======================================
   // RULE R0: Low-value automatic write-off (after document verification)
   // =======================================
@@ -260,7 +263,7 @@ function evaluateDecision(
   }
   
   // Document sufficiency check
-  const docSufficiency = checkDocumentSufficiency(dispute.reason_id, docCheck);
+  const docSufficiency = checkDocumentSufficiency(reasonCode, docCheck);
   
   // Priority rules (R1-R13)
   
@@ -359,7 +362,7 @@ function evaluateDecision(
   // R4: Secured OTP present
   if ([2, 212].includes(tx.secured_indication)) {
     matched_rules.push('R4');
-    if (dispute.reason_id === 'UNAUTHORIZED') {
+    if (reasonCode === 'UNAUTHORIZED') {
       return {
         decision: 'MANUAL_REVIEW',
         reason_summary: 'OTP present conflicts with unauthorized claim',
@@ -470,7 +473,7 @@ function evaluateDecision(
   }
   
   // R7: Subscription cancelled / refund promised
-  if (['CANCELLED_BUT_CHARGED', 'REFUND_NOT_PROCESSED'].includes(dispute.reason_id)) {
+  if (['CANCELLED_BUT_CHARGED', 'REFUND_NOT_PROCESSED'].includes(reasonCode)) {
     const hasCancellationProof = docCheck.some(d => d.key === 'cancellation_proof' && d.isValid);
     const hasCommunication = docCheck.some(d => d.key === 'communication' && d.isValid);
     
@@ -497,7 +500,7 @@ function evaluateDecision(
   }
   
   // R8: Not received
-  if (dispute.reason_id === 'NOT_RECEIVED' && docSufficiency.sufficient) {
+  if (reasonCode === 'NOT_RECEIVED' && docSufficiency.sufficient) {
     matched_rules.push('R8');
     return {
       decision: 'FILE_CHARGEBACK_WITH_TEMP_CREDIT',
@@ -519,7 +522,7 @@ function evaluateDecision(
   }
   
   // R9: Wrong / damaged / not as described
-  if (['WRONG_ITEM', 'DAMAGED_DEFECTIVE', 'NOT_AS_DESCRIBED'].includes(dispute.reason_id) && docSufficiency.sufficient) {
+  if (['WRONG_ITEM', 'DAMAGED_DEFECTIVE', 'NOT_AS_DESCRIBED'].includes(reasonCode) && docSufficiency.sufficient) {
     matched_rules.push('R9');
     return {
       decision: 'FILE_CHARGEBACK_WITH_TEMP_CREDIT',
