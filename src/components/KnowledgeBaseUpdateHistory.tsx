@@ -39,33 +39,34 @@ const KnowledgeBaseUpdateHistory = () => {
     setIsLoading(false);
   };
 
-  const extractChangeSummary = (previous: string, updated: string) => {
-    // Simple heuristic to identify what changed
-    const prevLength = previous.length;
-    const newLength = updated.length;
-    const diff = newLength - prevLength;
+  const findDifferences = (previous: string, updated: string) => {
+    // Split into sentences for comparison
+    const prevSentences = previous.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+    const updatedSentences = updated.split(/(?<=[.!?])\s+/).filter(s => s.trim());
     
-    if (diff > 0) {
-      return `Added ~${diff} characters of content`;
-    } else if (diff < 0) {
-      return `Removed ~${Math.abs(diff)} characters`;
+    // Find added content (in updated but not in previous)
+    const added = updatedSentences.filter(s => 
+      !prevSentences.some(ps => ps.trim() === s.trim())
+    ).slice(0, 3); // Limit to first 3 additions
+    
+    // Find removed content (in previous but not in updated)
+    const removed = prevSentences.filter(s => 
+      !updatedSentences.some(us => us.trim() === s.trim())
+    ).slice(0, 3); // Limit to first 3 removals
+    
+    // Generate summary
+    let summary = "";
+    if (added.length > 0 && removed.length > 0) {
+      summary = `Modified content: ${added.length} addition(s), ${removed.length} removal(s)`;
+    } else if (added.length > 0) {
+      summary = `Added ${added.length} new section(s)`;
+    } else if (removed.length > 0) {
+      summary = `Removed ${removed.length} section(s)`;
     } else {
-      return "Content modified";
+      summary = "Minor text modifications";
     }
-  };
-
-  const highlightDifferences = (previous: string, updated: string) => {
-    // Extract meaningful snippets showing what was added
-    const prevWords = previous.toLowerCase().split(/\s+/).slice(0, 100);
-    const newWords = updated.toLowerCase().split(/\s+/).slice(0, 100);
     
-    // Find new sections in updated content
-    const updatedPreview = updated.substring(0, 500);
-    
-    return {
-      summary: extractChangeSummary(previous, updated),
-      preview: updatedPreview
-    };
+    return { summary, added, removed };
   };
 
   if (isLoading) {
@@ -88,7 +89,7 @@ const KnowledgeBaseUpdateHistory = () => {
     <ScrollArea className="h-[400px] pr-4">
       <div className="space-y-4">
         {updates.map((update) => {
-          const { summary, preview } = highlightDifferences(
+          const { summary, added, removed } = findDifferences(
             update.previous_content,
             update.new_content
           );
@@ -127,33 +128,49 @@ const KnowledgeBaseUpdateHistory = () => {
 
               {isExpanded && (
                 <div className="mt-3 space-y-3">
-                  <div className="border-t pt-3">
-                    <p className="text-[10px] font-semibold text-foreground mb-2">
-                      Content Preview:
-                    </p>
-                    <div 
-                      className="text-[10px] text-muted-foreground bg-background rounded p-2 max-h-40 overflow-auto"
-                      dangerouslySetInnerHTML={{ 
-                        __html: preview.replace(/</g, '&lt;').replace(/>/g, '&gt;') 
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="border-t pt-3">
-                    <p className="text-[10px] font-semibold text-foreground mb-2">
-                      Change Statistics:
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div className="bg-background rounded p-2">
-                        <span className="text-muted-foreground">Previous:</span>
-                        <span className="ml-2 font-mono">{update.previous_content.length} chars</span>
-                      </div>
-                      <div className="bg-background rounded p-2">
-                        <span className="text-muted-foreground">Updated:</span>
-                        <span className="ml-2 font-mono">{update.new_content.length} chars</span>
+                  {added.length > 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-[10px] font-semibold text-green-600 dark:text-green-400 mb-2">
+                        ✓ Added Content:
+                      </p>
+                      <div className="space-y-2">
+                        {added.map((sentence, idx) => (
+                          <div 
+                            key={idx}
+                            className="text-[10px] bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500 rounded p-2 max-h-32 overflow-auto"
+                          >
+                            {sentence}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {removed.length > 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-[10px] font-semibold text-red-600 dark:text-red-400 mb-2">
+                        ✗ Removed Content:
+                      </p>
+                      <div className="space-y-2">
+                        {removed.map((sentence, idx) => (
+                          <div 
+                            key={idx}
+                            className="text-[10px] bg-red-50 dark:bg-red-950/30 border-l-2 border-red-500 rounded p-2 max-h-32 overflow-auto line-through opacity-75"
+                          >
+                            {sentence}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {added.length === 0 && removed.length === 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-[10px] text-muted-foreground text-center py-2">
+                        Minor text modifications detected
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
