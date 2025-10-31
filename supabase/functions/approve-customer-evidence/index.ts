@@ -24,7 +24,27 @@ Deno.serve(async (req) => {
 
     const { transaction_id, customer_evidence_id, review_notes } = await req.json();
 
-    console.log(`Approving customer evidence for transaction: ${transaction_id}`);
+    console.log(`Approving customer evidence for transaction: ${transaction_id}, evidence: ${customer_evidence_id}, user: ${user.id}`);
+
+    // Validate inputs
+    if (!transaction_id || !customer_evidence_id) {
+      throw new Error('Missing required fields: transaction_id and customer_evidence_id');
+    }
+
+    // Verify evidence belongs to this transaction
+    const { data: evidenceCheck, error: checkError } = await supabase
+      .from('dispute_customer_evidence')
+      .select('transaction_id')
+      .eq('id', customer_evidence_id)
+      .eq('transaction_id', transaction_id)
+      .single();
+
+    if (checkError || !evidenceCheck) {
+      console.error('Evidence validation failed:', checkError);
+      throw new Error('Invalid customer evidence ID for this transaction');
+    }
+
+    console.log('Evidence validation passed, inserting review record...');
 
     // Insert review record
     const { error: reviewError } = await supabase
@@ -37,7 +57,12 @@ Deno.serve(async (req) => {
         review_notes
       });
 
-    if (reviewError) throw reviewError;
+    if (reviewError) {
+      console.error('Failed to insert review record:', reviewError);
+      throw reviewError;
+    }
+
+    console.log('Review record inserted, updating representment status...');
 
     // Update representment status to rebuttal_submitted
     const { error: repError } = await supabase
@@ -45,10 +70,15 @@ Deno.serve(async (req) => {
       .update({ representment_status: 'rebuttal_submitted' })
       .eq('transaction_id', transaction_id);
 
-    if (repError) throw repError;
+    if (repError) {
+      console.error('Failed to update representment status:', repError);
+      throw repError;
+    }
+
+    console.log('Representment status updated, logging action...');
 
     // Log action
-    await supabase
+    const { error: logError } = await supabase
       .from('dispute_action_log')
       .insert({
         transaction_id,
@@ -58,7 +88,12 @@ Deno.serve(async (req) => {
         network: 'visa'
       });
 
-    console.log('Customer evidence approved and rebuttal submitted');
+    if (logError) {
+      console.error('Failed to log action:', logError);
+      throw logError;
+    }
+
+    console.log('Customer evidence approved and rebuttal submitted successfully');
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

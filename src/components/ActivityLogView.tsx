@@ -965,14 +965,22 @@ const ActivityLogView = ({
     }
     setProcessingRepresentment(true);
     try {
-      // Get customer evidence
-      const { data: evidence } = await supabase
+      // Get most recent customer evidence
+      const { data: evidence, error: evidenceError } = await supabase
         .from('dispute_customer_evidence')
-        .select('id')
+        .select('id, created_at')
         .eq('transaction_id', transactionId)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const { error } = await supabase.functions.invoke('approve-customer-evidence', {
+      if (evidenceError) throw evidenceError;
+      
+      if (!evidence) {
+        throw new Error('No customer evidence found for this transaction');
+      }
+
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('approve-customer-evidence', {
         body: {
           transaction_id: transactionId,
           customer_evidence_id: evidence.id,
@@ -980,7 +988,7 @@ const ActivityLogView = ({
         }
       });
       
-      if (error) throw error;
+      if (fnError) throw new Error(fnError.message || JSON.stringify(fnError));
       
       toast({
         title: "Evidence Approved",
@@ -991,7 +999,7 @@ const ActivityLogView = ({
       console.error('Error approving evidence:', error);
       toast({
         title: "Error",
-        description: "Failed to approve evidence",
+        description: error instanceof Error ? error.message : "Failed to approve evidence",
         variant: "destructive"
       });
     } finally {
@@ -1005,11 +1013,13 @@ const ActivityLogView = ({
     }
     setProcessingRepresentment(true);
     try {
-      // Get customer evidence
+      // Get most recent customer evidence
       const { data: evidence, error: evidenceError } = await supabase
         .from('dispute_customer_evidence')
-        .select('id')
+        .select('id, created_at')
         .eq('transaction_id', transactionId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (evidenceError) throw evidenceError;

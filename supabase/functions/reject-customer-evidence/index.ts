@@ -24,14 +24,46 @@ Deno.serve(async (req) => {
 
     const { transaction_id, customer_evidence_id, review_notes } = await req.json();
 
-    console.log(`Rejecting customer evidence for transaction: ${transaction_id}`);
+    console.log(`Rejecting customer evidence for transaction: ${transaction_id}, evidence: ${customer_evidence_id}, user: ${user.id}`);
+
+    // Validate inputs
+    if (!transaction_id || !customer_evidence_id) {
+      throw new Error('Missing required fields: transaction_id and customer_evidence_id');
+    }
+
+    // Verify evidence belongs to this transaction
+    const { data: evidenceCheck, error: checkError } = await supabase
+      .from('dispute_customer_evidence')
+      .select('transaction_id')
+      .eq('id', customer_evidence_id)
+      .eq('transaction_id', transaction_id)
+      .single();
+
+    if (checkError || !evidenceCheck) {
+      console.error('Evidence validation failed:', checkError);
+      throw new Error('Invalid customer evidence ID for this transaction');
+    }
+
+    console.log('Evidence validation passed, fetching transaction details...');
 
     // Get transaction details
-    const { data: transaction } = await supabase
+    const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .select('temporary_credit_provided, temporary_credit_amount, temporary_credit_currency')
       .eq('id', transaction_id)
       .single();
+
+    if (txError) {
+      console.error('Failed to fetch transaction:', txError);
+      throw txError;
+    }
+
+    console.log('Transaction details:', { 
+      temporary_credit_provided: transaction?.temporary_credit_provided,
+      temporary_credit_amount: transaction?.temporary_credit_amount
+    });
+
+    console.log('Inserting review record...');
 
     // Insert review record
     const { error: reviewError } = await supabase
@@ -44,7 +76,12 @@ Deno.serve(async (req) => {
         review_notes
       });
 
-    if (reviewError) throw reviewError;
+    if (reviewError) {
+      console.error('Failed to insert review record:', reviewError);
+      throw reviewError;
+    }
+
+    console.log('Review record inserted, updating representment status...');
 
     // Update representment status to customer_evidence_rejected (chargeback recalled)
     const { error: repError } = await supabase
@@ -52,27 +89,40 @@ Deno.serve(async (req) => {
       .update({ representment_status: 'customer_evidence_rejected' })
       .eq('transaction_id', transaction_id);
 
-    if (repError) throw repError;
+    if (repError) {
+      console.error('Failed to update representment status:', repError);
+      throw repError;
+    }
 
-    // Update transaction - make temporary credit permanent if it was provided
+    console.log('Representment status updated, updating transaction...');
+
+    // Update transaction - reverse temporary credit if it was provided
     const updateData: any = {
       needs_attention: false,
       dispute_status: 'merchant_won'
     };
 
     if (transaction?.temporary_credit_provided) {
-      updateData.refund_received = true;
-      updateData.refund_amount = transaction.temporary_credit_amount;
+      // Reverse the temporary credit (take it back from customer)
+      updateData.temporary_credit_provided = false;
       updateData.temporary_credit_reversal_at = new Date().toISOString();
+      console.log('Reversing temporary credit...');
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('transactions')
       .update(updateData)
       .eq('id', transaction_id);
 
+    if (updateError) {
+      console.error('Failed to update transaction:', updateError);
+      throw updateError;
+    }
+
+    console.log('Transaction updated, logging action...');
+
     // Log action
-    await supabase
+    const { error: logError } = await supabase
       .from('dispute_action_log')
       .insert({
         transaction_id,
@@ -82,11 +132,16 @@ Deno.serve(async (req) => {
         network: 'visa'
       });
 
-    console.log('Customer evidence rejected and chargeback recalled');
+    if (logError) {
+      console.error('Failed to log action:', logError);
+      throw logError;
+    }
+
+    console.log('Customer evidence rejected and chargeback recalled successfully');
 
     return new Response(JSON.stringify({ 
       success: true,
-      credit_made_permanent: transaction?.temporary_credit_provided 
+      credit_reversed: transaction?.temporary_credit_provided 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
