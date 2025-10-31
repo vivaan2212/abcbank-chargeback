@@ -33,89 +33,103 @@ const Dashboard = () => {
 
   const loadCounts = async () => {
     try {
-      // Fetch disputes with related data
+      // 1) Fetch disputes first (lean)
       const { data: disputesData, error } = await supabase
         .from('disputes')
-        .select(`
-          id, 
-          status, 
-          transaction_id,
-          transaction:transactions(
-            id,
-            needs_attention,
-            dispute_status,
-            chargeback_representment_static(representment_status)
-          )
-        `);
-      
+        .select('id, status, transaction_id');
       if (error) throw error;
 
-      // Fetch dispute decisions for write-off check
       const disputeIds = (disputesData || []).map((d: any) => d.id);
-      let decisionsByDispute: Record<string, any[]> = {};
-      if (disputeIds.length > 0) {
-        const { data: decisionsData } = await supabase
-          .from('dispute_decisions')
-          .select('dispute_id, decision')
-          .in('dispute_id', disputeIds);
-        (decisionsData || []).forEach((d: any) => {
-          if (!decisionsByDispute[d.dispute_id]) decisionsByDispute[d.dispute_id] = [];
-          decisionsByDispute[d.dispute_id].push(d);
-        });
+      const transactionIds = (disputesData || [])
+        .map((d: any) => d.transaction_id)
+        .filter((id: string | null): id is string => !!id);
+
+      // Early exit when nothing to count
+      if (disputeIds.length === 0) {
+        setCounts({ needs_attention: 0, void: 0, in_progress: 0, done: 0 });
+        return;
       }
 
-      const newCounts = {
-        needs_attention: 0,
-        void: 0,
-        in_progress: 0,
-        done: 0
-      };
+      // 2) Fetch related data in bulk (no implicit joins)
+      const [txRes, repRes, decRes] = await Promise.all([
+        supabase.from('transactions').select('id, needs_attention, dispute_status').in('id', transactionIds),
+        supabase.from('chargeback_representment_static').select('transaction_id, representment_status').in('transaction_id', transactionIds),
+        supabase.from('dispute_decisions').select('dispute_id, decision').in('dispute_id', disputeIds),
+      ]);
 
-      // Count all disputes with matching logic to DisputesList
+      const txById: Record<string, { id: string; needs_attention: boolean | null; dispute_status: string | null }> = {};
+      (txRes.data || []).forEach((t: any) => { txById[t.id] = t; });
+
+      const repByTxnId: Record<string, { transaction_id: string; representment_status: string | null }> = {};
+      (repRes.data || []).forEach((r: any) => { repByTxnId[r.transaction_id] = r; });
+
+      const decisionsByDispute: Record<string, any[]> = {};
+      (decRes.data || []).forEach((d: any) => {
+        if (!decisionsByDispute[d.dispute_id]) decisionsByDispute[d.dispute_id] = [];
+        decisionsByDispute[d.dispute_id].push(d);
+      });
+
+      const newCounts = { needs_attention: 0, void: 0, in_progress: 0, done: 0 };
+
       (disputesData || []).forEach((dispute: any) => {
-        // Only count disputes with transaction_id
+        // Only count disputes with a transaction
         if (!dispute.transaction_id) return;
 
-        const status = dispute.status;
-        const txn = dispute.transaction;
+        const status: string = dispute.status;
+        const txn = txById[dispute.transaction_id];
+        const rep = repByTxnId[dispute.transaction_id];
+        const repStatus = rep?.representment_status;
         const decisions = decisionsByDispute[dispute.id] || [];
         const hasWriteOffDecision = decisions.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
-        const repRel = txn?.chargeback_representment_static;
-        const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
-        
-        // Done bucket logic - matches DisputesList exactly
-        if (hasWriteOffDecision || status === 'write_off_approved' ||
-            ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 
-             'representment_contested', 'write_off_approved'].includes(status) ||
-            repStatus === 'no_representment' || 
-            repStatus === 'accepted_by_bank' ||
-            txn?.dispute_status === 'closed_won' ||
-            txn?.dispute_status === 'closed_lost') {
+
+        // DONE (match DisputesList 'done' tab)
+        if (
+          hasWriteOffDecision ||
+          status === 'write_off_approved' ||
+          ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
+          repStatus === 'no_representment' ||
+          repStatus === 'accepted_by_bank' ||
+          txn?.dispute_status === 'closed_won' ||
+          txn?.dispute_status === 'closed_lost'
+        ) {
           newCounts.done++;
+          return;
         }
-        // Needs attention logic
-        else if (!hasWriteOffDecision && status !== 'write_off_approved' && status !== 'in_progress' &&
-                 (repStatus === 'pending' || 
-                  repStatus === 'awaiting_customer_info' ||
-                  txn?.dispute_status === 'evidence_submitted' ||
-                  txn?.needs_attention === true ||
-                  ['requires_action', 'needs_attention', 'pending_manual_review', 'awaiting_settlement'].includes(status))) {
+
+        // NEEDS ATTENTION (match DisputesList 'needs_attention' tab)
+        if (
+          !hasWriteOffDecision &&
+          status !== 'write_off_approved' &&
+          status !== 'in_progress' &&
+          (
+            repStatus === 'pending' ||
+            repStatus === 'awaiting_customer_info' ||
+            txn?.dispute_status === 'evidence_submitted' ||
+            txn?.needs_attention === true ||
+            ['requires_action', 'needs_attention', 'pending_manual_review', 'awaiting_settlement'].includes(status)
+          )
+        ) {
           newCounts.needs_attention++;
+          return;
         }
-        // Void bucket logic
-        else if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
+
+        // VOID (match DisputesList 'void' tab)
+        if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
           newCounts.void++;
+          return;
         }
-        // In progress bucket logic
-        else if ([
-          'started', 'transaction_selected', 'eligibility_checked', 'reason_selected', 
-          'documents_uploaded', 'under_review', 'awaiting_investigation', 'chargeback_filed', 
+
+        // IN PROGRESS (match DisputesList server filter)
+        if ([
+          'started', 'transaction_selected', 'eligibility_checked', 'reason_selected',
+          'documents_uploaded', 'under_review', 'awaiting_investigation', 'chargeback_filed',
           'awaiting_merchant_refund'
         ].includes(status)) {
           newCounts.in_progress++;
+          return;
         }
       });
-      
+
       setCounts(newCounts);
     } catch (error) {
       console.error('Error loading counts:', error);
