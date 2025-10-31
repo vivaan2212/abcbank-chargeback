@@ -82,6 +82,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Create evidence request record
+    await supabase
+      .from('dispute_customer_evidence_request')
+      .insert({
+        transaction_id: transaction_id,
+        customer_id: transaction.customer_id,
+        status: 'pending_upload',
+        note: 'Bank requested customer communication evidence after merchant representment',
+      });
+
     // Create or reopen conversation for customer
     let conversationId = dispute?.conversation_id;
 

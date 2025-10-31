@@ -287,6 +287,132 @@ export type Database = {
         }
         Relationships: []
       }
+      dispute_action_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          network: string | null
+          note: string | null
+          performed_at: string
+          performed_by: string | null
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          network?: string | null
+          note?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          network?: string | null
+          note?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_action_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispute_customer_evidence: {
+        Row: {
+          ai_reasons: Json | null
+          ai_sufficient: boolean | null
+          ai_summary: string | null
+          created_at: string
+          customer_id: string
+          customer_note: string | null
+          evidence_type: string
+          evidence_url: string | null
+          id: string
+          transaction_id: string
+        }
+        Insert: {
+          ai_reasons?: Json | null
+          ai_sufficient?: boolean | null
+          ai_summary?: string | null
+          created_at?: string
+          customer_id: string
+          customer_note?: string | null
+          evidence_type: string
+          evidence_url?: string | null
+          id?: string
+          transaction_id: string
+        }
+        Update: {
+          ai_reasons?: Json | null
+          ai_sufficient?: boolean | null
+          ai_summary?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_note?: string | null
+          evidence_type?: string
+          evidence_url?: string | null
+          id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_customer_evidence_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispute_customer_evidence_request: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          note: string | null
+          requested_at: string
+          status: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          note?: string | null
+          requested_at?: string
+          status?: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          note?: string | null
+          requested_at?: string
+          status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispute_customer_evidence_request_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dispute_decisions: {
         Row: {
           audit: Json

@@ -3,6 +3,15 @@ project_id = "sneahvpzwjbmjsqbducw"
 [functions.check-eligibility]
 verify_jwt = true
 
+[functions.evaluate-customer-evidence]
+verify_jwt = true
+
+[functions.proceed-to-prearbitration]
+verify_jwt = true
+
+[functions.close-after-customer-evidence]
+verify_jwt = true
+
 [functions.analyze-custom-reason]
 verify_jwt = true
 
