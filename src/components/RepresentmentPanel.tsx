@@ -15,6 +15,7 @@ interface RepresentmentPanelProps {
   merchantReason?: string;
   merchantDocumentUrl?: string;
   temporaryCreditProvided?: boolean;
+  transactionDisputeStatus?: string;
   onActionComplete?: () => void;
 }
 
@@ -24,6 +25,7 @@ export const RepresentmentPanel = ({
   merchantReason,
   merchantDocumentUrl,
   temporaryCreditProvided,
+  transactionDisputeStatus,
   onActionComplete,
 }: RepresentmentPanelProps) => {
   const [isAccepting, setIsAccepting] = useState(false);
@@ -129,7 +131,7 @@ export const RepresentmentPanel = ({
     if (representmentStatus === 'awaiting_customer_info') {
       loadCustomerEvidence();
     }
-  }, [representmentStatus, transactionId]);
+  }, [representmentStatus, transactionId, transactionDisputeStatus]); // Added transactionDisputeStatus to trigger reload when evidence is submitted
 
   const loadCustomerEvidence = async () => {
     setLoadingEvidence(true);

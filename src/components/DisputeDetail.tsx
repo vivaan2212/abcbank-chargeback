@@ -3,9 +3,10 @@ import { CheckCircle2, Circle, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RepresentmentPanel } from "./RepresentmentPanel";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DisputeDetailProps {
   dispute: {
@@ -59,7 +60,38 @@ interface DisputeDetailProps {
 
 const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
+  const [evidenceRequest, setEvidenceRequest] = useState<any>(null);
+  const [customerEvidence, setCustomerEvidence] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  // Load evidence request and submission data
+  useEffect(() => {
+    const loadEvidenceData = async () => {
+      if (!dispute.transaction?.id) return;
+
+      // Check if evidence was requested
+      const { data: reqData } = await supabase
+        .from('dispute_customer_evidence_request')
+        .select('*')
+        .eq('transaction_id', dispute.transaction.id)
+        .maybeSingle();
+
+      setEvidenceRequest(reqData);
+
+      // Check if evidence was submitted
+      const { data: evidenceData } = await supabase
+        .from('dispute_customer_evidence')
+        .select('*')
+        .eq('transaction_id', dispute.transaction.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setCustomerEvidence(evidenceData);
+    };
+
+    loadEvidenceData();
+  }, [dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status]);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
@@ -219,6 +251,45 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
       });
     }
 
+    // Add evidence request and submission steps
+    const repStatus = dispute.chargeback_representment_static?.representment_status;
+    
+    if (evidenceRequest && (repStatus === 'awaiting_customer_info' || customerEvidence)) {
+      steps.push({
+        label: "Waiting for customer response",
+        description: "Requested additional evidence from customer",
+        completed: true,
+        timestamp: evidenceRequest.requested_at || evidenceRequest.created_at,
+        hasDetails: true,
+        details: {
+          items: [
+            { label: "Status", value: evidenceRequest.status === 'submitted' ? 'Evidence submitted' : 'Awaiting response' }
+          ]
+        }
+      });
+    }
+
+    if (customerEvidence) {
+      steps.push({
+        label: "Customer uploaded evidence",
+        description: customerEvidence.ai_sufficient 
+          ? "Evidence reviewed and found sufficient"
+          : "Evidence reviewed - may need additional review",
+        completed: true,
+        timestamp: customerEvidence.created_at,
+        hasDetails: true,
+        details: {
+          items: [
+            { label: "AI Evaluation", value: customerEvidence.ai_sufficient ? "✓ Sufficient" : "⚠ Insufficient" },
+            { label: "Summary", value: customerEvidence.ai_summary || "No summary available" }
+          ]
+        }
+      });
+    }
+
+    // Sort steps chronologically by timestamp
+    steps.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
     return steps;
   };
 
@@ -235,6 +306,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
             merchantReason={dispute.chargeback_representment_static.merchant_reason_text}
             merchantDocumentUrl={dispute.chargeback_representment_static.merchant_document_url}
             temporaryCreditProvided={dispute.transaction.temporary_credit_provided}
+            transactionDisputeStatus={dispute.transaction.dispute_status}
             onActionComplete={handleRepresentmentActionComplete}
           />
         </div>
