@@ -91,7 +91,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
     };
 
     loadEvidenceData();
-  }, [dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status]);
+  }, [dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status, dispute.transaction?.dispute_status]);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
