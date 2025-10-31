@@ -616,7 +616,11 @@ const ActivityLogView = ({
             repActivity.activityType = 'done';
             break;
         }
-        activityList.push(repActivity);
+        
+        // Only push repActivity if it has a label (avoids blank entries)
+        if (repActivity.label) {
+          activityList.push(repActivity);
+        }
 
         // Add temporary credit reversal entry if representment was accepted and credit was reversed
         if (repData.representment_status === 'accepted_by_bank' && dispute.transaction.temporary_credit_reversal_at) {
