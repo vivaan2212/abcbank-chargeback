@@ -203,7 +203,7 @@ const ActivityLogView = ({
         label: 'Received a disputed transaction',
         attachments: dispute.documents ? [{
           label: 'Disputed transaction',
-          icon: '📄'
+          icon: 'database'
         }] : undefined,
         activityType: 'human_action'
       });
@@ -1060,7 +1060,11 @@ const ActivityLogView = ({
                           {/* Attachments */}
                           {activity.attachments && activity.attachments.length > 0 && <div className="mt-3 space-y-2">
                               {activity.attachments.map((attachment, i) => <button key={i} onClick={() => handleAttachmentClick(attachment)} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm">
-                                  <span>{attachment.icon}</span>
+                                  {attachment.icon === 'database' ? (
+                                    <Database className="h-4 w-4" />
+                                  ) : (
+                                    <span>{attachment.icon}</span>
+                                  )}
                                   <span>{attachment.label}</span>
                                 </button>)}
                             </div>}
