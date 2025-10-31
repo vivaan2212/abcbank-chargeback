@@ -82,21 +82,8 @@ const Dashboard = () => {
         const decisions = decisionsByDispute[dispute.id] || [];
         const hasWriteOffDecision = decisions.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
 
-        // DONE (match DisputesList 'done' tab)
-        if (
-          hasWriteOffDecision ||
-          status === 'write_off_approved' ||
-          ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
-          repStatus === 'no_representment' ||
-          repStatus === 'accepted_by_bank' ||
-          txn?.dispute_status === 'closed_won' ||
-          txn?.dispute_status === 'closed_lost'
-        ) {
-          newCounts.done++;
-          return;
-        }
-
-        // NEEDS ATTENTION (match DisputesList 'needs_attention' tab)
+        // NEEDS ATTENTION - check first to prioritize over done
+        // Exclude write-off and in_progress from needs attention
         if (
           !hasWriteOffDecision &&
           status !== 'write_off_approved' &&
@@ -113,13 +100,27 @@ const Dashboard = () => {
           return;
         }
 
-        // VOID (match DisputesList 'void' tab)
+        // DONE - check after needs_attention
+        if (
+          hasWriteOffDecision ||
+          status === 'write_off_approved' ||
+          ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
+          repStatus === 'no_representment' ||
+          repStatus === 'accepted_by_bank' ||
+          txn?.dispute_status === 'closed_won' ||
+          txn?.dispute_status === 'closed_lost'
+        ) {
+          newCounts.done++;
+          return;
+        }
+
+        // VOID
         if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
           newCounts.void++;
           return;
         }
 
-        // IN PROGRESS (match DisputesList server filter)
+        // IN PROGRESS
         if ([
           'started', 'transaction_selected', 'eligibility_checked', 'reason_selected',
           'documents_uploaded', 'under_review', 'awaiting_investigation', 'chargeback_filed',
