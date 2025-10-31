@@ -146,10 +146,13 @@ Respond with a JSON object ONLY (no other text):
       .update({ status: 'submitted' })
       .eq('transaction_id', transaction_id);
 
-    // Update transaction to trigger needs_attention for bank review
+    // Update transaction to trigger needs_attention for bank review and change status
     await supabase
       .from('transactions')
-      .update({ needs_attention: true })
+      .update({ 
+        needs_attention: true,
+        dispute_status: 'evidence_submitted'
+      })
       .eq('id', transaction_id);
 
     console.log('Evidence evaluated successfully:', evaluation);

@@ -66,6 +66,22 @@ export const CustomerEvidenceUpload = ({
         description: "Your evidence has been submitted and is being reviewed.",
       });
 
+      // Get the conversation for this transaction to send a message
+      const { data: dispute } = await supabase
+        .from("disputes")
+        .select("conversation_id")
+        .eq("transaction_id", transactionId)
+        .maybeSingle();
+
+      if (dispute?.conversation_id) {
+        await supabase.from("messages").insert({
+          conversation_id: dispute.conversation_id,
+          role: "assistant",
+          content:
+            "Thank you for submitting your evidence. Our team is reviewing your documents and will get back to you shortly. We appreciate your patience.",
+        });
+      }
+
       onComplete?.();
     } catch (error: any) {
       console.error("Error submitting evidence:", error);
