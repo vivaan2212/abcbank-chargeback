@@ -115,6 +115,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
       completed: boolean;
       timestamp: string;
       hasDetails: boolean;
+      color?: 'yellow' | 'blue' | 'green' | 'default';
       details?: {
         items: Array<{ label: string; icon?: string; value?: string }>;
       };
@@ -304,6 +305,73 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
       });
     }
 
+    // When merchant representment is accepted (merchant won)
+    if (repStatus === 'accepted_by_bank' && dispute.transaction) {
+      const network = dispute.transaction.acquirer_name || "Network";
+      const networkRefs: Record<string, string> = {
+        "Mastercard": "https://www.mastercardconnect.com/chargeback",
+        "Visa": "https://www.visa.com/viw",
+        "Amex": "https://www.americanexpress.com",
+        "Rupay": "https://www.rupay.co.in"
+      };
+      const networkPortal = networkRefs[network] || null;
+
+      // Step 1: Evidence reviewed
+      steps.push({
+        label: "Evidence reviewed and found valid; customer chargeback request to be recalled",
+        description: "Reviewed by Pace",
+        completed: true,
+        timestamp: dispute.updated_at,
+        hasDetails: true,
+        color: 'yellow',
+        details: {
+          items: [
+            { label: "Invoice verified and matches transaction details." },
+            { label: "Merchant terms state the service is non-refundable." },
+            { label: "Evidence confirms customer received and used the service." },
+            { label: "No evidence of fraud or unauthorized access." },
+            { label: "Transaction consistent with past customer behavior." }
+          ]
+        }
+      });
+
+      // Step 2: Chargeback recalled from network
+      const caseId = (dispute.transaction as any).chargeback_case_id || "N/A";
+      steps.push({
+        label: `Chargeback request for Ref. No. ${caseId} has been recalled from ${network} network`,
+        description: "Recall details",
+        completed: true,
+        timestamp: dispute.updated_at,
+        hasDetails: networkPortal ? true : false,
+        color: 'blue',
+        details: networkPortal ? {
+          items: [
+            { label: "Network Portal", value: networkPortal }
+          ]
+        } : undefined
+      });
+
+      // Step 3: Temporary credit reversed
+      if (dispute.transaction.temporary_credit_provided) {
+        const reversalRef = dispute.transaction.transaction_id || "N/A";
+        const reversalDate = (dispute.transaction as any).temporary_credit_reversal_at || dispute.updated_at;
+        steps.push({
+          label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. ${reversalRef}.`,
+          description: "Transaction details",
+          completed: true,
+          timestamp: reversalDate,
+          hasDetails: true,
+          color: 'green',
+          details: {
+            items: [
+              { label: "Amount reversed", value: `${dispute.transaction.temporary_credit_currency || 'USD'} ${dispute.transaction.temporary_credit_amount || 0}` },
+              { label: "Status", value: "Closed - Merchant won" }
+            ]
+          }
+        });
+      }
+    }
+
     // Sort steps chronologically by timestamp
     steps.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
@@ -361,53 +429,62 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
                   {index > 0 && (
                     <div className="ml-3 h-6 w-0.5 bg-border" />
                   )}
-                  <div className="flex gap-4">
-                    <div className="flex-shrink-0 mt-1">
-                      {step.completed ? (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm">{step.label}</div>
-                          
-                          {step.hasDetails && step.details ? (
-                            <Collapsible open={openSections[index]} onOpenChange={() => toggleSection(index)}>
-                              <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground mt-1 hover:text-foreground transition-colors">
-                                {step.description}
-                                <ChevronDown className={`h-3 w-3 transition-transform ${openSections[index] ? 'rotate-180' : ''}`} />
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="mt-3 space-y-2 bg-muted/30 rounded-md p-3">
-                                  {step.details.items.map((item, itemIndex) => (
-                                    <div key={itemIndex} className="flex items-start gap-2 text-xs">
-                                      {item.icon && <span>{item.icon}</span>}
-                                      <div className="flex-1">
-                                        <span className="text-muted-foreground">
-                                          {item.label}
-                                          {item.value && `: ${item.value}`}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </CollapsibleContent>
-                            </Collapsible>
-                          ) : (
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {step.description}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(new Date(step.timestamp), "h:mm a")}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                   <div className={`flex gap-4 ${
+                     step.color === 'yellow' ? 'border-l-4 border-yellow-500 pl-3' : 
+                     step.color === 'blue' ? 'border-l-4 border-blue-500 pl-3' : 
+                     step.color === 'green' ? 'border-l-4 border-green-500 pl-3' : ''
+                   }`}>
+                     <div className="flex-shrink-0 mt-1">
+                       {step.completed ? (
+                         <CheckCircle2 className="h-5 w-5 text-primary" />
+                       ) : (
+                         <Circle className="h-5 w-5 text-muted-foreground" />
+                       )}
+                     </div>
+                     <div className="flex-1 pb-4">
+                       <div className="flex items-start justify-between gap-4">
+                         <div className="flex-1 min-w-0">
+                           <div className="font-medium text-sm">{step.label}</div>
+                           
+                           {step.hasDetails && step.details ? (
+                             <Collapsible open={openSections[index]} onOpenChange={() => toggleSection(index)}>
+                               <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground mt-1 hover:text-foreground transition-colors">
+                                 {step.description}
+                                 <ChevronDown className={`h-3 w-3 transition-transform ${openSections[index] ? 'rotate-180' : ''}`} />
+                               </CollapsibleTrigger>
+                               <CollapsibleContent>
+                                 <div className={`mt-3 space-y-2 rounded-md p-3 ${
+                                   step.color === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-950/20' : 
+                                   step.color === 'blue' ? 'bg-blue-50 dark:bg-blue-950/20' : 
+                                   step.color === 'green' ? 'bg-green-50 dark:bg-green-950/20' : 
+                                   'bg-muted/30'
+                                 }`}>
+                                   {step.details.items.map((item, itemIndex) => (
+                                     <div key={itemIndex} className="flex items-start gap-2 text-xs">
+                                       {item.icon && <span>{item.icon}</span>}
+                                       <div className="flex-1">
+                                         <span className="text-muted-foreground">
+                                           {item.label}
+                                           {item.value && `: ${item.value}`}
+                                         </span>
+                                       </div>
+                                     </div>
+                                   ))}
+                                 </div>
+                               </CollapsibleContent>
+                             </Collapsible>
+                           ) : (
+                             <div className="text-sm text-muted-foreground mt-1">
+                               {step.description}
+                             </div>
+                           )}
+                         </div>
+                         <div className="text-xs text-muted-foreground whitespace-nowrap">
+                           {format(new Date(step.timestamp), "h:mm a")}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
                 </div>
               ))}
             </div>
