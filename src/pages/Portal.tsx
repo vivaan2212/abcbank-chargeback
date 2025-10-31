@@ -628,11 +628,41 @@ const Portal = () => {
           .limit(20);
         setTransactions(txns || []);
         
-        // Check if any transaction is awaiting customer evidence
-        const awaitingTransaction = txns?.find(
-          (t) => t.dispute_status === "awaiting_customer_info"
-        );
-        setAwaitingEvidenceTransaction(awaitingTransaction || null);
+        // CRITICAL: Only check for awaiting evidence if there's an active dispute in THIS conversation
+        const { data: dispute } = await supabase
+          .from("disputes")
+          .select("id, transaction_id, status")
+          .eq("conversation_id", conversationId)
+          .maybeSingle();
+        
+        // Evidence upload should ONLY appear if:
+        // 1. There's a dispute for this conversation
+        // 2. The dispute has a selected transaction
+        // 3. That transaction's dispute_status is "awaiting_customer_info"
+        // 4. The representment status confirms merchant has challenged
+        if (dispute && dispute.transaction_id) {
+          const transaction = txns?.find(t => t.id === dispute.transaction_id);
+          
+          if (transaction && transaction.dispute_status === "awaiting_customer_info") {
+            // Double-check there's an actual representment request
+            const { data: representment } = await supabase
+              .from("chargeback_representment_static")
+              .select("representment_status")
+              .eq("transaction_id", transaction.id)
+              .maybeSingle();
+            
+            // Only show evidence upload if representment exists and is awaiting customer info
+            if (representment && representment.representment_status === "awaiting_customer_info") {
+              setAwaitingEvidenceTransaction(transaction);
+            } else {
+              setAwaitingEvidenceTransaction(null);
+            }
+          } else {
+            setAwaitingEvidenceTransaction(null);
+          }
+        } else {
+          setAwaitingEvidenceTransaction(null);
+        }
       }
 
       // Only load dispute state if UI wasn't restored from cache
