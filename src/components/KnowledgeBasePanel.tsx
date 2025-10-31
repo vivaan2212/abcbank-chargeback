@@ -22,6 +22,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
   const [content, setContent] = useState<string>("");
   const [isLoadingContent, setIsLoadingContent] = useState(true);
   const [chatInput, setChatInput] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [isLoadingAnswer, setIsLoadingAnswer] = useState(false);
 
   const fetchKnowledgeBase = async () => {
     setIsLoadingContent(true);
@@ -50,6 +52,35 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
     // Refresh the content and timestamp
     fetchKnowledgeBase();
     toast.success('Knowledge base has been updated');
+  };
+
+  const handleAskQuestion = async () => {
+    if (!chatInput.trim()) return;
+
+    setIsLoadingAnswer(true);
+    setAnswer("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
+        body: { question: chatInput }
+      });
+
+      if (error) throw error;
+
+      setAnswer(data.answer);
+    } catch (error) {
+      console.error('Error asking question:', error);
+      toast.error('Failed to get answer. Please try again.');
+    } finally {
+      setIsLoadingAnswer(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAskQuestion();
+    }
   };
 
   if (!isOpen) return null;
@@ -97,6 +128,31 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
         {/* Content */}
         <div className="flex-1 overflow-auto px-6 py-6">
+          {/* Answer Display Area */}
+          {answer && (
+            <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
+              <div className="flex items-start gap-3">
+                <img 
+                  src="/src/assets/pace-avatar.png" 
+                  alt="Pace" 
+                  className="h-8 w-8 rounded-full flex-shrink-0 mt-1"
+                />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-foreground mb-2">Pace's Answer:</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{answer}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setAnswer("")}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           <Tabs defaultValue="content" className="h-full flex flex-col">
             <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
               <TabsTrigger value="content" className="text-xs">
@@ -146,23 +202,25 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
               placeholder="Ask anything to Pace"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  setIsChatOpen(true);
-                }
-              }}
+              onKeyPress={handleKeyPress}
+              disabled={isLoadingAnswer}
               className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
             />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 rounded-full hover:bg-primary/10 flex-shrink-0"
-              onClick={() => setIsChatOpen(true)}
-              disabled={!chatInput.trim()}
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
+            {isLoadingAnswer ? (
+              <div className="h-8 w-8 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 rounded-full hover:bg-primary/10 flex-shrink-0"
+                onClick={handleAskQuestion}
+                disabled={!chatInput.trim()}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="default"
               size="sm"
