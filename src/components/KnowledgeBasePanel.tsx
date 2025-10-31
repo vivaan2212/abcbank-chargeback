@@ -24,6 +24,7 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
   const [chatInput, setChatInput] = useState("");
   const [answer, setAnswer] = useState("");
   const [isLoadingAnswer, setIsLoadingAnswer] = useState(false);
+  const [askedQuestion, setAskedQuestion] = useState("");
 
   const fetchKnowledgeBase = async () => {
     setIsLoadingContent(true);
@@ -57,12 +58,15 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
   const handleAskQuestion = async () => {
     if (!chatInput.trim()) return;
 
+    const question = chatInput.trim();
+    setAskedQuestion(question);
+    setChatInput(""); // Clear input immediately
     setIsLoadingAnswer(true);
     setAnswer("");
 
     try {
       const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
-        body: { question: chatInput }
+        body: { question }
       });
 
       if (error) throw error;
@@ -131,24 +135,33 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
           {/* Answer Display Area */}
           {answer && (
             <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-foreground mb-1">Your Question:</p>
+                  <p className="text-xs text-muted-foreground italic">{askedQuestion}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    setAnswer("");
+                    setAskedQuestion("");
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              <div className="flex items-start gap-3 pt-3 border-t">
                 <img 
                   src="/src/assets/pace-avatar.png" 
                   alt="Pace" 
                   className="h-8 w-8 rounded-full flex-shrink-0 mt-1"
                 />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-foreground mb-2">Pace's Answer:</p>
+                  <p className="text-xs font-semibold text-foreground mb-2">Pace&apos;s Answer:</p>
                   <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{answer}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setAnswer("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
               </div>
             </div>
           )}
