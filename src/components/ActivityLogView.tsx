@@ -800,7 +800,7 @@ const ActivityLogView = ({
 
         if (chargebackActions) {
           for (const action of chargebackActions) {
-            if (action.action_type === 'representment_accepted') {
+            if (action.action_type === 'representment_accepted' && repData?.representment_status === 'accepted_by_bank') {
               const creditAmount = action.net_amount || 0;
               const currency = dispute.transaction?.transaction_currency || 'INR';
               const creditReversed = action.temporary_credit_issued === false;
