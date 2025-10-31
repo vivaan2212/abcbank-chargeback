@@ -5,6 +5,7 @@ import { ArrowUp, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getUserRole } from "@/lib/auth";
 
 interface Message {
   id: string;
@@ -23,12 +24,22 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingUpdate, setPendingUpdate] = useState<{ content: string } | null>(null);
+  const [userRole, setUserRole] = useState<'customer' | 'bank_admin' | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const checkUserRole = async () => {
+      if (isOpen) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const role = await getUserRole(user.id);
+          setUserRole(role);
+        }
+      }
+    };
+    
     if (isOpen && messages.length === 0) {
-      // Add welcome message
+      checkUserRole();
       setMessages([
         {
           id: "welcome",
@@ -59,66 +70,58 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userInput = input.trim();
     setInput("");
     setIsLoading(true);
 
     try {
       // Check if this is an update request
-      const isUpdateRequest = /update|change|modify|edit|revise/i.test(input);
+      const isUpdateRequest = /update|change|modify|edit|revise|add|remove/i.test(userInput);
 
-      const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
-        body: { 
-          question: input,
-          isUpdateRequest 
-        }
-      });
-
-      if (error) throw error;
-
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: data.answer,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // If it's an update request, check user permissions and show confirmation
       if (isUpdateRequest) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: userRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'bank_admin')
-            .single();
-
-          if (userRole) {
-            // User has permissions - ask for update details
-            setTimeout(() => {
-              const followUpMessage: Message = {
-                id: `system-${Date.now()}`,
-                role: "system",
-                content: "You have permission to update the knowledge base. Please provide the new content you'd like to add or the specific changes you'd like to make.",
-                timestamp: new Date()
-              };
-              setMessages(prev => [...prev, followUpMessage]);
-            }, 500);
-          } else {
-            // User doesn't have permissions
-            setTimeout(() => {
-              const deniedMessage: Message = {
-                id: `system-${Date.now()}`,
-                role: "system",
-                content: "You don't have permission to update the knowledge base. Only bank administrators can make changes.",
-                timestamp: new Date()
-              };
-              setMessages(prev => [...prev, deniedMessage]);
-            }, 500);
-          }
+        // Check permissions first
+        if (userRole !== 'bank_admin') {
+          const deniedMessage: Message = {
+            id: `system-${Date.now()}`,
+            role: "system",
+            content: "You don't have permission to update the knowledge base. Only bank administrators can make changes.",
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, deniedMessage]);
+          setIsLoading(false);
+          return;
         }
+
+        // User has permission - show confirmation and execute update
+        const confirmMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: "I'll update the knowledge base with your requested changes.",
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+
+        // Execute the update
+        await handleConfirmUpdate(userInput);
+      } else {
+        // Regular query
+        const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
+          body: { 
+            question: userInput,
+            isUpdateRequest: false
+          }
+        });
+
+        if (error) throw error;
+
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: data.answer,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -138,8 +141,6 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
   const handleConfirmUpdate = async (newContent: string) => {
     if (!newContent.trim()) return;
 
-    setIsLoading(true);
-
     try {
       const { data, error } = await supabase.functions.invoke('update-knowledge-base', {
         body: {
@@ -149,24 +150,18 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
       });
 
       if (error) {
-        if (error.message?.includes('permission')) {
-          toast.error('You do not have permission to update the knowledge base');
-        } else {
-          throw error;
-        }
-        return;
+        throw error;
       }
 
       const successMessage: Message = {
         id: `success-${Date.now()}`,
         role: "system",
-        content: `✅ Knowledge base updated successfully! The changes are now live.`,
+        content: `✅ Knowledge base updated successfully!`,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, successMessage]);
-      toast.success('Knowledge base updated successfully');
-      setPendingUpdate(null);
+      toast.success('Knowledge base updated');
       
       // Notify parent component
       if (onUpdateSuccess) {
@@ -183,8 +178,6 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
