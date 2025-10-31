@@ -1462,12 +1462,47 @@ Let me check if this transaction is eligible for a chargeback...`;
           if (verificationData.success) {
             // All documents are valid - use decision engine for all transactions
             if (currentDisputeId && selectedTransaction) {
+              // Map requirement names to keys expected by evaluate-decision
+              const requirementToKeyMap: Record<string, string> = {
+                // Fraud/Unauthorized
+                'Police report or fraud claim': 'police_report',
+                'Bank statement showing unauthorized charge(s)': 'bank_statement',
+                'Transaction receipt or email confirmation': 'transaction_receipt',
+                
+                // Not Received
+                'Order confirmation or invoice': 'invoice',
+                'Shipping tracking number or delivery receipt': 'tracking_proof',
+                'Correspondence (e.g., emails) showing failure to deliver': 'communication',
+                
+                // Duplicate
+                'Bank statement showing duplicate charges': 'bank_statement',
+                'Transaction receipt or invoice': 'invoice',
+                'Merchant correspondence proving duplicate charges': 'communication',
+                
+                // Incorrect Amount
+                'Transaction receipt showing agreed price': 'invoice',
+                'Bank statement showing incorrect charge': 'bank_statement',
+                'Email correspondence with merchant regarding pricing discrepancy': 'communication',
+                
+                // Cancelled/Refund
+                'Cancellation confirmation or proof': 'cancellation_proof',
+                'Email or message showing refund request': 'communication',
+                
+                // Product quality issues
+                'Photos of damaged or defective product': 'product_photo',
+                'Original invoice or order confirmation': 'invoice',
+                'Communication with merchant about the issue': 'communication'
+              };
+              
               // Prepare docCheck from verification results
-              const docCheck = verificationData.results.map((r: any) => ({
-                key: r.requirement,
-                isValid: r.isValid,
-                reason: r.reason
-              }));
+              const docCheck = verificationData.results.map((r: any) => {
+                const mappedKey = requirementToKeyMap[r.requirementName] || r.requirementName.toLowerCase().replace(/\s+/g, '_');
+                return {
+                  key: mappedKey,
+                  isValid: r.isValid,
+                  reason: r.reason
+                };
+              });
 
               // Get session for auth
               const { data: { session } } = await supabase.auth.getSession();
