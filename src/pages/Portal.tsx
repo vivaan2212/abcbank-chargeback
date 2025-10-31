@@ -2136,11 +2136,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                 <div key={`order-details-${currentConversationId}`} className="mt-6">
                   <Card className="p-6 space-y-4">
                     <div className="space-y-2">
-                      {questionStep && (
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Question {questionStep} of 3</span>
-                        </div>
-                      )}
                       <label className="text-sm font-medium">
                         {questionStep 
                           ? "Your answer" 
