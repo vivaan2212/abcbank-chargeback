@@ -1,4 +1,4 @@
-import { BookOpen, X, ArrowUp } from "lucide-react";
+import { BookOpen, X, ArrowUp, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
+import KnowledgeBaseChat from "./KnowledgeBaseChat";
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
@@ -18,24 +19,31 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
   const [isLoading, setIsLoading] = useState(false);
   const [answer, setAnswer] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const fetchLastUpdated = async () => {
+    const { data, error } = await supabase
+      .from('knowledge_base_content')
+      .select('updated_at')
+      .eq('section_key', 'chargeback_for_banks')
+      .single();
+
+    if (!error && data) {
+      setLastUpdated(new Date(data.updated_at));
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch last updated timestamp
-      const fetchLastUpdated = async () => {
-        const { data, error } = await supabase
-          .from('knowledge_base_content')
-          .select('updated_at')
-          .eq('section_key', 'chargeback_for_banks')
-          .single();
-
-        if (!error && data) {
-          setLastUpdated(new Date(data.updated_at));
-        }
-      };
       fetchLastUpdated();
     }
   }, [isOpen]);
+
+  const handleUpdateSuccess = () => {
+    // Refresh the last updated timestamp
+    fetchLastUpdated();
+    toast.success('Knowledge base has been updated');
+  };
 
   const handleAskQuestion = async () => {
     if (!question.trim()) return;
@@ -341,30 +349,48 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
-              <span className="text-xl">⚡</span>
-              <Input
-                type="text"
-                placeholder="Ask anything to ⚡ Pace"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-                className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
-                onClick={handleAskQuestion}
-                disabled={isLoading || !question.trim()}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
+                <span className="text-xl">⚡</span>
+                <Input
+                  type="text"
+                  placeholder="Ask anything to ⚡ Pace"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                  onClick={handleAskQuestion}
+                  disabled={isLoading || !question.trim()}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsChatOpen(true)}
+                className="gap-2"
               >
-                <ArrowUp className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
+                Chat
               </Button>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Chat Modal */}
+      <KnowledgeBaseChat 
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onUpdateSuccess={handleUpdateSuccess}
+      />
     </>
   );
 };
