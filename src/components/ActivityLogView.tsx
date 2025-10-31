@@ -202,7 +202,7 @@ const ActivityLogView = ({
         timestamp: dispute.created_at,
         label: 'Received a disputed transaction',
         attachments: dispute.documents ? [{
-          label: 'Disputed transaction',
+          label: 'Past transaction with merchant',
           icon: '📄'
         }] : undefined,
         activityType: 'human_action'
@@ -1121,7 +1121,7 @@ const ActivityLogView = ({
           {transactionDetails ? <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Layers className="h-4 w-4" />
-                <span>Disputed transaction</span>
+                <span>Past transaction with merchant</span>
               </div>
 
               <div className="space-y-3 text-sm">
