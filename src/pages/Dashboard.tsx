@@ -426,14 +426,6 @@ const Dashboard = () => {
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">Updated 10m ago</span>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4" />
-                  <span className="text-sm">4</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">💬</span>
-                  <span className="text-sm">2</span>
-                </div>
                 <Button
                   variant="ghost"
                   size="icon"
