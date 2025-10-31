@@ -1201,29 +1201,30 @@ const ActivityLogView = ({
                 const isLastActivity = isLastInGroup && isLastGroup;
                 return <div key={activity.id} className="flex gap-4 relative">
                         {/* Time */}
-                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0 flex items-center h-[20px]">
+                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-[3px]">
                           {format(new Date(activity.timestamp), "h:mm a")}
                         </div>
 
                         {/* Icon with connecting line */}
-                        <div className="flex-shrink-0 relative flex items-center h-[20px]">
+                        <div className="flex-shrink-0 relative pt-[3px]">
                           {/* Connecting line above */}
                           {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />}
                           
                           {getActivityIcon(activity.activityType, activity.color)}
                           
                           {/* Connecting line below */}
-                          {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />}
+                          {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 top-[14px] h-6 w-px bg-border" />}
                         </div>
 
                         {/* Content */}
-                        <div className={cn(
-                          "flex-1 min-w-0 rounded-lg p-3",
-                          activity.color === 'green' && "border-l-4 border-green-600 bg-green-50 dark:bg-green-950/30",
-                          activity.color === 'blue' && "border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30",
-                          activity.color === 'orange' && "border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30",
-                          activity.color === 'yellow' && "border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30"
-                        )}>
+                        <div className="flex-1 min-w-0">
+                          <div className={cn(
+                            "rounded-lg p-3",
+                            activity.color === 'green' && "border-l-4 border-green-600 bg-green-50 dark:bg-green-950/30",
+                            activity.color === 'blue' && "border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30",
+                            activity.color === 'orange' && "border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30",
+                            activity.color === 'yellow' && "border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30"
+                          )}>
                           <div className="font-medium text-sm mb-1">{activity.label}</div>
                           
                           {/* Tag Pill */}
@@ -1325,6 +1326,7 @@ const ActivityLogView = ({
                               <span>✓</span>
                               <span>Reviewed by {activity.reviewer}</span>
                             </div>}
+                          </div>
                         </div>
                       </div>;
               })}
