@@ -29,10 +29,6 @@ interface Activity {
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
   showRepresentmentActions?: boolean;
   representmentTransactionId?: string;
-  color?: 'yellow' | 'blue' | 'green';
-  tag?: string;
-  reasoning?: string[];
-  link?: string;
 }
 interface ActivityLogViewProps {
   disputeId: string;
@@ -488,51 +484,9 @@ const ActivityLogView = ({
             repActivity.activityType = 'paused';
             break;
           case 'accepted_by_bank':
-            // Step 1: Evidence reviewed (yellow)
-            activityList.push({
-              id: 'representment-evidence-reviewed',
-              timestamp: repTs,
-              label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
-              color: 'yellow',
-              tag: 'Reviewed by Pace',
-              reasoning: [
-                'Invoice verified and matches transaction details.',
-                'Merchant terms state the service is non-refundable.',
-                'Evidence confirms customer received and used the service.',
-                'No evidence of fraud or unauthorized access.',
-                'Transaction consistent with past customer behavior.'
-              ],
-              activityType: 'needs_attention',
-              expandable: true
-            });
-
-            // Step 2: Chargeback recalled (blue)
-            const cardNetwork = dispute.transaction?.acquirer_name?.toLowerCase().includes('mastercard') ? 'Mastercard' : 
-                                dispute.transaction?.acquirer_name?.toLowerCase().includes('visa') ? 'Visa' : 
-                                dispute.transaction?.acquirer_name?.toLowerCase().includes('amex') ? 'Amex' : 
-                                dispute.transaction?.acquirer_name?.toLowerCase().includes('rupay') ? 'Rupay' : 'Visa';
-            
-            const networkLinks: Record<string, string> = {
-              Mastercard: 'https://www.mastercardconnect.com/chargeback',
-              Visa: 'https://www.visa.com/viw',
-              Amex: 'https://www.americanexpress.com',
-              Rupay: 'https://www.rupay.co.in'
-            };
-            
-            const chargebackRef = dispute.transaction?.chargeback_case_id || dispute.id.substring(0, 10);
-            
-            activityList.push({
-              id: 'representment-chargeback-recalled',
-              timestamp: new Date(new Date(repTs).getTime() + 1).toISOString(),
-              label: `Chargeback request for Ref. No. ${chargebackRef} has been recalled from ${cardNetwork} network`,
-              color: 'blue',
-              tag: 'Recall details',
-              link: networkLinks[cardNetwork],
-              activityType: 'human_action',
-              expandable: false
-            });
-            
-            // Don't add the old single activity anymore - it's replaced by the three-step flow
+            repActivity.label = 'Representment Accepted - Merchant Wins';
+            repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
+            repActivity.activityType = 'error';
             break;
           case 'rejected_by_bank':
             repActivity.label = 'Representment Rejected - Customer Wins';
@@ -540,30 +494,19 @@ const ActivityLogView = ({
             repActivity.activityType = 'done';
             break;
         }
-        
-        // Only push repActivity for cases OTHER than accepted_by_bank (which has its own three-step flow)
-        if (repData.representment_status !== 'accepted_by_bank') {
-          activityList.push(repActivity);
-        }
+        activityList.push(repActivity);
 
-        // Step 3: Temporary credit reversal (green) - add if representment was accepted
-        if (repData.representment_status === 'accepted_by_bank') {
-          const reversalTs = dispute.transaction.temporary_credit_reversal_at 
-            ? new Date(dispute.transaction.temporary_credit_reversal_at).toISOString()
-            : new Date(new Date(repTs).getTime() + 2).toISOString();
-          const creditAmount = dispute.transaction.temporary_credit_amount || dispute.transaction.transaction_amount || 0;
-          const reversalRef = dispute.transaction.chargeback_case_id 
-            ? `REV-${dispute.transaction.chargeback_case_id.substring(0, 8)}`
-            : `REV-${dispute.id.substring(0, 8)}`;
-          
+        // Add temporary credit reversal entry if representment was accepted and credit was reversed
+        if (repData.representment_status === 'accepted_by_bank' && dispute.transaction.temporary_credit_reversal_at) {
+          const reversalTs = new Date(dispute.transaction.temporary_credit_reversal_at).toISOString();
+          const creditAmount = dispute.transaction.temporary_credit_amount || 0;
           activityList.push({
             id: 'temp-credit-reversal',
             timestamp: reversalTs,
-            label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. ${reversalRef}.`,
-            color: 'green',
-            tag: 'Transaction details',
-            activityType: 'done',
-            expandable: false
+            label: 'Temporary credit reversed',
+            expandable: true,
+            details: `Amount reversed: ₹${creditAmount.toLocaleString()}\n\nThe temporary credit has been reversed and deducted from your account as the merchant won the representment.`,
+            activityType: 'human_action'
           });
         }
       }
@@ -947,43 +890,17 @@ const ActivityLogView = ({
                         </div>
 
                         {/* Content */}
-                        <div className={cn(
-                          "flex-1 min-w-0",
-                          activity.color && "border-l-4 pl-4 py-2 rounded-r",
-                          activity.color === 'yellow' && "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/20",
-                          activity.color === 'blue' && "border-l-blue-500 bg-blue-50 dark:bg-blue-950/20",
-                          activity.color === 'green' && "border-l-green-500 bg-green-50 dark:bg-green-950/20"
-                        )}>
+                        <div className="flex-1 min-w-0">
                           <div className="font-medium text-sm mb-1">{activity.label}</div>
                           
-                          {/* Status Tag */}
-                          {activity.tag && <div className="inline-block px-2 py-0.5 mb-2 text-xs rounded-full bg-primary/10 text-primary font-medium">
-                              {activity.tag}
-                            </div>}
-                          
-                          {/* Link */}
-                          {activity.link && <div className="mt-2 mb-2">
-                              <a href={activity.link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
-                                View on network portal →
-                              </a>
-                            </div>}
-                          
-                          {/* Reasoning List */}
-                          {activity.reasoning && expandedActivities.has(activity.id) && <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                              {activity.reasoning.map((reason, idx) => <li key={idx} className="flex gap-2">
-                                  <span className="text-primary">•</span>
-                                  <span>{reason}</span>
-                                </li>)}
-                            </ul>}
-                          
-                          {/* Expandable Details Button */}
-                          {activity.expandable && (activity.details || activity.reasoning) && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
-                              <span>See {activity.reasoning ? 'reasoning' : 'details'}</span>
+                          {/* Expandable Details */}
+                          {activity.expandable && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+                              <span>See reasoning</span>
                               <ChevronRight className={cn("h-3 w-3 transition-transform", expandedActivities.has(activity.id) && "rotate-90")} />
                             </button>}
 
                           {/* Expanded Details */}
-                          {expandedActivities.has(activity.id) && activity.details && !activity.reasoning && <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
+                          {expandedActivities.has(activity.id) && activity.details && <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
                               {activity.details}
                             </div>}
 
