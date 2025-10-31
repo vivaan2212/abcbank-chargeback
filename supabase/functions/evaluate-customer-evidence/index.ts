@@ -140,43 +140,31 @@ Respond with a JSON object ONLY (no other text):
       );
     }
 
-    // Update evidence request status
+    // Update evidence request status to submitted - now awaiting bank admin review
     await supabase
       .from('dispute_customer_evidence_request')
       .update({ status: 'submitted' })
       .eq('transaction_id', transaction_id);
 
-    // Automatically resolve case: merchant accepts evidence, make temporary credit permanent
+    // Set transaction to need attention from bank admin for review
     await supabase
       .from('transactions')
       .update({ 
-        needs_attention: false,
-        dispute_status: 'resolved_merchant_accepted',
-        temporary_credit_provided: false, // Credit is now permanent
-        refund_received: true,
-        refund_amount: transaction.temporary_credit_amount || transaction.transaction_amount
+        needs_attention: true,
+        dispute_status: 'awaiting_evidence_review'
       })
       .eq('id', transaction_id);
 
-    // Update representment status to mark as resolved
+    // Keep representment status as awaiting_customer_info or set to awaiting review
+    // Do NOT auto-resolve - wait for bank admin to approve or reject
     await supabase
       .from('chargeback_representment_static')
       .update({ 
-        representment_status: 'customer_evidence_approved'
+        representment_status: 'awaiting_customer_info' // Keep same status, evidence is just submitted
       })
       .eq('transaction_id', transaction_id);
 
-    // Log the final resolution action
-    await supabase
-      .from('dispute_action_log')
-      .insert({
-        transaction_id: transaction_id,
-        action: 'case_resolved_merchant_accepted',
-        note: 'Customer evidence submitted. Merchant accepted evidence and case is resolved. Temporary credit converted to permanent.',
-        performed_by: transaction.customer_id
-      });
-
-    console.log('Evidence evaluated and case resolved successfully:', evaluation);
+    console.log('Evidence evaluated and stored for bank admin review:', evaluation);
 
     return new Response(
       JSON.stringify({
