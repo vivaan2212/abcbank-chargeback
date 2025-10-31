@@ -16,6 +16,7 @@ import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/compo
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { HelpWidget } from "@/components/HelpWidget";
+import { CustomerEvidenceUpload } from "@/components/CustomerEvidenceUpload";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { LoadingText } from "@/components/LoadingText";
@@ -112,6 +113,7 @@ const Portal = () => {
       timestamp: new Date(),
     }
   ]);
+  const [awaitingEvidenceTransaction, setAwaitingEvidenceTransaction] = useState<Transaction | null>(null);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -625,6 +627,12 @@ const Portal = () => {
           .order("transaction_time", { ascending: false })
           .limit(20);
         setTransactions(txns || []);
+        
+        // Check if any transaction is awaiting customer evidence
+        const awaitingTransaction = txns?.find(
+          (t) => t.dispute_status === "awaiting_customer_info"
+        );
+        setAwaitingEvidenceTransaction(awaitingTransaction || null);
       }
 
       // Only load dispute state if UI wasn't restored from cache
@@ -2028,11 +2036,21 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
-              {showTransactions && (
+              {awaitingEvidenceTransaction ? (
+                <div key={`evidence-upload-${currentConversationId}`} className="mt-6">
+                  <CustomerEvidenceUpload
+                    transactionId={awaitingEvidenceTransaction.id}
+                    onComplete={() => {
+                      setAwaitingEvidenceTransaction(null);
+                      loadMessages(currentConversationId!);
+                    }}
+                  />
+                </div>
+              ) : showTransactions ? (
                 <div key={`txn-list-${currentConversationId}`} className="mt-6">
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
                 </div>
-              )}
+              ) : null}
               {showContinueOrEndButtons && !needsReupload && (
                 <div key={`continue-buttons-${currentConversationId}`} className="mt-6 flex gap-3 justify-center">
                   <Button 
