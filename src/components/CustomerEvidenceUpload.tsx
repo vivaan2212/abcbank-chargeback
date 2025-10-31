@@ -62,8 +62,8 @@ export const CustomerEvidenceUpload = ({
       if (error) throw error;
 
       toast({
-        title: "Evidence Submitted",
-        description: "Your evidence has been submitted and is being reviewed.",
+        title: "Documents Uploaded Successfully!",
+        description: "We are now reviewing your case and will get back to you shortly.",
       });
 
       // Get the conversation for this transaction to send a message
@@ -78,7 +78,7 @@ export const CustomerEvidenceUpload = ({
           conversation_id: dispute.conversation_id,
           role: "assistant",
           content:
-            "Thank you for submitting your evidence. Our team is reviewing your documents and will get back to you shortly. We appreciate your patience.",
+            "✅ Documents uploaded successfully! We are now reviewing your case and will get back to you shortly. Thank you for providing this additional information.",
         });
       }
 
