@@ -1121,7 +1121,7 @@ const ActivityLogView = ({
           {transactionDetails ? <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Layers className="h-4 w-4" />
-                <span>Past transaction with merchant</span>
+                <span>Disputed transaction</span>
               </div>
 
               <div className="space-y-3 text-sm">
