@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { step, answer1, answer2, merchantName, transactionAmount, transactionDate } = await req.json();
+    const { step, answer1, answer2, answer3, merchantName, transactionAmount, transactionDate } = await req.json();
     console.log('Chargeback precheck request:', { step, merchantName, transactionAmount });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -126,7 +126,7 @@ The question should reference their previous answers and be conversational.`;
       ];
     } else if (step === 'evaluate') {
       // Step 3: Evaluate all 3 answers and determine chargeback eligibility
-      const { answer3 } = await req.json();
+      // answer3 is already destructured from req.json() at the top
       
       systemPrompt = `You are a chargeback specialist making the final determination on whether a customer's situation qualifies for a chargeback.
 
