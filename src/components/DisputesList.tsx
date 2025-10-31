@@ -348,6 +348,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           if (hasWriteOffDecision) return true;
           if (dispute.status === 'write_off_approved') return true;
           
+          // Include disputes with done statuses
+          if ([
+            'done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 
+            'representment_contested', 'write_off_approved'
+          ].includes(dispute.status)) return true;
+          
           const repRel = (dispute.transaction as any)?.chargeback_representment_static;
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'no_representment' || 
