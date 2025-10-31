@@ -32,29 +32,24 @@ export interface UploadedDocument {
 
 export const DOCUMENT_REQUIREMENTS: Record<string, DocumentRequirement[]> = {
   fraud: [
-    { name: "Police report or fraud claim", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Bank statement showing unauthorized charge(s)", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Transaction receipt or email confirmation", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
   ],
   not_received: [
     { name: "Order confirmation or invoice", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
-    { name: "Shipping tracking number or delivery receipt", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
-    { name: "Correspondence (e.g., emails) showing failure to deliver", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
+    { name: "Delivery receipt", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
   ],
   duplicate: [
     { name: "Bank statement showing duplicate charges", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Transaction receipt or invoice", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
-    { name: "Merchant correspondence proving duplicate charges", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
   ],
   incorrect_amount: [
     { name: "Transaction receipt showing agreed price", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Bank statement showing incorrect charge", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
-    { name: "Email correspondence with merchant regarding pricing discrepancy", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
   ],
   other: [
-    { name: "Relevant proof (e.g., any supporting document)", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
+    { name: "Proof of transaction or invoice", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
     { name: "Bank statement showing the charge", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
-    { name: "Any other correspondence (e.g., emails, messages)", uploadType: ["pdf", "docx", "txt", "png", "jpg"] },
   ],
 };
 
@@ -124,6 +119,9 @@ export const DocumentUpload = ({ reasonId, reasonLabel, customReason, aiClassifi
       </div>
       
       <p className="text-sm text-muted-foreground">
+        You only need to upload two documents to initiate your dispute. If more information or communication proof is needed later, we'll ask you for it during review.
+      </p>
+      <p className="text-sm text-muted-foreground mt-1">
         Please upload the following documents (PDF, Word, .txt, PNG, or JPG format):
       </p>
 
