@@ -698,7 +698,7 @@ const ActivityLogView = ({
                 .eq('is_active', true)
                 .maybeSingle();
 
-              // Rebuttal accepted (final status) - END OF JOURNEY
+              // Rebuttal accepted (final status)
               const acceptedTimestamp = new Date(new Date(review.reviewed_at).getTime() + 24 * 60 * 60 * 1000).toISOString();
               const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
               const acceptedAttachments: Activity['attachments'] = [
@@ -720,7 +720,6 @@ const ActivityLogView = ({
                 label: 'Chargeback request accepted by Visa; Temporary credit earlier processed has been made permanent',
                 expandable: false,
                 activityType: 'done',
-                color: 'green',
                 attachments: acceptedAttachments
               });
             } else if (review.review_decision === 'rejected') {
@@ -1093,78 +1092,55 @@ const ActivityLogView = ({
       label: string;
       color: string;
     }> = {
-      // Done - Final successful states
       completed: {
         label: "Done",
         color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
       },
       approved: {
-        label: "Done",
+        label: "Approved",
         color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
       },
-      closed_won: {
-        label: "Done",
-        color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+      chargeback_filed: {
+        label: "Chargeback filed",
+        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       },
-      
-      // Void - Cancelled or rejected states
+      under_review: {
+        label: "Under review",
+        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+      },
+      awaiting_merchant_refund: {
+        label: "Awaiting refund",
+        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+      },
+      awaiting_settlement: {
+        label: "Awaiting settlement",
+        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
+      },
+      pending_manual_review: {
+        label: "Manual review",
+        color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+      },
+      rejected: {
+        label: "Rejected",
+        color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+      },
       void: {
         label: "Void",
         color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
       },
       cancelled: {
-        label: "Void",
-        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-      },
-      rejected: {
-        label: "Void",
+        label: "Cancelled",
         color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
       },
       ineligible: {
-        label: "Void",
+        label: "Ineligible",
         color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-      },
-      closed_lost: {
-        label: "Void",
-        color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-      },
-      
-      // In progress - Active processing states
-      chargeback_filed: {
-        label: "In progress",
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-      },
-      under_review: {
-        label: "In progress",
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       },
       in_progress: {
         label: "In progress",
         color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
       },
-      started: {
-        label: "In progress",
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-      },
-      
-      // Needs attention - Requires user or admin action
-      awaiting_merchant_refund: {
-        label: "Needs attention",
-        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-      },
-      awaiting_settlement: {
-        label: "Needs attention",
-        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-      },
-      pending_manual_review: {
-        label: "Needs attention",
-        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-      },
       needs_attention: {
-        label: "Needs attention",
-        color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-      },
-      documents_requested: {
         label: "Needs attention",
         color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
       }
