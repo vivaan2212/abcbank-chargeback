@@ -798,6 +798,59 @@ const ActivityLogView = ({
         });
       }
 
+      // Check for chargeback recalled (customer evidence rejected)
+      const recalledLog = actionLogs?.find(log => log.action === 'chargeback_recalled');
+      if (recalledLog && repData?.representment_status === 'customer_evidence_rejected') {
+        const creditAmount = dispute.transaction?.temporary_credit_amount || dispute.transaction?.transaction_amount || 0;
+        const currency = dispute.transaction?.transaction_currency || 'INR';
+        const creditReversed = dispute.transaction?.temporary_credit_provided;
+        const merchantDocUrl = repData?.merchant_document_url;
+        const referenceNo = dispute.transaction?.chargeback_case_id || 'N/A';
+        
+        // Add evidence review activity
+        const evidenceReviewTimestamp = new Date(new Date(recalledLog.performed_at).getTime() - 1000).toISOString();
+        activityList.push({
+          id: 'evidence-reviewed-rejected',
+          timestamp: evidenceReviewTimestamp,
+          label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
+          expandable: true,
+          details: 'Pill: Reviewed by Pace\n\n✓ Valid invoice\n✓ Service delivered\n✓ Non-refundable terms\n✓ Usage confirmed\n✓ No fraud risk',
+          activityType: 'human_action',
+          color: 'orange',
+          attachments: merchantDocUrl ? [{
+            label: 'Merchant docs, invoice, terms',
+            icon: 'document',
+            action: 'download',
+            docUrl: merchantDocUrl
+          }] : []
+        });
+
+        // Add chargeback recalled activity
+        activityList.push({
+          id: 'chargeback-recalled',
+          timestamp: recalledLog.performed_at,
+          label: `Chargeback request Ref. No. ${referenceNo} has been recalled from ${recalledLog.network || 'Visa'}`,
+          expandable: true,
+          details: `Pill: Recall details     🔗 Network Portal\n\n${recalledLog.note || 'Bank rejected customer evidence and recalled chargeback from card network'}`,
+          activityType: 'done',
+          color: 'green'
+        });
+
+        // Add credit reversal activity if applicable
+        if (creditReversed) {
+          const reversalTimestamp = new Date(new Date(recalledLog.performed_at).getTime() + 1000).toISOString();
+          activityList.push({
+            id: 'credit-reversed-recalled',
+            timestamp: reversalTimestamp,
+            label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. REV-${Date.now()}.`,
+            expandable: true,
+            details: `Pill: Transaction details\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from the customer's account.\n\nMerchant wins the dispute.`,
+            activityType: 'done',
+            color: 'green'
+          });
+        }
+      }
+
       // Check for chargeback actions (like representment accepted)
       if (transactionId) {
         const { data: chargebackActions } = await supabase
@@ -953,11 +1006,17 @@ const ActivityLogView = ({
     setProcessingRepresentment(true);
     try {
       // Get customer evidence
-      const { data: evidence } = await supabase
+      const { data: evidence, error: evidenceError } = await supabase
         .from('dispute_customer_evidence')
         .select('id')
         .eq('transaction_id', transactionId)
-        .single();
+        .maybeSingle();
+
+      if (evidenceError) throw evidenceError;
+
+      if (!evidence) {
+        throw new Error('No customer evidence found for this transaction');
+      }
 
       const { error } = await supabase.functions.invoke('reject-customer-evidence', {
         body: {
@@ -978,7 +1037,7 @@ const ActivityLogView = ({
       console.error('Error rejecting evidence:', error);
       toast({
         title: "Error",
-        description: "Failed to reject evidence",
+        description: error instanceof Error ? error.message : "Failed to reject evidence",
         variant: "destructive"
       });
     } finally {

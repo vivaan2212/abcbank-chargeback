@@ -323,7 +323,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
 
           // Exclude if representment or transaction is terminal
-          if (repStatus === 'no_representment' || repStatus === 'accepted_by_bank' || txn?.dispute_status === 'closed_won' || txn?.dispute_status === 'closed_lost') {
+          if (repStatus === 'no_representment' || 
+              repStatus === 'accepted_by_bank' || 
+              repStatus === 'customer_evidence_rejected' ||
+              txn?.dispute_status === 'closed_won' || 
+              txn?.dispute_status === 'closed_lost' ||
+              txn?.dispute_status === 'merchant_won') {
             return false;
           }
           

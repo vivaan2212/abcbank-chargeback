@@ -89,8 +89,10 @@ const Dashboard = () => {
           ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
           repStatus === 'no_representment' ||
           repStatus === 'accepted_by_bank' ||
+          repStatus === 'customer_evidence_rejected' ||
           txn?.dispute_status === 'closed_won' ||
-          txn?.dispute_status === 'closed_lost'
+          txn?.dispute_status === 'closed_lost' ||
+          txn?.dispute_status === 'merchant_won'
         );
         if (isTerminalDone) {
           newCounts.done++;
