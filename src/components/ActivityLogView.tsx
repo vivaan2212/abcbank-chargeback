@@ -1026,13 +1026,13 @@ const ActivityLogView = ({
       let sortKey: number;
       if (date.toDateString() === today.toDateString()) {
         dateLabel = "Today";
-        sortKey = 2; // Today last
+        sortKey = Date.now() + 2000; // Today last (highest value)
       } else if (date.toDateString() === yesterday.toDateString()) {
         dateLabel = "Yesterday";
-        sortKey = 1; // Yesterday in middle
+        sortKey = Date.now() + 1000; // Yesterday second to last
       } else {
         dateLabel = format(date, "dd MMM yyyy");
-        sortKey = 0 - date.getTime(); // Older dates first (more negative = earlier date = lower sort key)
+        sortKey = date.getTime(); // Older dates first (smaller timestamps = lower sort key)
       }
       if (!groupMap[dateLabel]) {
         groupMap[dateLabel] = [];
