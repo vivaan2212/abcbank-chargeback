@@ -566,6 +566,60 @@ export type Database = {
           },
         ]
       }
+      knowledge_base_content: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          section_key: string
+          section_title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          section_key: string
+          section_title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          section_key?: string
+          section_title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      knowledge_base_updates: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_content: string
+          previous_content: string | null
+          section_key: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_content: string
+          previous_content?: string | null
+          section_key: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_content?: string
+          previous_content?: string | null
+          section_key?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string

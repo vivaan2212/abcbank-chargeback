@@ -47,3 +47,9 @@ verify_jwt = true
 
 [functions.reject-customer-evidence]
 verify_jwt = true
+
+[functions.query-knowledge-base]
+verify_jwt = true
+
+[functions.update-knowledge-base]
+verify_jwt = true

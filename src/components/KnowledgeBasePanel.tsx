@@ -1,6 +1,11 @@
-import { BookOpen, X } from "lucide-react";
+import { BookOpen, X, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
@@ -9,6 +14,58 @@ interface KnowledgeBasePanelProps {
 }
 
 const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelProps) => {
+  const [question, setQuestion] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [answer, setAnswer] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch last updated timestamp
+      const fetchLastUpdated = async () => {
+        const { data, error } = await supabase
+          .from('knowledge_base_content')
+          .select('updated_at')
+          .eq('section_key', 'chargeback_for_banks')
+          .single();
+
+        if (!error && data) {
+          setLastUpdated(new Date(data.updated_at));
+        }
+      };
+      fetchLastUpdated();
+    }
+  }, [isOpen]);
+
+  const handleAskQuestion = async () => {
+    if (!question.trim()) return;
+
+    setIsLoading(true);
+    setAnswer("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
+        body: { question }
+      });
+
+      if (error) throw error;
+
+      setAnswer(data.answer);
+    } catch (error) {
+      console.error('Error asking question:', error);
+      toast.error('Failed to get answer. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAskQuestion();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -31,7 +88,14 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
         <div className="border-b px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BookOpen className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">Knowledge Base</h2>
+            <div className="flex flex-col">
+              <h2 className="text-lg font-semibold">Knowledge Base</h2>
+              {lastUpdated && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <Button
@@ -264,6 +328,39 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                   <li>Override Permissions: 2-step approval required to override AI classification decision</li>
                 </ul>
               </div>
+            </div>
+          </div>
+
+          {/* AI Question Interface at Bottom */}
+          <div className="border-t px-6 py-4 bg-muted/30">
+            <div className="mb-3">
+              {answer && (
+                <div className="mb-4 p-4 bg-background rounded-lg border">
+                  <p className="text-sm font-semibold mb-2">Answer:</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{answer}</p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
+              <span className="text-xl">⚡</span>
+              <Input
+                type="text"
+                placeholder="Ask anything to ⚡ Pace"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
+                className="flex-1 bg-transparent border-0 outline-none text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                onClick={handleAskQuestion}
+                disabled={isLoading || !question.trim()}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
