@@ -26,9 +26,13 @@ interface Activity {
     docUrl?: string;
   }>;
   reviewer?: string;
-  activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void';
+  activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void' | 'review_decision';
   showRepresentmentActions?: boolean;
   representmentTransactionId?: string;
+  color?: 'green' | 'blue' | 'orange' | 'yellow';
+  tag?: string;
+  reasoning?: string[];
+  link?: string;
 }
 interface ActivityLogViewProps {
   disputeId: string;
@@ -484,9 +488,65 @@ const ActivityLogView = ({
             repActivity.activityType = 'paused';
             break;
           case 'accepted_by_bank':
-            repActivity.label = 'Representment Accepted - Merchant Wins';
-            repActivity.details = 'The bank has accepted the merchant\'s representment. The chargeback is closed in favor of the merchant.';
-            repActivity.activityType = 'error';
+            // For accepted representment, create 3 distinct activities
+            // 1. Evidence reviewed (orange diamond)
+            const network = dispute.transaction?.acquirer_name || 'Visa';
+            const networkRefs: Record<string, string> = {
+              'Mastercard': 'https://www.mastercardconnect.com/chargeback',
+              'Visa': 'https://www.visa.com/viw',
+              'Amex': 'https://www.americanexpress.com',
+              'Rupay': 'https://www.rupay.co.in'
+            };
+            const networkPortal = networkRefs[network] || networkRefs['Visa'];
+            
+            activityList.push({
+              id: 'rep-evidence-reviewed',
+              timestamp: repTs,
+              label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
+              color: 'orange',
+              tag: 'Reviewed by Pace',
+              reasoning: [
+                'Valid invoice',
+                'Service delivered',
+                'Non-refundable terms',
+                'Usage confirmed',
+                'No fraud risk'
+              ],
+              attachments: [{
+                label: 'Merchant docs, invoice, terms',
+                icon: '📄'
+              }],
+              activityType: 'review_decision',
+              expandable: true
+            });
+            
+            // 2. Chargeback recalled (green box)
+            const caseRef = dispute.transaction.chargeback_case_id?.substring(0, 10) || 'REF-' + transactionId?.substring(0, 8);
+            activityList.push({
+              id: 'rep-chargeback-recalled',
+              timestamp: new Date(new Date(repTs).getTime() + 1000).toISOString(),
+              label: `Chargeback request Ref. No. ${caseRef} has been recalled from ${network}`,
+              color: 'green',
+              tag: 'Recall details',
+              link: networkPortal,
+              activityType: 'success'
+            });
+            
+            // 3. Temporary credit reversed (green box)
+            const reversalRef = dispute.transaction.temporary_credit_reversal_at 
+              ? 'REV-' + new Date(dispute.transaction.temporary_credit_reversal_at).getTime().toString().substring(0, 10)
+              : 'REV-' + Date.now().toString().substring(0, 10);
+            activityList.push({
+              id: 'rep-credit-reversed',
+              timestamp: new Date(new Date(repTs).getTime() + 2000).toISOString(),
+              label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. ${reversalRef}.`,
+              color: 'green',
+              tag: 'Transaction details',
+              activityType: 'success'
+            });
+            
+            // Don't push repActivity for accepted_by_bank since we've added the 3 activities above
+            return; // Exit early to skip the repActivity.push at the end
             break;
           case 'rejected_by_bank':
             repActivity.label = 'Representment Rejected - Customer Wins';
@@ -669,6 +729,8 @@ const ActivityLogView = ({
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-red-500 bg-background")} />;
       case 'needs_attention':
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-orange-500 bg-background")} />;
+      case 'review_decision':
+        return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-orange-500 bg-orange-100 dark:bg-orange-900/30")} />;
       case 'paused':
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-gray-400 bg-background")} />;
       case 'loading':
@@ -890,11 +952,48 @@ const ActivityLogView = ({
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 min-w-0">
+                        <div className={cn(
+                          "flex-1 min-w-0 rounded-lg p-3",
+                          activity.color === 'green' && "border-l-4 border-green-500 bg-green-50 dark:bg-green-950/30",
+                          activity.color === 'blue' && "border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30",
+                          activity.color === 'orange' && "border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30",
+                          activity.color === 'yellow' && "border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30"
+                        )}>
                           <div className="font-medium text-sm mb-1">{activity.label}</div>
                           
+                          {/* Tag Pill */}
+                          {activity.tag && (
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium mb-2">
+                              <span>Pill: {activity.tag}</span>
+                            </div>
+                          )}
+                          
+                          {/* Link Pill */}
+                          {activity.link && (
+                            <a 
+                              href={activity.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium hover:bg-muted/80 transition-colors mb-2"
+                            >
+                              <span>🔗 Network Portal</span>
+                            </a>
+                          )}
+                          
+                          {/* Reasoning with checkmarks */}
+                          {activity.reasoning && activity.reasoning.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {activity.reasoning.map((reason, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  <span>{reason}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
                           {/* Expandable Details */}
-                          {activity.expandable && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+                          {activity.expandable && !activity.reasoning && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
                               <span>See reasoning</span>
                               <ChevronRight className={cn("h-3 w-3 transition-transform", expandedActivities.has(activity.id) && "rotate-90")} />
                             </button>}
