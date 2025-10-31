@@ -257,6 +257,39 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_evidence_reviews: {
+        Row: {
+          created_at: string
+          customer_evidence_id: string
+          id: string
+          review_decision: string
+          review_notes: string | null
+          reviewed_at: string
+          reviewed_by: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_evidence_id: string
+          id?: string
+          review_decision: string
+          review_notes?: string | null
+          reviewed_at?: string
+          reviewed_by: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_evidence_id?: string
+          id?: string
+          review_decision?: string
+          review_notes?: string | null
+          reviewed_at?: string
+          reviewed_by?: string
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       delete_operations: {
         Row: {
           conversation_id: string
@@ -733,6 +766,10 @@ export type Database = {
         | "accepted_by_bank"
         | "awaiting_customer_info"
         | "rejected_by_bank"
+        | "customer_evidence_approved"
+        | "customer_evidence_rejected"
+        | "rebuttal_submitted"
+        | "rebuttal_accepted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -867,6 +904,10 @@ export const Constants = {
         "accepted_by_bank",
         "awaiting_customer_info",
         "rejected_by_bank",
+        "customer_evidence_approved",
+        "customer_evidence_rejected",
+        "rebuttal_submitted",
+        "rebuttal_accepted",
       ],
     },
   },

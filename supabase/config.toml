@@ -41,3 +41,9 @@ verify_jwt = true
 
 [functions.chargeback-precheck]
 verify_jwt = true
+
+[functions.approve-customer-evidence]
+verify_jwt = true
+
+[functions.reject-customer-evidence]
+verify_jwt = true

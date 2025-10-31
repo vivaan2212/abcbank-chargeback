@@ -34,6 +34,9 @@ const stagePriorityMap: Record<string, number> = {
   'rep-chargeback-recalled': 22,
   'rep-credit-reversed': 23,
   'customer-evidence-submitted': 24,
+  'rebuttal-submitted': 25,
+  'rebuttal-accepted': 26,
+  'chargeback-recalled': 27,
   // Write-off
   'write-off': 90
 };
@@ -63,6 +66,7 @@ interface Activity {
     action?: string;
     videoData?: any;
     docUrl?: string;
+    link?: string;
   }>;
   reviewer?: string;
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void' | 'review_decision';
@@ -171,6 +175,12 @@ const ActivityLogView = ({
       event: '*',
       schema: 'public',
       table: 'dispute_customer_evidence_request'
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'customer_evidence_reviews'
     }, () => {
       loadDisputeData();
     }).subscribe();
@@ -633,18 +643,78 @@ const ActivityLogView = ({
           .maybeSingle();
 
         if (customerEvidence) {
+          // Check if evidence has been reviewed
+          const { data: review } = await supabase
+            .from('customer_evidence_reviews')
+            .select('*')
+            .eq('customer_evidence_id', customerEvidence.id)
+            .maybeSingle();
+
+          const showReviewActions = isBankAdmin && !review;
+
           activityList.push({
             id: 'customer-evidence-submitted',
             timestamp: customerEvidence.created_at,
-            label: 'Customer submitted additional evidence',
+            label: 'Valid rebuttal representment evidence submitted by customer',
             expandable: true,
-            details: `Customer note: ${customerEvidence.customer_note || 'No note provided'}\n\nAI Evaluation: ${customerEvidence.ai_sufficient ? '✓ Sufficient' : '⚠ Insufficient'}\n\nSummary: ${customerEvidence.ai_summary || 'No summary available'}`,
-            activityType: customerEvidence.ai_sufficient ? 'success' : 'needs_attention',
-            attachments: customerEvidence.evidence_type === 'files' ? [{
-              label: 'Customer evidence documents',
+            details: `Attached screenshots of email/chat with "SHARAF DG" customer care reporting receipt of damaged goods in <4 hours of delivery time\n\nRebuttal evidence reviewed and found sufficient; customer-provided evidence deemed more credible. Merchant representment`,
+            activityType: 'success',
+            attachments: [{
+              label: 'Chat with merchant.jpg',
               icon: 'document'
-            }] : undefined
+            }],
+            showRepresentmentActions: showReviewActions,
+            representmentTransactionId: transactionId
           });
+
+          // 10. Add review result if exists
+          if (review) {
+            if (review.review_decision === 'approved') {
+              // Rebuttal submitted
+              activityList.push({
+                id: 'rebuttal-submitted',
+                timestamp: review.reviewed_at,
+                label: 'Chargeback request upheld; response submitted on Visa Resolve Online',
+                expandable: true,
+                details: review.review_notes || 'Bank approved customer evidence and submitted rebuttal to card network',
+                activityType: 'human_action',
+                attachments: [
+                  { label: 'Response details', icon: 'document' },
+                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' },
+                  { label: 'Evidence details', icon: 'document' }
+                ]
+              });
+
+              // Rebuttal accepted (final status)
+              const acceptedTimestamp = new Date(new Date(review.reviewed_at).getTime() + 24 * 60 * 60 * 1000).toISOString();
+              const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
+              activityList.push({
+                id: 'rebuttal-accepted',
+                timestamp: acceptedTimestamp,
+                label: 'Chargeback request accepted by Visa; Temporary credit earlier processed has been made permanent',
+                expandable: false,
+                activityType: 'done',
+                attachments: [
+                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' },
+                  { label: 'Transaction details', icon: 'document' }
+                ]
+              });
+            } else if (review.review_decision === 'rejected') {
+              // Chargeback recalled
+              const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
+              activityList.push({
+                id: 'chargeback-recalled',
+                timestamp: review.reviewed_at,
+                label: 'Chargeback recalled; Merchant wins',
+                expandable: true,
+                details: `${review.review_notes || 'Bank rejected customer evidence and recalled chargeback from card network'}\n\n${dispute.transaction?.temporary_credit_provided ? `Temporary credit of ₹${creditAmount.toLocaleString()} has been made permanent and remains with you.` : 'No temporary credit was issued.'}`,
+                activityType: 'done',
+                attachments: [
+                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' }
+                ]
+              });
+            }
+          }
         }
       }
 
@@ -727,6 +797,86 @@ const ActivityLogView = ({
       // Handle document view (existing functionality)
     }
   };
+  const handleApproveEvidence = async (transactionId: string) => {
+    if (!confirm('Approve customer evidence and submit rebuttal to card network?')) {
+      return;
+    }
+    setProcessingRepresentment(true);
+    try {
+      // Get customer evidence
+      const { data: evidence } = await supabase
+        .from('dispute_customer_evidence')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .single();
+
+      const { error } = await supabase.functions.invoke('approve-customer-evidence', {
+        body: {
+          transaction_id: transactionId,
+          customer_evidence_id: evidence.id,
+          review_notes: 'Customer evidence approved and rebuttal submitted to Visa'
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Evidence Approved",
+        description: "Rebuttal has been submitted to the card network."
+      });
+      await loadDisputeData();
+    } catch (error) {
+      console.error('Error approving evidence:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve evidence",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRepresentment(false);
+    }
+  };
+
+  const handleRejectEvidence = async (transactionId: string) => {
+    if (!confirm('Reject customer evidence and recall chargeback? This will uphold the merchant response.')) {
+      return;
+    }
+    setProcessingRepresentment(true);
+    try {
+      // Get customer evidence
+      const { data: evidence } = await supabase
+        .from('dispute_customer_evidence')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .single();
+
+      const { error } = await supabase.functions.invoke('reject-customer-evidence', {
+        body: {
+          transaction_id: transactionId,
+          customer_evidence_id: evidence.id,
+          review_notes: 'Customer evidence rejected, chargeback recalled'
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Evidence Rejected",
+        description: "Chargeback has been recalled from the card network."
+      });
+      await loadDisputeData();
+    } catch (error) {
+      console.error('Error rejecting evidence:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject evidence",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRepresentment(false);
+    }
+  };
+
   const handleAcceptRepresentment = async (transactionId: string) => {
     if (!confirm('Accept merchant representment? This will close the case in favor of the merchant and reverse any temporary credit.')) {
       return;
@@ -1087,28 +1237,50 @@ const ActivityLogView = ({
 
                           {/* Representment Action Buttons */}
                           {activity.showRepresentmentActions && activity.representmentTransactionId && <div className="mt-3 flex gap-2">
-                              <Button size="sm" variant="destructive" onClick={() => handleAcceptRepresentment(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
+                              <Button size="sm" variant="default" onClick={() => handleApproveEvidence(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
                                 <Check className="h-4 w-4" />
-                                Accept Representment
+                                Approve & Submit Rebuttal
                               </Button>
-                              <Button size="sm" variant="default" onClick={() => handleRejectRepresentment(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleRejectEvidence(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
                                 <X className="h-4 w-4" />
-                                Reject & Request Info
+                                Reject & Recall Chargeback
                               </Button>
                             </div>}
 
                           {/* Attachments */}
                           {activity.attachments && activity.attachments.length > 0 && <div className="mt-3 space-y-2">
-                              {activity.attachments.map((attachment, i) => <button key={i} onClick={() => handleAttachmentClick(attachment)} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm">
-                                  {attachment.icon === 'database' ? (
-                                    <Database className="h-4 w-4" />
-                                  ) : attachment.icon === 'document' ? (
-                                    <FileText className="h-4 w-4" />
-                                  ) : (
-                                    <span>{attachment.icon}</span>
-                                  )}
-                                  <span>{attachment.label}</span>
-                                </button>)}
+                              {activity.attachments.map((attachment, i) => {
+                                if (attachment.link) {
+                                  return <a 
+                                    key={i}
+                                    href={attachment.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
+                                  >
+                                    {attachment.icon === 'database' ? (
+                                      <Database className="h-4 w-4" />
+                                    ) : attachment.icon === 'document' ? (
+                                      <FileText className="h-4 w-4" />
+                                    ) : attachment.icon === 'link' ? (
+                                      <Share2 className="h-4 w-4" />
+                                    ) : (
+                                      <span>{attachment.icon}</span>
+                                    )}
+                                    <span>{attachment.label}</span>
+                                  </a>;
+                                }
+                                return <button key={i} onClick={() => handleAttachmentClick(attachment)} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm">
+                                    {attachment.icon === 'database' ? (
+                                      <Database className="h-4 w-4" />
+                                    ) : attachment.icon === 'document' ? (
+                                      <FileText className="h-4 w-4" />
+                                    ) : (
+                                      <span>{attachment.icon}</span>
+                                    )}
+                                    <span>{attachment.label}</span>
+                                  </button>;
+                              })}
                             </div>}
 
                           {/* Reviewer */}
