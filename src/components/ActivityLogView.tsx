@@ -784,6 +784,35 @@ const ActivityLogView = ({
         });
       }
 
+      // Check for chargeback actions (like representment accepted)
+      if (transactionId) {
+        const { data: chargebackActions } = await supabase
+          .from('chargeback_actions')
+          .select('*')
+          .eq('transaction_id', transactionId)
+          .order('created_at', { ascending: true });
+
+        if (chargebackActions) {
+          for (const action of chargebackActions) {
+            if (action.action_type === 'representment_accepted') {
+              const creditAmount = action.net_amount || 0;
+              const currency = dispute.transaction?.transaction_currency || 'INR';
+              const creditReversed = action.temporary_credit_issued === false;
+              
+              activityList.push({
+                id: `chargeback-action-${action.id}`,
+                timestamp: action.created_at,
+                label: 'Bank Decision: Merchant Wins - Representment Accepted',
+                expandable: true,
+                details: `${action.admin_message}\n\n${creditReversed ? `Temporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from your account.` : 'No temporary credit was issued.'}\n\n${action.internal_notes || ''}`,
+                activityType: 'human_action',
+                color: 'orange'
+              });
+            }
+          }
+        }
+      }
+
       // Check for write-off approval
       const writeOffDecision = (dispute as any).dispute_decisions?.find(
         (d: any) => d.decision === 'APPROVE_WRITEOFF'
