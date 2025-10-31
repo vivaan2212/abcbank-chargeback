@@ -551,6 +551,10 @@ const ActivityLogView = ({
             repActivity.details = 'The bank has requested additional evidence from the customer to contest the merchant\'s representment.';
             repActivity.activityType = 'paused';
             break;
+          case 'customer_evidence_approved':
+            // This status means customer evidence was approved and case is resolved - don't show standalone representment activity
+            // The full flow will be shown by the customer evidence section below
+            return; // Skip adding a representment activity here
           case 'accepted_by_bank':
             // For accepted representment, create 3 distinct activities
             // 1. Evidence reviewed (orange diamond)
@@ -657,7 +661,7 @@ const ActivityLogView = ({
             .eq('customer_evidence_id', customerEvidence.id)
             .maybeSingle();
 
-          const showReviewActions = isBankAdmin && !review;
+          const showReviewActions = isBankAdmin && !review && repData?.representment_status !== 'customer_evidence_approved';
 
           activityList.push({
             id: 'customer-evidence-submitted',
