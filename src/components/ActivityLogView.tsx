@@ -1207,15 +1207,15 @@ const ActivityLogView = ({
 
                         {/* Icon with connecting line */}
                         <div className="flex-shrink-0 relative">
-                          {/* Connecting line above */}
-                          {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 top-0 -mt-6 h-9 w-px bg-border" />}
+                          {/* Connecting line above - ends with gap before icon */}
+                          {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 top-0 h-[10px] w-px bg-border" />}
                           
                           <div className="pt-3 flex items-center h-5">
                             {getActivityIcon(activity.activityType, activity.color)}
                           </div>
                           
-                          {/* Connecting line below */}
-                          {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 bottom-0 -mb-6 h-6 w-px bg-border" />}
+                          {/* Connecting line below - starts with gap after icon */}
+                          {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 top-[22px] h-[calc(100%-22px+24px)] w-px bg-border" />}
                         </div>
 
                         {/* Content */}
