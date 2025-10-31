@@ -1209,9 +1209,6 @@ const ActivityLogView = ({
                 {statusBadge.label}
               </span>
             </div>
-            <div className="text-sm text-muted-foreground">
-              1 / 5195
-            </div>
           </div>
         </div>
 
