@@ -422,7 +422,7 @@ const Dashboard = () => {
             <div className="border-b px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <BookOpen className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Knowledge</h2>
+                <h2 className="text-lg font-semibold">Knowledge Base</h2>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">Updated 10m ago</span>
