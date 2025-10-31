@@ -1199,14 +1199,14 @@ const ActivityLogView = ({
                 const isLastInGroup = index === group.activities.length - 1;
                 const isLastGroup = groupIndex === groupedActivities.length - 1;
                 const isLastActivity = isLastInGroup && isLastGroup;
-                return <div key={activity.id} className="flex gap-4 relative">
+                return <div key={activity.id} className="flex gap-4 relative items-start">
                         {/* Time */}
-                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0 pt-0.5">
+                        <div className="text-sm text-muted-foreground w-20 flex-shrink-0">
                           {format(new Date(activity.timestamp), "h:mm a")}
                         </div>
 
                         {/* Icon with connecting line */}
-                        <div className="flex-shrink-0 pt-0.5 relative">
+                        <div className="flex-shrink-0 relative">
                           {/* Connecting line above */}
                           {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />}
                           
