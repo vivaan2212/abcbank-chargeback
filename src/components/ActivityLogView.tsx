@@ -10,6 +10,7 @@ import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
+import { RepresentmentPanel } from "./RepresentmentPanel";
 import paceAvatar from "@/assets/pace-logo-grey.png";
 import videoIcon from "@/assets/video-icon.png";
 
@@ -74,6 +75,11 @@ interface Activity {
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void' | 'review_decision';
   showRepresentmentActions?: boolean;
   representmentTransactionId?: string;
+  showRepresentmentPanel?: boolean;
+  representmentStatus?: string;
+  merchantReason?: string;
+  merchantDocumentUrl?: string;
+  temporaryCreditProvided?: boolean;
   color?: 'green' | 'blue' | 'orange' | 'yellow';
   tag?: string;
   reasoning?: string[];
@@ -539,8 +545,12 @@ const ActivityLogView = ({
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
             repActivity.activityType = 'needs_attention';
-            repActivity.showRepresentmentActions = isBankAdmin;
+            repActivity.showRepresentmentPanel = isBankAdmin;
+            repActivity.representmentStatus = repData.representment_status;
             repActivity.representmentTransactionId = dispute.transaction.id;
+            repActivity.merchantReason = repData.merchant_reason_text;
+            repActivity.merchantDocumentUrl = repData.merchant_document_url;
+            repActivity.temporaryCreditProvided = dispute.transaction?.temporary_credit_provided;
             if (repData.merchant_reason_text) {
               repActivity.details += `\n\nMerchant's reason: ${repData.merchant_reason_text}`;
             }
@@ -1302,7 +1312,22 @@ const ActivityLogView = ({
                               {activity.details}
                             </div>}
 
-                          {/* Representment Action Buttons */}
+                          {/* Representment Panel (for pending status) */}
+                          {activity.showRepresentmentPanel && activity.representmentTransactionId && (
+                            <div className="mt-3">
+                              <RepresentmentPanel
+                                transactionId={activity.representmentTransactionId}
+                                representmentStatus={activity.representmentStatus || 'pending'}
+                                merchantReason={activity.merchantReason}
+                                merchantDocumentUrl={activity.merchantDocumentUrl}
+                                temporaryCreditProvided={activity.temporaryCreditProvided}
+                                transactionDisputeStatus={transactionDetails?.dispute_status}
+                                onActionComplete={() => loadDisputeData()}
+                              />
+                            </div>
+                          )}
+
+                          {/* Representment Action Buttons (for customer evidence review) */}
                           {activity.showRepresentmentActions && activity.representmentTransactionId && <div className="mt-3 flex gap-2">
                               <Button size="sm" variant="default" onClick={() => handleApproveEvidence(activity.representmentTransactionId!)} disabled={processingRepresentment} className="gap-2">
                                 <Check className="h-4 w-4" />
