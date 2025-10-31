@@ -162,9 +162,27 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       )
       .subscribe();
 
+    // Subscribe to dispute decision changes
+    const decisionsChannel = supabase
+      .channel('dispute-decisions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'dispute_decisions',
+        },
+        (payload) => {
+          console.log('Dispute decision change detected:', payload);
+          loadDisputes();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(disputesChannel);
       supabase.removeChannel(repChannel);
+      supabase.removeChannel(decisionsChannel);
     };
   }, [statusFilter, userId, filters, sortField, sortDirection]);
 
@@ -304,6 +322,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           // Exclude write-off approved disputes from needs attention
           const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
           if (hasWriteOffDecision) return false;
+          if (dispute.status === 'write_off_approved') return false;
           
           const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'pending' || 
@@ -325,6 +344,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           // Include write-off approved disputes in done
           const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
           if (hasWriteOffDecision) return true;
+          if (dispute.status === 'write_off_approved') return true;
           
           const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
           return repStatus === 'no_representment' || 
