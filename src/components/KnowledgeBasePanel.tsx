@@ -152,17 +152,24 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                   setIsChatOpen(true);
                 }
               }}
-              onClick={() => setIsChatOpen(true)}
               className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <Button
+              size="icon"
               variant="ghost"
+              className="h-8 w-8 rounded-full hover:bg-primary/10 flex-shrink-0"
+              onClick={() => setIsChatOpen(true)}
+              disabled={!chatInput.trim()}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="default"
               size="sm"
               onClick={() => setIsChatOpen(true)}
-              className="gap-2 rounded-full hover:bg-primary hover:text-primary-foreground"
+              className="gap-2 rounded-full px-4 py-2 h-8"
             >
-              <MessageSquare className="h-4 w-4" />
-              Update
+              Update KB
             </Button>
           </div>
         </div>
