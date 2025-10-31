@@ -1614,7 +1614,6 @@ const ActivityLogView = ({
                 <h2 className="text-lg font-semibold">Knowledge Base</h2>
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">Updated 10m ago</span>
                 <Button variant="ghost" size="icon" onClick={handleCloseKnowledgeBase} className="h-8 w-8">
                   <X className="h-4 w-4" />
                 </Button>
