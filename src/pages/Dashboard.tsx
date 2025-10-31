@@ -82,11 +82,29 @@ const Dashboard = () => {
         const decisions = decisionsByDispute[dispute.id] || [];
         const hasWriteOffDecision = decisions.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
 
-        // NEEDS ATTENTION - check first to prioritize over done
-        // Exclude write-off and in_progress from needs attention
+        // DONE - terminal states must always win over needs_attention
+        const isTerminalDone = (
+          hasWriteOffDecision ||
+          status === 'write_off_approved' ||
+          ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
+          repStatus === 'no_representment' ||
+          repStatus === 'accepted_by_bank' ||
+          txn?.dispute_status === 'closed_won' ||
+          txn?.dispute_status === 'closed_lost'
+        );
+        if (isTerminalDone) {
+          newCounts.done++;
+          return;
+        }
+
+        // VOID
+        if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
+          newCounts.void++;
+          return;
+        }
+
+        // NEEDS ATTENTION (non-terminal only)
         if (
-          !hasWriteOffDecision &&
-          status !== 'write_off_approved' &&
           status !== 'in_progress' &&
           (
             repStatus === 'pending' ||
@@ -97,26 +115,6 @@ const Dashboard = () => {
           )
         ) {
           newCounts.needs_attention++;
-          return;
-        }
-
-        // DONE - check after needs_attention
-        if (
-          hasWriteOffDecision ||
-          status === 'write_off_approved' ||
-          ['done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 'representment_contested', 'write_off_approved'].includes(status) ||
-          repStatus === 'no_representment' ||
-          repStatus === 'accepted_by_bank' ||
-          txn?.dispute_status === 'closed_won' ||
-          txn?.dispute_status === 'closed_lost'
-        ) {
-          newCounts.done++;
-          return;
-        }
-
-        // VOID
-        if (['rejected', 'cancelled', 'expired', 'void'].includes(status)) {
-          newCounts.void++;
           return;
         }
 

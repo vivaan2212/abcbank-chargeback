@@ -306,6 +306,10 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for needs_attention
       if (statusFilter === 'needs_attention') {
         filteredData = filteredData.filter((dispute: any) => {
+          // Exclude terminal "done" states from needs attention regardless of flags
+          const terminalDoneStatuses = ['done','completed','approved','ineligible','closed_lost','closed_won','representment_contested','write_off_approved'];
+          if (terminalDoneStatuses.includes(dispute.status)) return false;
+
           // Exclude write-off approved disputes from needs attention
           const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
           if (hasWriteOffDecision) return false;
@@ -314,15 +318,17 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           // Exclude in_progress cases from needs attention
           if (dispute.status === 'in_progress') return false;
           
-          const repRel = (dispute.transaction as any)?.chargeback_representment_static;
-          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           const txn = dispute.transaction;
+          const repRel = (txn as any)?.chargeback_representment_static;
+          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
+
+          // Exclude if representment or transaction is terminal
+          if (repStatus === 'no_representment' || repStatus === 'accepted_by_bank' || txn?.dispute_status === 'closed_won' || txn?.dispute_status === 'closed_lost') {
+            return false;
+          }
           
-          // Show in needs_attention if:
-          // 1. Merchant has challenged (pending representment)
-          // 2. Customer has submitted evidence (needs admin review)
-          // 3. Transaction explicitly needs attention flag
-          // 4. Dispute requires action or manual review
+          // Show in needs_attention if pending representment, awaiting customer info, customer evidence submitted,
+          // explicit transaction needs_attention, or dispute requires manual action
           return repStatus === 'pending' || 
                  repStatus === 'awaiting_customer_info' ||
                  txn?.dispute_status === 'evidence_submitted' ||
