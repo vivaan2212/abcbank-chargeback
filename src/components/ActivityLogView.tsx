@@ -33,6 +33,7 @@ const stagePriorityMap: Record<string, number> = {
   'rep-evidence-reviewed': 21,
   'rep-chargeback-recalled': 22,
   'rep-credit-reversed': 23,
+  'customer-evidence-submitted': 24,
   // Write-off
   'write-off': 90
 };
@@ -158,6 +159,18 @@ const ActivityLogView = ({
       event: 'UPDATE',
       schema: 'public',
       table: 'chargeback_representment_static'
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'dispute_customer_evidence'
+    }, () => {
+      loadDisputeData();
+    }).on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'dispute_customer_evidence_request'
     }, () => {
       loadDisputeData();
     }).subscribe();
@@ -605,6 +618,32 @@ const ActivityLogView = ({
             expandable: true,
             details: `Amount reversed: ₹${creditAmount.toLocaleString()}\n\nThe temporary credit has been reversed and deducted from your account as the merchant won the representment.`,
             activityType: 'human_action'
+          });
+        }
+      }
+
+      // 9. Customer evidence submission (if exists)
+      if (transactionId) {
+        const { data: customerEvidence } = await supabase
+          .from('dispute_customer_evidence')
+          .select('*')
+          .eq('transaction_id', transactionId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (customerEvidence) {
+          activityList.push({
+            id: 'customer-evidence-submitted',
+            timestamp: customerEvidence.created_at,
+            label: 'Customer submitted additional evidence',
+            expandable: true,
+            details: `Customer note: ${customerEvidence.customer_note || 'No note provided'}\n\nAI Evaluation: ${customerEvidence.ai_sufficient ? '✓ Sufficient' : '⚠ Insufficient'}\n\nSummary: ${customerEvidence.ai_summary || 'No summary available'}`,
+            activityType: customerEvidence.ai_sufficient ? 'success' : 'needs_attention',
+            attachments: customerEvidence.evidence_type === 'files' ? [{
+              label: 'Customer evidence documents',
+              icon: 'document'
+            }] : undefined
           });
         }
       }
