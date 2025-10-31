@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
 import { useToast } from "@/hooks/use-toast";
 import paceAvatar from "@/assets/pace-logo-grey.png";
+import videoIcon from "@/assets/video-icon.png";
 
 // Stage priority map for enforcing activity order
 const stagePriorityMap: Record<string, number> = {
@@ -393,7 +394,7 @@ const ActivityLogView = ({
             if (action.video) {
               attachments.push({
                 label: 'Video Recording',
-                icon: '🎥',
+                icon: 'video',
                 action: 'video',
                 videoData: action.video
               });
@@ -437,7 +438,7 @@ const ActivityLogView = ({
               if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0 && dispute.chargeback_actions[0].video) {
                 attachments.push({
                   label: 'Video Recording',
-                  icon: '🎥',
+                  icon: 'video',
                   action: 'video',
                   videoData: dispute.chargeback_actions[0].video
                 });
@@ -461,7 +462,7 @@ const ActivityLogView = ({
                 if (videoData) {
                   attachments.push({
                     label: 'Video Recording',
-                    icon: '🎥',
+                    icon: 'video',
                     action: 'video',
                     videoData
                   });
@@ -1296,6 +1297,8 @@ const ActivityLogView = ({
                                       <FileText className="h-4 w-4" />
                                     ) : attachment.icon === 'link' ? (
                                       <Share2 className="h-4 w-4" />
+                                    ) : attachment.icon === 'video' ? (
+                                      <img src={videoIcon} alt="video" className="h-4 w-4" />
                                     ) : (
                                       <span>{attachment.icon}</span>
                                     )}
@@ -1307,6 +1310,8 @@ const ActivityLogView = ({
                                       <Database className="h-4 w-4" />
                                     ) : attachment.icon === 'document' ? (
                                       <FileText className="h-4 w-4" />
+                                    ) : attachment.icon === 'video' ? (
+                                      <img src={videoIcon} alt="video" className="h-4 w-4" />
                                     ) : (
                                       <span>{attachment.icon}</span>
                                     )}
