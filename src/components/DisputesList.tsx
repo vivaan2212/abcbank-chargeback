@@ -276,7 +276,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           "awaiting_merchant_refund"
         ]);
       } else if (statusFilter === "done") {
-        query = query.in("status", ["approved", "completed", "ineligible", "closed_lost", "representment_contested"]);
+        // Do not restrict by status here; we'll compute "done" client-side based on decisions,
+        // representment, and transaction statuses
       } else if (statusFilter === "needs_attention") {
         // Intentionally do not restrict by status; we'll compute from logs and flags
       } else if (statusFilter === "void") {
@@ -324,7 +325,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           if (hasWriteOffDecision) return false;
           if (dispute.status === 'write_off_approved') return false;
           
-          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+          const repRel = (dispute.transaction as any)?.chargeback_representment_static;
+          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'pending' || 
                  ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status);
         });
@@ -333,7 +335,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Special handling for awaiting_customer filter
       if (statusFilter === 'awaiting_customer') {
         filteredData = filteredData.filter(dispute => {
-          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+          const repRel = (dispute.transaction as any)?.chargeback_representment_static;
+          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'awaiting_customer_info';
         });
       }
@@ -346,7 +349,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           if (hasWriteOffDecision) return true;
           if (dispute.status === 'write_off_approved') return true;
           
-          const repStatus = (dispute.transaction as any)?.chargeback_representment_static?.representment_status;
+          const repRel = (dispute.transaction as any)?.chargeback_representment_static;
+          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'no_representment' || 
                  repStatus === 'accepted_by_bank' ||
                  dispute.transaction?.dispute_status === 'closed_won' ||
