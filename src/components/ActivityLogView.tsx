@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -1120,7 +1120,7 @@ const ActivityLogView = ({
         <div className="flex-1 overflow-auto px-4 py-4">
           {transactionDetails ? <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Database className="h-4 w-4" />
+                <Layers className="h-4 w-4" />
                 <span>Disputed transaction</span>
               </div>
 
