@@ -311,6 +311,9 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           if (hasWriteOffDecision) return false;
           if (dispute.status === 'write_off_approved') return false;
           
+          // Exclude in_progress cases from needs attention
+          if (dispute.status === 'in_progress') return false;
+          
           const repRel = (dispute.transaction as any)?.chargeback_representment_static;
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'pending' || 
