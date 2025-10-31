@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, PanelLeft, ArrowUp, Check, X, Layers, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -1291,7 +1291,7 @@ const ActivityLogView = ({
                                     ) : attachment.icon === 'document' ? (
                                       <FileText className="h-4 w-4" />
                                     ) : attachment.icon === 'link' ? (
-                                      <ExternalLink className="h-4 w-4" />
+                                      <Share2 className="h-4 w-4" />
                                     ) : (
                                       <span>{attachment.icon}</span>
                                     )}
@@ -1348,8 +1348,8 @@ const ActivityLogView = ({
               <span>Knowledge Base</span>
             </Button>
             <Button variant="ghost" size="sm" className="h-8 gap-2">
-              <ExternalLink className="h-4 w-4" />
-              <span>Browser agent</span>
+              <Share2 className="h-4 w-4" />
+              <span>Share</span>
             </Button>
           </div>
         </div>

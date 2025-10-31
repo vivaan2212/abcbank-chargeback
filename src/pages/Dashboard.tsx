@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, BookOpen, Check, X, ExternalLink } from "lucide-react";
+import { LogOut, BookOpen, Share2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import DisputesList from "@/components/DisputesList";
 import { getUserRole } from "@/lib/auth";
@@ -251,8 +251,8 @@ const Dashboard = () => {
                   Knowledge Base
                 </Button>
                 <Button variant="ghost" size="sm">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Browser agent
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
                 </Button>
               </div>
             </div>
