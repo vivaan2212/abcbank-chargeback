@@ -85,6 +85,9 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get current user (admin who is accepting)
+    const { data: { user } } = await supabase.auth.getUser();
+
     // Log to chargeback_actions if there's a dispute_id
     const { data: dispute } = await supabase
       .from('disputes')
@@ -118,6 +121,15 @@ Deno.serve(async (req) => {
         temporary_credit_issued: false,
       });
     }
+
+    // Log to representment_audit_log
+    await supabase.from('representment_audit_log').insert({
+      transaction_id: transaction_id,
+      action: 'accept',
+      performed_by: user?.id || null,
+      admin_notes: admin_notes || null,
+      merchant_document_url: transaction.chargeback_representment_static?.[0]?.merchant_document_url || null,
+    });
 
     console.log('Successfully accepted representment');
 

@@ -622,6 +622,36 @@ export type Database = {
         }
         Relationships: []
       }
+      representment_audit_log: {
+        Row: {
+          action: string
+          admin_notes: string | null
+          id: string
+          merchant_document_url: string | null
+          performed_at: string
+          performed_by: string | null
+          transaction_id: string
+        }
+        Insert: {
+          action: string
+          admin_notes?: string | null
+          id?: string
+          merchant_document_url?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          transaction_id: string
+        }
+        Update: {
+          action?: string
+          admin_notes?: string | null
+          id?: string
+          merchant_document_url?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           acquirer_name: string
