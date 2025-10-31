@@ -37,6 +37,7 @@ const stagePriorityMap: Record<string, number> = {
   'rebuttal-submitted': 25,
   'rebuttal-accepted': 26,
   'chargeback-recalled': 27,
+  'case-resolved-merchant-accepted': 28,
   // Write-off
   'write-off': 90
 };
@@ -718,6 +719,27 @@ const ActivityLogView = ({
         }
       }
 
+      // Check for case resolved (merchant accepted evidence)
+      const { data: actionLogs } = await supabase
+        .from('dispute_action_log')
+        .select('*')
+        .eq('transaction_id', transactionId);
+
+      const resolvedLog = actionLogs?.find(log => log.action === 'case_resolved_merchant_accepted');
+      if (resolvedLog) {
+        const creditAmount = dispute.transaction?.temporary_credit_amount || dispute.transaction?.transaction_amount || 0;
+        const currency = dispute.transaction?.transaction_currency || 'INR';
+        activityList.push({
+          id: 'case-resolved-merchant-accepted',
+          timestamp: resolvedLog.performed_at,
+          label: 'Case Resolved - Merchant Accepted Evidence',
+          expandable: true,
+          details: `${resolvedLog.note || 'Customer evidence submitted. Merchant accepted evidence and case is resolved.'}\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been converted to permanent credit.\n\nCase is now closed.`,
+          activityType: 'done',
+          color: 'green'
+        });
+      }
+
       // Check for write-off approval
       const writeOffDecision = (dispute as any).dispute_decisions?.find(
         (d: any) => d.decision === 'APPROVE_WRITEOFF'
@@ -954,8 +976,14 @@ const ActivityLogView = ({
       handleSubmitComment();
     }
   };
-  const getActivityIcon = (type?: Activity['activityType']) => {
+  const getActivityIcon = (type?: Activity['activityType'], color?: string) => {
     const iconClasses = "h-2.5 w-2.5 flex-shrink-0";
+    
+    // Special handling for green colored done activities (final resolution)
+    if (type === 'done' && color === 'green') {
+      return <div className={cn(iconClasses, "rounded-full bg-green-600 dark:bg-green-500")} />;
+    }
+    
     switch (type) {
       case 'error':
         return <div className={cn(iconClasses, "rotate-45 rounded-sm border-2 border-red-500 bg-background")} />;
@@ -1177,7 +1205,7 @@ const ActivityLogView = ({
                           {/* Connecting line above */}
                           {!isFirstActivity && <div className="absolute left-1/2 -translate-x-1/2 bottom-full h-6 w-px bg-border" />}
                           
-                          {getActivityIcon(activity.activityType)}
+                          {getActivityIcon(activity.activityType, activity.color)}
                           
                           {/* Connecting line below */}
                           {!isLastActivity && <div className="absolute left-1/2 -translate-x-1/2 top-full h-6 w-px bg-border" />}
@@ -1186,7 +1214,7 @@ const ActivityLogView = ({
                         {/* Content */}
                         <div className={cn(
                           "flex-1 min-w-0 rounded-lg p-3",
-                          activity.color === 'green' && "border-l-4 border-green-500 bg-green-50 dark:bg-green-950/30",
+                          activity.color === 'green' && "border-l-4 border-green-600 bg-green-50 dark:bg-green-950/30",
                           activity.color === 'blue' && "border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30",
                           activity.color === 'orange' && "border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30",
                           activity.color === 'yellow' && "border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30"

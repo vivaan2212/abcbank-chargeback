@@ -146,16 +146,37 @@ Respond with a JSON object ONLY (no other text):
       .update({ status: 'submitted' })
       .eq('transaction_id', transaction_id);
 
-    // Update transaction to trigger needs_attention for bank review and change status
+    // Automatically resolve case: merchant accepts evidence, make temporary credit permanent
     await supabase
       .from('transactions')
       .update({ 
-        needs_attention: true,
-        dispute_status: 'evidence_submitted'
+        needs_attention: false,
+        dispute_status: 'resolved_merchant_accepted',
+        temporary_credit_provided: false, // Credit is now permanent
+        refund_received: true,
+        refund_amount: transaction.temporary_credit_amount || transaction.transaction_amount
       })
       .eq('id', transaction_id);
 
-    console.log('Evidence evaluated successfully:', evaluation);
+    // Update representment status to mark as resolved
+    await supabase
+      .from('chargeback_representment_static')
+      .update({ 
+        representment_status: 'customer_evidence_approved'
+      })
+      .eq('transaction_id', transaction_id);
+
+    // Log the final resolution action
+    await supabase
+      .from('dispute_action_log')
+      .insert({
+        transaction_id: transaction_id,
+        action: 'case_resolved_merchant_accepted',
+        note: 'Customer evidence submitted. Merchant accepted evidence and case is resolved. Temporary credit converted to permanent.',
+        performed_by: transaction.customer_id
+      });
+
+    console.log('Evidence evaluated and case resolved successfully:', evaluation);
 
     return new Response(
       JSON.stringify({
