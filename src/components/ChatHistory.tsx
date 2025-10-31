@@ -121,10 +121,11 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
 
   const deleteConversationWithRetry = async (
     conversationId: string,
-    attempt: number = 1
+    attempt: number = 1,
+    idempotencyKey?: string
   ): Promise<void> => {
     const maxRetries = 3;
-    const idempotencyKey = crypto.randomUUID();
+    const key = idempotencyKey || crypto.randomUUID();
     const timeout = 8000;
 
     const retryDelays = [0, 400, 1200]; // exponential backoff
@@ -143,7 +144,7 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'x-idempotency-key': idempotencyKey,
+            'x-idempotency-key': key,
           },
           body: JSON.stringify({ conversationId }),
           signal: controller.signal,
@@ -165,7 +166,7 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
       if (attempt < maxRetries) {
         const delay = retryDelays[attempt - 1] || 1200;
         await new Promise(resolve => setTimeout(resolve, delay));
-        return deleteConversationWithRetry(conversationId, attempt + 1);
+        return deleteConversationWithRetry(conversationId, attempt + 1, key);
       }
 
       throw error;
