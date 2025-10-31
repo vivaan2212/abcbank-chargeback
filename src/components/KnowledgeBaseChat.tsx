@@ -199,23 +199,21 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Chat Container - No backdrop, integrated into panel */}
-      <div className="h-full w-full bg-background flex flex-col">
-        {/* Header */}
-        <div className="border-b px-4 py-3 flex items-center justify-between bg-background">
-          <div className="flex items-center gap-2">
-            <img 
-              src="/src/assets/pace-avatar.png" 
-              alt="Pace" 
-              className="h-8 w-8 rounded-full"
-            />
-            <h3 className="font-semibold text-sm">Chat with Pace</h3>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+    <div className="h-full w-full flex flex-col">
+      {/* Header */}
+      <div className="border-b px-4 py-3 flex items-center justify-between bg-background mb-4">
+        <div className="flex items-center gap-2">
+          <img 
+            src="/src/assets/pace-avatar.png" 
+            alt="Pace" 
+            className="h-8 w-8 rounded-full"
+          />
+          <h3 className="font-semibold text-sm">Update Knowledge Base</h3>
         </div>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -229,7 +227,11 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
             >
               {message.role !== "user" && (
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm">⚡</span>
+                  <img 
+                    src="/src/assets/pace-avatar.png" 
+                    alt="Pace" 
+                    className="h-8 w-8 rounded-full"
+                  />
                 </div>
               )}
               <div
@@ -249,7 +251,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
               </div>
               {message.role === "user" && (
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm text-primary-foreground">You</span>
+                  <span className="text-xs text-primary-foreground font-semibold">You</span>
                 </div>
               )}
             </div>
@@ -257,7 +259,11 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
           {isLoading && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm">⚡</span>
+                <img 
+                  src="/src/assets/pace-avatar.png" 
+                  alt="Pace" 
+                  className="h-8 w-8 rounded-full"
+                />
               </div>
               <div className="bg-muted rounded-lg px-4 py-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -277,7 +283,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
             />
             <Input
               type="text"
-              placeholder="Type your message..."
+              placeholder="Type your update request..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -296,8 +302,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
           </div>
         </div>
       </div>
-    </>
-  );
-};
+    );
+  };
 
 export default KnowledgeBaseChat;

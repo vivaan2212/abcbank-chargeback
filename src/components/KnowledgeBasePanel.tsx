@@ -131,140 +131,149 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto px-6 py-6">
-          {/* Answer Display Area */}
-          {answer && (
-            <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-foreground mb-1">Your Question:</p>
-                  <p className="text-xs text-muted-foreground italic">{askedQuestion}</p>
+        <div className="flex-1 overflow-auto px-6 py-6 relative">
+          {/* KB Content View */}
+          <div className={cn(
+            "transition-all duration-300",
+            isChatOpen ? "opacity-0 translate-x-[-20px] pointer-events-none absolute inset-0" : "opacity-100 translate-x-0"
+          )}>
+            {/* Answer Display Area */}
+            {answer && (
+              <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-foreground mb-1">Your Question:</p>
+                    <p className="text-xs text-muted-foreground italic">{askedQuestion}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setAnswer("");
+                      setAskedQuestion("");
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => {
-                    setAnswer("");
-                    setAskedQuestion("");
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex items-start gap-3 pt-3 border-t">
-                <img 
-                  src="/src/assets/pace-avatar.png" 
-                  alt="Pace" 
-                  className="h-8 w-8 rounded-full flex-shrink-0 mt-1"
-                />
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-foreground mb-2">Pace&apos;s Answer:</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{answer}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <Tabs defaultValue="content" className="h-full flex flex-col">
-            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-              <TabsTrigger value="content" className="text-xs">
-                <BookOpen className="h-3 w-3 mr-2" />
-                Content
-              </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs">
-                <History className="h-3 w-3 mr-2" />
-                Update History
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="content" className="mt-0 flex-1 overflow-auto">
-              {isLoadingContent ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-sm text-muted-foreground">Loading knowledge base...</p>
+                <div className="flex items-start gap-3 pt-3 border-t">
+                  <img 
+                    src="/src/assets/pace-avatar.png" 
+                    alt="Pace" 
+                    className="h-8 w-8 rounded-full flex-shrink-0 mt-1"
+                  />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-foreground mb-2">Pace&apos;s Answer:</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{answer}</p>
                   </div>
                 </div>
-              ) : (
-                <div className="max-w-3xl space-y-6 prose prose-sm max-w-none">
-                  <div 
-                    className="text-xs leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mb-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:mb-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_p]:mb-4 [&_ul]:text-xs [&_ul]:text-muted-foreground [&_ul]:space-y-1 [&_ol]:text-xs [&_ol]:text-muted-foreground [&_ol]:space-y-3 [&_li]:text-xs [&_strong]:text-foreground"
-                    dangerouslySetInnerHTML={{ __html: content }}
-                  />
-                </div>
-              )}
-            </TabsContent>
+              </div>
+            )}
 
-            <TabsContent value="history" className="mt-0 flex-1 overflow-auto">
-              <KnowledgeBaseUpdateHistory />
-            </TabsContent>
-          </Tabs>
+            <Tabs defaultValue="content" className="h-full flex flex-col">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+                <TabsTrigger value="content" className="text-xs">
+                  <BookOpen className="h-3 w-3 mr-2" />
+                  Content
+                </TabsTrigger>
+                <TabsTrigger value="history" className="text-xs">
+                  <History className="h-3 w-3 mr-2" />
+                  Update History
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="content" className="mt-0 flex-1 overflow-auto">
+                {isLoadingContent ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-sm text-muted-foreground">Loading knowledge base...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="max-w-3xl space-y-6 prose prose-sm max-w-none">
+                    <div 
+                      className="text-xs leading-relaxed [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:mb-2 [&_h4]:text-xs [&_h4]:font-bold [&_h4]:mb-1 [&_p]:text-xs [&_p]:text-muted-foreground [&_p]:mb-4 [&_ul]:text-xs [&_ul]:text-muted-foreground [&_ul]:space-y-1 [&_ol]:text-xs [&_ol]:text-muted-foreground [&_ol]:space-y-3 [&_li]:text-xs [&_strong]:text-foreground"
+                      dangerouslySetInnerHTML={{ __html: content }}
+                    />
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="history" className="mt-0 flex-1 overflow-auto">
+                <KnowledgeBaseUpdateHistory />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Update Chat View */}
+          <div className={cn(
+            "transition-all duration-300 absolute inset-0 px-6 py-6",
+            isChatOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-[20px] pointer-events-none"
+          )}>
+            <KnowledgeBaseChat
+              isOpen={isChatOpen}
+              onClose={() => setIsChatOpen(false)}
+              onUpdateSuccess={handleUpdateSuccess}
+              initialInput={chatInput}
+            />
+          </div>
         </div>
 
         {/* AI Question Interface at Bottom */}
         <div className="border-t px-6 py-4 bg-background">
-          <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3 hover:bg-muted/70 transition-colors">
-            <img 
-              src="/src/assets/pace-avatar.png" 
-              alt="Pace" 
-              className="h-6 w-6 rounded-full flex-shrink-0"
-            />
-            <Input
-              type="text"
-              placeholder="Ask anything to Pace"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoadingAnswer}
-              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-            {isLoadingAnswer ? (
-              <div className="h-8 w-8 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full hover:bg-primary/10 flex-shrink-0"
-                onClick={handleAskQuestion}
-                disabled={!chatInput.trim()}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-            )}
+          {isChatOpen ? (
             <Button
-              variant="default"
-              size="sm"
-              onClick={() => setIsChatOpen(true)}
-              className="gap-2 rounded-full px-4 py-2 h-8"
-            >
-              Update KB
-            </Button>
-          </div>
-        </div>
-
-        {/* Chat Overlay - Positioned within the panel */}
-        {isChatOpen && (
-          <>
-            {/* Backdrop within panel */}
-            <div 
-              className="absolute inset-0 bg-black/30 z-10 animate-fade-in"
+              variant="ghost"
               onClick={() => setIsChatOpen(false)}
-            />
-            
-            {/* Chat Modal - Right side overlay */}
-            <div className="absolute top-0 right-0 bottom-0 w-full md:w-2/3 bg-background z-20 shadow-2xl flex flex-col animate-slide-in-right">
-              <KnowledgeBaseChat
-                isOpen={isChatOpen}
-                onClose={() => setIsChatOpen(false)}
-                onUpdateSuccess={handleUpdateSuccess}
-                initialInput={chatInput}
+              className="w-full justify-start gap-2"
+            >
+              <ArrowUp className="h-4 w-4 rotate-180" />
+              <span className="text-sm">Back to Knowledge Base</span>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3 hover:bg-muted/70 transition-colors">
+              <img 
+                src="/src/assets/pace-avatar.png" 
+                alt="Pace" 
+                className="h-6 w-6 rounded-full flex-shrink-0"
               />
+              <Input
+                type="text"
+                placeholder="Ask anything to Pace"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoadingAnswer}
+                className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              {isLoadingAnswer ? (
+                <div className="h-8 w-8 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full hover:bg-primary/10 flex-shrink-0"
+                  onClick={handleAskQuestion}
+                  disabled={!chatInput.trim()}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsChatOpen(true)}
+                className="gap-2 rounded-full px-4 py-2 h-8"
+              >
+                Update KB
+              </Button>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </>
   );
