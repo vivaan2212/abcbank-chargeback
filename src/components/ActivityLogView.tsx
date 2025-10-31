@@ -620,8 +620,16 @@ const ActivityLogView = ({
             });
             
             // Don't push repActivity for accepted_by_bank since we've added the 3 activities above
-            return; // Exit early to skip the repActivity.push at the end
-            break;
+            // Finalize activity list now so UI updates immediately and action buttons disappear
+            activityList.sort((a, b) => {
+              const orderDiff = getStageOrder(a.id) - getStageOrder(b.id);
+              if (orderDiff !== 0) return orderDiff;
+              return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+            });
+            setActivities(activityList);
+            setTransactionDetails(dispute.transaction);
+            return; // Exit early to skip the repActivity.push and the rest of the builder for this flow
+            
           case 'rejected_by_bank':
             repActivity.label = 'Representment Rejected - Customer Wins';
             repActivity.details = 'The bank has rejected the merchant\'s representment. Your chargeback stands as approved.';
