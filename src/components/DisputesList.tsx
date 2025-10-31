@@ -316,7 +316,17 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           
           const repRel = (dispute.transaction as any)?.chargeback_representment_static;
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
+          const txn = dispute.transaction;
+          
+          // Show in needs_attention if:
+          // 1. Merchant has challenged (pending representment)
+          // 2. Customer has submitted evidence (needs admin review)
+          // 3. Transaction explicitly needs attention flag
+          // 4. Dispute requires action or manual review
           return repStatus === 'pending' || 
+                 repStatus === 'awaiting_customer_info' ||
+                 txn?.dispute_status === 'evidence_submitted' ||
+                 txn?.needs_attention === true ||
                  ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status);
         });
       }
