@@ -75,9 +75,12 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
         .from('dispute_customer_evidence_request')
         .select('*')
         .eq('transaction_id', dispute.transaction.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       setEvidenceRequest(reqData);
+      console.log('[DisputeDetail] evidenceRequest', reqData);
 
       // Check if evidence was submitted
       const { data: evidenceData } = await supabase
@@ -89,6 +92,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
         .maybeSingle();
 
       setCustomerEvidence(evidenceData);
+      console.log('[DisputeDetail] customerEvidence', evidenceData);
     };
 
     loadEvidenceData();
@@ -268,6 +272,17 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
             { label: "Status", value: submitted ? 'Evidence submitted' : 'Awaiting response' }
           ]
         }
+      });
+    }
+
+    // Fallback: if transaction reflects evidence submitted but no record loaded yet
+    if (!customerEvidence && dispute.transaction?.dispute_status === 'evidence_submitted') {
+      steps.push({
+        label: "Customer evidence submitted",
+        description: "Evidence received from customer",
+        completed: true,
+        timestamp: dispute.updated_at,
+        hasDetails: false,
       });
     }
 
