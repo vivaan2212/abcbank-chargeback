@@ -567,82 +567,240 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     return statusMap[status] || status;
   };
 
-  // Derive a display status from logs and flags to match activity log
+  // Build activity timeline and get the most recent activity label (matches ActivityLogView)
   const getDerivedStatus = (dispute: Dispute): string => {
-    const actions = dispute.chargeback_actions || [];
+    // Build activity timeline similar to ActivityLogView
+    const activityList: Array<{id: string; timestamp: string; label: string; order: number}> = [];
     
-    // Check for write-off approval first (highest priority)
+    const stagePriorityMap: Record<string, number> = {
+      'milestone-received': 1,
+      'milestone-security': 2,
+      'milestone-eligibility': 3,
+      'milestone-docs-requested': 4,
+      'milestone-docs-uploaded': 5,
+      'milestone-reason': 6,
+      'action-temp-credit': 7,
+      'action-awaiting-refund': 8,
+      'action-manual-review': 9,
+      'action-reviewed': 10,
+      'action-filed': 11,
+      'milestone-final-status': 12,
+      'representment-status': 20,
+      'rep-evidence-reviewed': 21,
+      'rep-chargeback-recalled': 22,
+      'rep-credit-reversed': 23,
+      'customer-evidence-submitted': 24,
+      'write-off': 90
+    };
+
+    const getStageOrder = (id: string): number => {
+      if (stagePriorityMap[id]) return stagePriorityMap[id];
+      for (const [key, priority] of Object.entries(stagePriorityMap)) {
+        if (id.startsWith(key)) return priority;
+      }
+      return 999;
+    };
+
+    // 1. Dispute received
+    activityList.push({
+      id: 'milestone-received',
+      timestamp: dispute.created_at,
+      label: 'Received a disputed transaction',
+      order: getStageOrder('milestone-received')
+    });
+
+    // 2. Security analysis
+    if (dispute.transaction) {
+      const isSecured = dispute.transaction.secured_indication === 1;
+      activityList.push({
+        id: 'milestone-security',
+        timestamp: dispute.created_at,
+        label: isSecured ? 'Transaction is secured' : 'Transaction is unsecured',
+        order: getStageOrder('milestone-security')
+      });
+    }
+
+    // 3. Eligibility check
+    if (dispute.eligibility_status) {
+      const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
+      activityList.push({
+        id: 'milestone-eligibility',
+        timestamp: dispute.updated_at,
+        label: isEligible ? 'Transaction is eligible for chargeback' : 'Transaction is not eligible for chargeback',
+        order: getStageOrder('milestone-eligibility')
+      });
+    }
+
+    // 4. Document upload
+    if (dispute.documents && Array.isArray(dispute.documents) && dispute.documents.length > 0) {
+      activityList.push({
+        id: 'milestone-docs-uploaded',
+        timestamp: dispute.updated_at,
+        label: `Customer uploaded ${dispute.documents.length} document${dispute.documents.length > 1 ? 's' : ''}`,
+        order: getStageOrder('milestone-docs-uploaded')
+      });
+    }
+
+    // 5. Reason selection
+    if (dispute.reason_label || dispute.custom_reason) {
+      activityList.push({
+        id: 'milestone-reason',
+        timestamp: dispute.updated_at,
+        label: `Dispute reason: ${dispute.reason_label || dispute.custom_reason}`,
+        order: getStageOrder('milestone-reason')
+      });
+    }
+
+    // 6. Chargeback actions
+    const actions = dispute.chargeback_actions || [];
+    actions.forEach((action, idx) => {
+      if (action.temporary_credit_issued) {
+        activityList.push({
+          id: `action-${idx}-temp-credit`,
+          timestamp: action.updated_at || action.created_at,
+          label: 'Temporary credit approved',
+          order: getStageOrder('action-temp-credit')
+        });
+      }
+      if (action.awaiting_merchant_refund) {
+        activityList.push({
+          id: `action-${idx}-awaiting-refund`,
+          timestamp: action.updated_at || action.created_at,
+          label: 'Awaiting merchant refund',
+          order: getStageOrder('action-awaiting-refund')
+        });
+      }
+      if (action.requires_manual_review) {
+        activityList.push({
+          id: `action-${idx}-manual-review`,
+          timestamp: action.updated_at || action.created_at,
+          label: 'Case requires manual review',
+          order: getStageOrder('action-manual-review')
+        });
+      }
+      if (action.chargeback_filed) {
+        activityList.push({
+          id: `action-${idx}-filed`,
+          timestamp: action.updated_at || action.created_at,
+          label: 'Chargeback filing completed',
+          order: getStageOrder('action-filed')
+        });
+      }
+    });
+
+    // 7. Write-off decision
     const latestDecision = dispute.dispute_decisions?.[0];
     if (latestDecision?.decision === 'APPROVE_WRITEOFF') {
-      return "Write-off provided to customer";
+      activityList.push({
+        id: 'write-off',
+        timestamp: latestDecision.created_at,
+        label: 'Write-off provided to customer',
+        order: getStageOrder('write-off')
+      });
     }
-    
-    // Access representment data - handle both single object and array
+
+    // 8. Final status
+    const status = dispute.status?.toLowerCase() || '';
+    const finalStatuses = ['completed', 'approved', 'rejected', 'void', 'cancelled', 'closed_won', 'closed_lost'];
+    if (finalStatuses.includes(status)) {
+      let label = '';
+      switch (status) {
+        case 'completed':
+        case 'approved':
+        case 'closed_won':
+          label = 'Chargeback approved - Case resolved';
+          break;
+        case 'rejected':
+          label = 'Chargeback rejected';
+          break;
+        case 'void':
+        case 'cancelled':
+          label = 'Case voided';
+          break;
+      }
+      if (label) {
+        activityList.push({
+          id: 'milestone-final-status',
+          timestamp: dispute.updated_at,
+          label,
+          order: getStageOrder('milestone-final-status')
+        });
+      }
+    }
+
+    // 9. Representment status (highest priority after chargeback filed)
     const repData = (dispute.transaction as any)?.chargeback_representment_static;
     const repStatus = Array.isArray(repData) ? repData[0]?.representment_status : repData?.representment_status;
+    const hasChargebackAction = actions.length > 0;
+    const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(status);
     
-    const status = dispute.status?.toLowerCase() || '';
-
-    // Check final outcomes first (most recent)
-    if (['completed', 'approved', 'closed_won'].includes(status)) {
-      return "Chargeback approved - Case resolved";
-    }
-    if (status === 'rejected') {
-      return "Chargeback rejected";
-    }
-    if (['void', 'cancelled'].includes(status)) {
-      return "Case voided";
-    }
-
-    // Check representment status (after chargeback filed) - PRIORITY
-    if (repStatus === 'accepted_by_bank') return "Representment Accepted - Merchant Wins";
-    if (repStatus === 'rejected_by_bank') return "Representment Rejected - Customer Wins";
-    if (repStatus === 'pending') return "Merchant Representment Received";
-    if (repStatus === 'awaiting_customer_info') return "Waiting for Customer Response";
-
-    // Check chargeback actions for most recent activity
-    if (actions.length > 0) {
-      const latestAction = actions[actions.length - 1];
+    if (repData && chargebackFiledOrApproved) {
+      const repTs = repData.updated_at || dispute.updated_at;
       
-      // Check if chargeback has been filed (not in final state)
-      if (latestAction.chargeback_filed && !['completed', 'approved', 'closed_won'].includes(status)) {
-        return "Chargeback filing completed";
-      }
-      
-      // Check for awaiting merchant refund
-      if (latestAction.awaiting_merchant_refund) {
-        return "Awaiting merchant refund";
-      }
-      
-      // Check for manual review
-      if (latestAction.requires_manual_review) {
-        return "Case requires manual review";
-      }
-      
-      // Check for temporary credit
-      if (latestAction.temporary_credit_issued) {
-        return "Temporary credit approved";
+      if (repStatus === 'accepted_by_bank') {
+        // Add the three bank decision activities
+        activityList.push({
+          id: 'rep-evidence-reviewed',
+          timestamp: repTs,
+          label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
+          order: getStageOrder('rep-evidence-reviewed')
+        });
+        activityList.push({
+          id: 'rep-chargeback-recalled',
+          timestamp: repTs,
+          label: `Chargeback request has been recalled`,
+          order: getStageOrder('rep-chargeback-recalled')
+        });
+        activityList.push({
+          id: 'rep-credit-reversed',
+          timestamp: repTs,
+          label: 'Temporary credit has been reversed',
+          order: getStageOrder('rep-credit-reversed')
+        });
+      } else if (repStatus === 'rejected_by_bank') {
+        activityList.push({
+          id: 'representment-status',
+          timestamp: repTs,
+          label: 'Representment Rejected - Customer Wins',
+          order: getStageOrder('representment-status')
+        });
+      } else if (repStatus === 'pending') {
+        activityList.push({
+          id: 'representment-status',
+          timestamp: repTs,
+          label: 'Merchant Representment Received',
+          order: getStageOrder('representment-status')
+        });
+      } else if (repStatus === 'awaiting_customer_info') {
+        activityList.push({
+          id: 'representment-status',
+          timestamp: repTs,
+          label: 'Waiting for Customer Response',
+          order: getStageOrder('representment-status')
+        });
+      } else if (repStatus === 'no_representment') {
+        activityList.push({
+          id: 'representment-status',
+          timestamp: repTs,
+          label: 'Merchant Representment Period Closed',
+          order: getStageOrder('representment-status')
+        });
       }
     }
 
-    // Check document status
-    if (dispute.documents && Array.isArray(dispute.documents) && dispute.documents.length > 0) {
-      return `Customer uploaded ${dispute.documents.length} document${dispute.documents.length > 1 ? 's' : ''}`;
+    // Sort activities by stage order first, then by timestamp
+    activityList.sort((a, b) => {
+      const orderDiff = a.order - b.order;
+      if (orderDiff !== 0) return orderDiff;
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+    });
+
+    // Return the label of the most recent activity
+    if (activityList.length > 0) {
+      return activityList[activityList.length - 1].label;
     }
 
-    // Check reason selection
-    if (dispute.reason_label || dispute.custom_reason) {
-      return `Dispute reason: ${dispute.reason_label || dispute.custom_reason}`;
-    }
-
-    // Check eligibility
-    if (dispute.eligibility_status) {
-      return dispute.eligibility_status.toUpperCase() === 'ELIGIBLE' 
-        ? 'Transaction is eligible for chargeback'
-        : 'Transaction is not eligible for chargeback';
-    }
-
-    // Default to basic status label
+    // Fallback to basic status label
     return getStatusLabel(dispute.status);
   };
 
