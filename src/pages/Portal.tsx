@@ -1663,18 +1663,34 @@ Let me check if this transaction is eligible for a chargeback...`;
             formData.append(doc.requirementName, doc.file);
           });
 
-          const { data: verificationData, error: verificationError } = await supabase.functions.invoke(
-            'verify-documents',
+          // Use direct fetch with full function URL for FormData payloads
+          const { data: { session: fnSession } } = await supabase.auth.getSession();
+          if (!fnSession?.access_token) {
+            toast.error('Session expired. Please sign in again.');
+            navigate('/login');
+            return;
+          }
+
+          const verificationResp = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-documents`,
             {
-              body: formData
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${fnSession.access_token}`,
+              },
+              body: formData,
             }
           );
 
+          if (!verificationResp.ok) {
+            const errText = await verificationResp.text();
+            throw new Error(errText || 'Failed to verify documents');
+          }
+
+          const verificationData = await verificationResp.json();
+
           setIsCheckingDocuments(false);
 
-          if (verificationError) {
-            throw verificationError;
-          }
 
           console.log('Verification result:', verificationData);
 
