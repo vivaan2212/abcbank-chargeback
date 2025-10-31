@@ -539,6 +539,8 @@ const ActivityLogView = ({
             repActivity.label = 'Merchant Representment Received';
             repActivity.details = 'The merchant has contested this chargeback. Bank review is required.';
             repActivity.activityType = 'needs_attention';
+            repActivity.showRepresentmentActions = isBankAdmin;
+            repActivity.representmentTransactionId = dispute.transaction.id;
             if (repData.merchant_reason_text) {
               repActivity.details += `\n\nMerchant's reason: ${repData.merchant_reason_text}`;
             }
