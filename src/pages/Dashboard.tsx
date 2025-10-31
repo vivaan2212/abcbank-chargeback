@@ -289,7 +289,10 @@ const Dashboard = () => {
               <div className="flex items-center gap-4">
                 <h1 className="text-xl font-semibold">Chargebacks</h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={cn(
+                "flex items-center gap-2 transition-opacity duration-300",
+                isKnowledgeBaseOpen && "opacity-0 pointer-events-none"
+              )}>
                 <Button 
                   variant="ghost" 
                   size="sm"
