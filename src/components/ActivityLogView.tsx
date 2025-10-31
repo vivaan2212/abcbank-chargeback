@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers } from "lucide-react";
+import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -264,7 +264,7 @@ const ActivityLogView = ({
             label: `Customer uploaded ${docsArray.length} document${docsArray.length > 1 ? 's' : ''}`,
             attachments: docsArray.map((doc: any, idx: number) => ({
               label: doc.name || `Document ${idx + 1}`,
-              icon: '📄'
+              icon: 'document'
             })),
             activityType: 'success'
           });
@@ -360,7 +360,7 @@ const ActivityLogView = ({
           if (action.chargeback_filed && !isFinalApproved) {
             const attachments: Activity['attachments'] = [{
               label: 'View Document',
-              icon: '📄',
+              icon: 'document',
               action: 'document'
             }];
 
@@ -404,7 +404,7 @@ const ActivityLogView = ({
               // Add video attachment for approved cases - fetch video based on card network
               attachments = [{
                 label: 'View Document',
-                icon: '📄',
+                icon: 'document',
                 action: 'document'
               }];
 
@@ -551,7 +551,7 @@ const ActivityLogView = ({
               ],
               attachments: [{
                 label: 'Merchant docs, invoice, terms',
-                icon: '📄'
+                icon: 'document'
               }],
               activityType: 'review_decision',
               expandable: true
@@ -1062,6 +1062,8 @@ const ActivityLogView = ({
                               {activity.attachments.map((attachment, i) => <button key={i} onClick={() => handleAttachmentClick(attachment)} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm">
                                   {attachment.icon === 'database' ? (
                                     <Database className="h-4 w-4" />
+                                  ) : attachment.icon === 'document' ? (
+                                    <FileText className="h-4 w-4" />
                                   ) : (
                                     <span>{attachment.icon}</span>
                                   )}
