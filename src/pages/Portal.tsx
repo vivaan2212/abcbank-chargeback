@@ -1695,7 +1695,6 @@ Let me check if this transaction is eligible for a chargeback...`;
           console.log('Verification result:', verificationData);
 
           if (verificationData.success) {
-            toast.success('Documents uploaded successfully! We are now reviewing your case.');
             // All documents are valid - use decision engine for all transactions
             if (currentDisputeId && selectedTransaction) {
               // Map requirement names to keys expected by evaluate-decision
