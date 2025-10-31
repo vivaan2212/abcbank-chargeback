@@ -56,7 +56,7 @@ Available categories:
 7. "mismatch" - Order details don't match the chargeback reason
 8. "not_eligible" - Does not qualify for chargeback
 
-CRITICAL REQUIREMENT: You MUST return exactly 3 documents for ALL categories (except not_eligible and mismatch which have 0 documents).
+CRITICAL REQUIREMENT: You MUST return exactly 2 documents for ALL categories (except not_eligible and mismatch which have 0 documents).
 
 Example responses:
 
@@ -67,10 +67,9 @@ For "defective" category:
   "explanation": "Customer received damaged/defective product",
   "documents": [
     {"name": "Photo of the product showing the issue", "uploadTypes": "Image"},
-    {"name": "Proof of purchase (e.g., invoice, receipt, order confirmation)", "uploadTypes": "PDF, Image, Word"},
-    {"name": "Communication with merchant (e.g., emails, chat transcripts, support tickets)", "uploadTypes": "PDF, Image, Word, Text"}
+    {"name": "Proof of purchase (e.g., invoice, receipt, order confirmation)", "uploadTypes": "PDF, Image, Word"}
   ],
-  "userMessage": "We understand you received a defective product. Please upload 3 documents to help us process your chargeback."
+  "userMessage": "We understand you received a defective product. Please upload 2 documents to help us process your chargeback. If more information or communication proof is needed later, we'll ask you for it during review."
 }
 
 For "fraud" category:
@@ -79,11 +78,10 @@ For "fraud" category:
   "categoryLabel": "Fraudulent or unauthorized transaction",
   "explanation": "Customer claims unauthorized charge",
   "documents": [
-    {"name": "Police report or fraud affidavit", "uploadTypes": "PDF, Image, Word"},
     {"name": "Bank or credit card statement showing the charge", "uploadTypes": "PDF, Image"},
-    {"name": "Any communication with the merchant about this charge", "uploadTypes": "PDF, Image, Word, Text"}
+    {"name": "Transaction receipt or email confirmation", "uploadTypes": "PDF, Image, Word"}
   ],
-  "userMessage": "We understand this was an unauthorized charge. Please upload 3 documents to help us process your chargeback."
+  "userMessage": "We understand this was an unauthorized charge. Please upload 2 documents to help us process your chargeback. If more information or communication proof is needed later, we'll ask you for it during review."
 }
 
 For "not_received" category:
@@ -93,10 +91,9 @@ For "not_received" category:
   "explanation": "Customer didn't receive what they paid for",
   "documents": [
     {"name": "Proof of purchase (e.g., invoice, receipt, order confirmation)", "uploadTypes": "PDF, Image, Word"},
-    {"name": "Communication with merchant (e.g., emails, chat transcripts, support tickets)", "uploadTypes": "PDF, Image, Word, Text"},
-    {"name": "Bank or credit card statement showing the charge", "uploadTypes": "PDF, Image"}
+    {"name": "Delivery receipt", "uploadTypes": "PDF, Image"}
   ],
-  "userMessage": "We understand you didn't receive your order. Please upload 3 documents to help us process your chargeback."
+  "userMessage": "We understand you didn't receive your order. Please upload 2 documents to help us process your chargeback. If more information or communication proof is needed later, we'll ask you for it during review."
 }
 
 For "not_eligible" category:
@@ -119,10 +116,11 @@ For "mismatch" category (when order details don't match the reason):
 
 MANDATORY RULES:
 - FIRST, check if order details match the chargeback reason. If not, return "mismatch"
-- ALWAYS return EXACTLY 3 documents (except not_eligible or mismatch = 0 documents)
+- ALWAYS return EXACTLY 2 documents (except not_eligible or mismatch = 0 documents)
 - For product issues (defective, damaged, wrong item, etc.), document #1 MUST be "Photo of the product showing the issue" with uploadTypes "Image"
 - For generic documents, include helpful examples in parentheses (e.g., "Proof of purchase (e.g., invoice, receipt, order confirmation)")
-- Never return fewer than 3 documents unless category is not_eligible or mismatch
+- Never return fewer than 2 documents unless category is not_eligible or mismatch
+- DO NOT ask for merchant communication, emails, or correspondence in the initial filing - these will be collected later if needed
 - For not_eligible or mismatch: NEVER ask for more details or information. Simply state the reason is not eligible/mismatched and STOP.
 - Be specific and actionable with document names`
           },
@@ -210,36 +208,30 @@ MANDATORY RULES:
       defective: [
         { name: "Photo of the product showing the issue", uploadTypes: "Image" },
         { name: "Proof of purchase (e.g., invoice, receipt, order confirmation)", uploadTypes: "PDF, Image, Word" },
-        { name: "Communication with merchant (e.g., emails, chat transcripts, support tickets)", uploadTypes: "PDF, Image, Word, Text" },
       ],
       fraud: [
-        { name: "Police report or fraud affidavit", uploadTypes: "PDF, Image, Word" },
         { name: "Bank or credit card statement showing the charge", uploadTypes: "PDF, Image" },
-        { name: "Any communication with the merchant about this charge", uploadTypes: "PDF, Image, Word, Text" },
+        { name: "Transaction receipt or email confirmation", uploadTypes: "PDF, Image, Word" },
       ],
       not_received: [
         { name: "Proof of purchase (e.g., invoice, receipt, order confirmation)", uploadTypes: "PDF, Image, Word" },
-        { name: "Communication with merchant (e.g., emails, chat transcripts, support tickets)", uploadTypes: "PDF, Image, Word, Text" },
-        { name: "Bank or credit card statement showing the charge", uploadTypes: "PDF, Image" },
+        { name: "Delivery receipt", uploadTypes: "PDF, Image" },
       ],
       duplicate: [
-        { name: "Bank or credit card statement highlighting duplicate charges", uploadTypes: "PDF, Image" },
-        { name: "Proof of purchase or receipt", uploadTypes: "PDF, Image, Word" },
-        { name: "Communication with merchant requesting a refund or correction", uploadTypes: "PDF, Image, Word, Text" },
+        { name: "Bank or credit card statement showing duplicate charges", uploadTypes: "PDF, Image" },
+        { name: "Transaction receipt or invoice", uploadTypes: "PDF, Image, Word" },
       ],
       incorrect_amount: [
-        { name: "Proof of purchase showing expected amount", uploadTypes: "PDF, Image, Word" },
-        { name: "Bank or credit card statement showing charged amount", uploadTypes: "PDF, Image" },
-        { name: "Communication with merchant about the discrepancy", uploadTypes: "PDF, Image, Word, Text" },
+        { name: "Transaction receipt showing agreed price", uploadTypes: "PDF, Image, Word" },
+        { name: "Bank statement showing incorrect charge", uploadTypes: "PDF, Image" },
       ],
       billing_error: [
-        { name: "Invoice or receipt showing correct details", uploadTypes: "PDF, Image, Word" },
-        { name: "Bank or credit card statement showing the error", uploadTypes: "PDF, Image" },
-        { name: "Communication with merchant/support about the error", uploadTypes: "PDF, Image, Word, Text" },
+        { name: "Proof of transaction or invoice", uploadTypes: "PDF, Image, Word" },
+        { name: "Bank statement showing the charge", uploadTypes: "PDF, Image" },
       ],
     };
 
-    function enforceThreeDocs(category: string, docs: Doc[] = []): Doc[] {
+    function enforceTwoDocs(category: string, docs: Doc[] = []): Doc[] {
       if (category === 'not_eligible' || category === 'mismatch') return [];
       const template = TEMPLATES[category as keyof typeof TEMPLATES] ?? TEMPLATES.billing_error;
 
@@ -267,11 +259,11 @@ MANDATORY RULES:
       // Fill from template in order
       for (const d of template) pushIfMissing(d);
 
-      return result.slice(0, 3);
+      return result.slice(0, 2);
     }
 
     // Apply enforcement and normalize user message
-    classification.documents = enforceThreeDocs(classification.category, classification.documents);
+    classification.documents = enforceTwoDocs(classification.category, classification.documents);
 
     // Handle mismatch category
     if (classification.category === 'mismatch') {
@@ -287,8 +279,8 @@ MANDATORY RULES:
       }
     } else {
       // Only for valid categories that need documents
-      if (!classification.userMessage || !/\b3\b/.test(classification.userMessage)) {
-        classification.userMessage = 'We understand your situation. Please upload 3 documents to help us process your chargeback.';
+      if (!classification.userMessage || !/\b2\b/.test(classification.userMessage)) {
+        classification.userMessage = 'We understand your situation. Please upload 2 documents to help us process your chargeback. If more information or communication proof is needed later, we\'ll ask you for it during review.';
       }
     }
 
