@@ -1018,7 +1018,7 @@ const ActivityLogView = ({
         throw new Error('No customer evidence found for this transaction');
       }
 
-      const { error } = await supabase.functions.invoke('reject-customer-evidence', {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('reject-customer-evidence', {
         body: {
           transaction_id: transactionId,
           customer_evidence_id: evidence.id,
@@ -1026,7 +1026,7 @@ const ActivityLogView = ({
         }
       });
       
-      if (error) throw error;
+      if (fnError) throw new Error(fnError.message || JSON.stringify(fnError));
       
       toast({
         title: "Evidence Rejected",
