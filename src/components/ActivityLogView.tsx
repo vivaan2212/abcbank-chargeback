@@ -686,28 +686,64 @@ const ActivityLogView = ({
                 activityType: 'human_action',
                 attachments: [
                   { label: 'Response details', icon: 'document' },
-                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' },
                   { label: 'Evidence details', icon: 'document' }
                 ]
               });
 
+              // Fetch visa video for the pill
+              const { data: visaVideo } = await supabase
+                .from('chargeback_videos')
+                .select('*')
+                .eq('card_network', 'Visa')
+                .eq('is_active', true)
+                .maybeSingle();
+
               // Rebuttal accepted (final status)
               const acceptedTimestamp = new Date(new Date(review.reviewed_at).getTime() + 24 * 60 * 60 * 1000).toISOString();
               const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
+              const acceptedAttachments: Activity['attachments'] = [
+                { label: 'Transaction details', icon: 'document' }
+              ];
+              
+              if (visaVideo) {
+                acceptedAttachments.unshift({
+                  label: 'www.visaonline.com/chargeback',
+                  icon: 'video',
+                  action: 'video',
+                  videoData: visaVideo
+                });
+              }
+              
               activityList.push({
                 id: 'rebuttal-accepted',
                 timestamp: acceptedTimestamp,
                 label: 'Chargeback request accepted by Visa; Temporary credit earlier processed has been made permanent',
                 expandable: false,
                 activityType: 'done',
-                attachments: [
-                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' },
-                  { label: 'Transaction details', icon: 'document' }
-                ]
+                attachments: acceptedAttachments
               });
             } else if (review.review_decision === 'rejected') {
               // Chargeback recalled
               const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
+              
+              // Fetch visa video for the pill
+              const { data: visaVideo } = await supabase
+                .from('chargeback_videos')
+                .select('*')
+                .eq('card_network', 'Visa')
+                .eq('is_active', true)
+                .maybeSingle();
+              
+              const recalledAttachments: Activity['attachments'] = [];
+              if (visaVideo) {
+                recalledAttachments.push({
+                  label: 'www.visaonline.com/chargeback',
+                  icon: 'video',
+                  action: 'video',
+                  videoData: visaVideo
+                });
+              }
+              
               activityList.push({
                 id: 'chargeback-recalled',
                 timestamp: review.reviewed_at,
@@ -715,9 +751,7 @@ const ActivityLogView = ({
                 expandable: true,
                 details: `${review.review_notes || 'Bank rejected customer evidence and recalled chargeback from card network'}\n\n${dispute.transaction?.temporary_credit_provided ? `Temporary credit of ₹${creditAmount.toLocaleString()} has been made permanent and remains with you.` : 'No temporary credit was issued.'}`,
                 activityType: 'done',
-                attachments: [
-                  { label: 'www.visa.com/chargeback', icon: 'link', link: 'https://www.visa.com/chargeback' }
-                ]
+                attachments: recalledAttachments
               });
             }
           }
@@ -1286,6 +1320,18 @@ const ActivityLogView = ({
                           {/* Attachments */}
                           {activity.attachments && activity.attachments.length > 0 && <div className="mt-3 space-y-2">
                               {activity.attachments.map((attachment, i) => {
+                                // Video attachments with visaonline URL should be clickable pills
+                                if (attachment.action === 'video' && attachment.label?.includes('visaonline')) {
+                                  return <button 
+                                    key={i}
+                                    onClick={() => handleAttachmentClick(attachment)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                                  >
+                                    <img src={videoIcon} alt="video" className="h-3.5 w-3.5" />
+                                    <span>{attachment.label}</span>
+                                  </button>;
+                                }
+                                
                                 if (attachment.link) {
                                   return <a 
                                     key={i}
