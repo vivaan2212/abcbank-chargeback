@@ -362,7 +362,7 @@ function evaluateDecision(
   // R4: Secured OTP present
   if ([2, 212].includes(tx.secured_indication)) {
     matched_rules.push('R4');
-    if (reasonCode === 'UNAUTHORIZED') {
+    if (['UNAUTHORIZED', 'FRAUD'].includes(reasonCode)) {
       return {
         decision: 'MANUAL_REVIEW',
         reason_summary: 'OTP present conflicts with unauthorized claim',
@@ -565,8 +565,8 @@ function evaluateDecision(
     };
   }
   
-  // R11: Unauthorized (no OTP)
-  if (dispute.reason_id === 'UNAUTHORIZED' && ![2, 212].includes(tx.secured_indication)) {
+  // R11: Unauthorized/Fraud (no OTP)
+  if (['UNAUTHORIZED', 'FRAUD'].includes(reasonCode) && ![2, 212].includes(tx.secured_indication)) {
     matched_rules.push('R11');
     if (docSufficiency.sufficient) {
       return {
