@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -48,7 +49,7 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
       </div>
       
       {/* Data Section */}
-      <div className="p-4 pt-2">
+      <div className="p-4 pt-2 pb-2">
         <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer">
           <Database className="h-4 w-4" />
           <span className="text-sm">Data</span>
@@ -56,12 +57,14 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
       </div>
 
       {/* People Section */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-3">
         <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer">
           <Users className="h-4 w-4" />
           <span className="text-sm">People</span>
         </div>
       </div>
+
+      <Separator className="mx-4 mb-3" />
 
       {/* Processes Section */}
       <div className="px-4">
