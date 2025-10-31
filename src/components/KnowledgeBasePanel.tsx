@@ -114,9 +114,9 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
           <div className="max-w-3xl space-y-6">
             {/* Main Title */}
             <div>
-              <h1 className="text-3xl font-bold mb-4">Chargeback for Banks</h1>
+              <h1 className="text-lg font-bold mb-4">Chargeback for Banks</h1>
               
-              <p className="text-muted-foreground leading-relaxed mb-6">
+              <p className="text-muted-foreground leading-relaxed mb-6 text-xs">
                 This agent automates the end-to-end chargeback filing process by eliminating manual case review, 
                 reducing human error in dispute categorization, and ensuring timely, compliant submissions across 
                 card networks. It processes high-volume transaction and dispute data, identifies eligible chargebacks, 
@@ -128,15 +128,15 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* What This Agent Does */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">What This Agent Does</h2>
+              <h2 className="text-lg font-bold mb-4">What This Agent Does</h2>
               
               <div className="mb-4">
-                <h3 className="text-lg font-bold mb-2">Core Function</h3>
-                <p className="text-muted-foreground leading-relaxed mb-4">
+                <h3 className="text-sm font-bold mb-2">Core Function</h3>
+                <p className="text-muted-foreground leading-relaxed mb-4 text-xs">
                   The agent delivers four key value propositions:
                 </p>
                 
-                <ol className="space-y-3 text-muted-foreground list-decimal pl-5">
+                <ol className="space-y-3 text-muted-foreground list-decimal pl-5 text-xs">
                   <li>
                     <strong className="text-foreground">Process Automation:</strong> Automates end-to-end chargeback identification, documentation, and 
                     filing — reducing manual effort and processing time from hours to minutes.
@@ -159,40 +159,40 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Key Capabilities */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Key Capabilities</h2>
+              <h2 className="text-lg font-bold mb-4">Key Capabilities</h2>
               
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Automated Chargeback Processing:</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-sm font-bold mb-2">Automated Chargeback Processing:</h3>
+                  <p className="text-muted-foreground text-xs">
                     Replaces manual case screening with AI-driven classification and filing that operates continuously across all networks.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Consistent Dispute Standardization:</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-sm font-bold mb-2">Consistent Dispute Standardization:</h3>
+                  <p className="text-muted-foreground text-xs">
                     Applies uniform Visa/Mastercard reason codes and evidence criteria, removing variability from individual reviewer judgment.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Immediate Risk Detection:</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-sm font-bold mb-2">Immediate Risk Detection:</h3>
+                  <p className="text-muted-foreground text-xs">
                     Instantly flags high-value, repetitive, or time-sensitive chargebacks before deadlines pass.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">High-Volume Handling:</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-sm font-bold mb-2">High-Volume Handling:</h3>
+                  <p className="text-muted-foreground text-xs">
                     Manages large-scale transaction and dispute volumes without requiring proportional increases in operational staff.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Quality Assurance:</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="text-sm font-bold mb-2">Quality Assurance:</h3>
+                  <p className="text-muted-foreground text-xs">
                     Maintains complete audit trails, validation checks, and compliance logs to ensure accuracy and adherence to network standards.
                   </p>
                 </div>
@@ -201,15 +201,15 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Process Workflow */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Process Workflow</h2>
+              <h2 className="text-lg font-bold mb-4">Process Workflow</h2>
               
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Automated Manual Process Replacement</h3>
+                  <h3 className="text-sm font-bold mb-2">Automated Manual Process Replacement</h3>
                   
                   <div className="mb-3">
-                    <h4 className="font-bold mb-1">Traditional Process:</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                    <h4 className="font-bold mb-1 text-xs">Traditional Process:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                       <li>Human agents manually review customer disputes, check eligibility, classify secured/unsecured transactions, and file chargebacks in Visa/Mastercard portals.</li>
                       <li>Each case takes 30–45 minutes to process, with high dependency on manual judgment and routing.</li>
                       <li>Temporary credit, reversal, and reconciliation steps are tracked separately, often leading to timing mismatches and losses.</li>
@@ -217,8 +217,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                   </div>
 
                   <div className="mb-3">
-                    <h4 className="font-bold mb-1">Agent Process:</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                    <h4 className="font-bold mb-1 text-xs">Agent Process:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                       <li>AI-driven automation conducts eligibility checks, classification, investigation, and chargeback filing within 2–3 minutes per case.</li>
                       <li>Updates directly with Visa/Mastercard portals, bank's dashboard, and Feedzai for continuous updates.</li>
                       <li>Automates credit issuance, reconciliation, representment tracking, and escalation workflows.</li>
@@ -226,15 +226,15 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                   </div>
 
                   <div className="mb-3">
-                    <h4 className="font-bold mb-1">Time Reduction:</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                    <h4 className="font-bold mb-1 text-xs">Time Reduction:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                       <li>Reduces average case processing time by 90%+ while maintaining full auditability and compliance with network timelines.</li>
                     </ul>
                   </div>
 
                   <div>
-                    <h4 className="font-bold mb-1">Resource Optimization:</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                    <h4 className="font-bold mb-1 text-xs">Resource Optimization:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                       <li>Enables human teams to focus on complex representments, escalations, and arbitration cases, while the agent manages repetitive dispute handling.</li>
                     </ul>
                   </div>
@@ -244,9 +244,9 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Agent Capabilities */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Agent Capabilities</h2>
+              <h2 className="text-lg font-bold mb-4">Agent Capabilities</h2>
               
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
+              <ul className="list-disc pl-5 space-y-2 text-muted-foreground text-xs">
                 <li>Continuous Monitoring: 24/7 ingestion of customer disputes and transaction updates</li>
                 <li>Real-Time Filing: Immediate chargeback submission to Visa/Mastercard portals post-validation</li>
                 <li>Eligibility & Classification: Smart logic for secured/unsecured tagging, transaction thresholds, and MCC-based rules</li>
@@ -258,9 +258,9 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Coverage */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Coverage</h2>
+              <h2 className="text-lg font-bold mb-4">Coverage</h2>
               
-              <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
+              <ul className="list-disc pl-5 space-y-2 text-muted-foreground text-xs">
                 <li>Operates across Visa, Mastercard</li>
                 <li>Handles domestic and cross-border disputes</li>
                 <li>24/7 monitoring ensures no TAT breach during weekends or off-hours</li>
@@ -269,12 +269,12 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Agent Processing Scenarios */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Agent Processing Scenarios</h2>
+              <h2 className="text-lg font-bold mb-4">Agent Processing Scenarios</h2>
               
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-bold mb-2">High-Volume Routine Processing</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                  <h3 className="text-sm font-bold mb-2">High-Volume Routine Processing</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                     <li><strong className="text-foreground">Scenario:</strong> Thousands of low-value or repetitive customer disputes (e.g., subscription or duplicate charges).</li>
                     <li><strong className="text-foreground">Manual Risk:</strong> Backlogs, missed filing windows, or non-compliance penalties.</li>
                     <li><strong className="text-foreground">Agent Advantage:</strong> Automatically validates, classifies, and files cases in batches, ensuring full compliance</li>
@@ -283,8 +283,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Critical Event Immediate Response</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                  <h3 className="text-sm font-bold mb-2">Critical Event Immediate Response</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                     <li><strong className="text-foreground">Scenario:</strong> Visa/Mastercard imposes penalties if &gt;35 chargebacks are filed on one card.</li>
                     <li><strong className="text-foreground">Manual Risk:</strong> Inconsistent prioritization — filing by time instead of value.</li>
                     <li><strong className="text-foreground">Agent Advantage:</strong> Automatically selects top 35 highest-value transactions for filing, preventing penalties while maximizing recovery.</li>
@@ -293,8 +293,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Representment / Arbitration Escalation</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                  <h3 className="text-sm font-bold mb-2">Representment / Arbitration Escalation</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                     <li><strong className="text-foreground">Scenario:</strong> Merchant submits counter-evidence challenging the chargeback.</li>
                     <li><strong className="text-foreground">Manual Risk:</strong> Lost tracking, delayed response, missed SLA.</li>
                     <li><strong className="text-foreground">Agent Solution:</strong> Centralized representment queue, AI-generated response drafts, auto-tracking of pre-arbitration/arbitration stages.</li>
@@ -303,8 +303,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold mb-2">Complex Multi-System Reconciliation</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                  <h3 className="text-sm font-bold mb-2">Complex Multi-System Reconciliation</h3>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                     <li><strong className="text-foreground">Scenario:</strong> Temporary credits issued but not reversed post chargeback rejection.</li>
                     <li><strong className="text-foreground">Manual Risk:</strong> Reconciliation errors or financial leakage.</li>
                     <li><strong className="text-foreground">Agent Solution:</strong> Auto cross-matching of Visa/MC portal outcomes with Wio's temp credit ledger and GL entries; triggers reversals or confirmations.</li>
@@ -316,11 +316,11 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
 
             {/* Agent Audit Standards */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Agent Audit Standards</h2>
+              <h2 className="text-lg font-bold mb-4">Agent Audit Standards</h2>
               
               <div className="mb-4">
-                <h3 className="text-lg font-bold mb-2">Quality Assurance</h3>
-                <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-sm">
+                <h3 className="text-sm font-bold mb-2">Quality Assurance</h3>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground text-xs">
                   <li>Audit Trail: Each case (TID, ARN) tagged with timestamps, decision logs, and user actions</li>
                   <li>Validation Checks: Data integrity verified during every portal sync</li>
                   <li>Error Detection: Missing TIDs, mismatched credits, or invalid reason codes flagged automatically</li>
@@ -336,8 +336,8 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
             <div className="mb-3">
               {answer && (
                 <div className="mb-4 p-4 bg-background rounded-lg border">
-                  <p className="text-sm font-semibold mb-2">Answer:</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{answer}</p>
+                  <p className="text-xs font-semibold mb-2">Answer:</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{answer}</p>
                 </div>
               )}
             </div>
@@ -350,7 +350,7 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyPress={handleKeyPress}
                 disabled={isLoading}
-                className="flex-1 bg-transparent border-0 outline-none text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <Button 
                 size="icon" 
