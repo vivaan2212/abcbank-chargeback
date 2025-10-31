@@ -26,14 +26,15 @@ const stagePriorityMap: Record<string, number> = {
   'action-manual-review': 9,
   'action-reviewed': 10,
   'action-filed': 11,
+  // Final closure stages (before representment)
+  'milestone-final-status': 12,
   // Network representment flow
-  'representment-status': 12,
-  'rep-evidence-reviewed': 13,
-  'rep-chargeback-recalled': 14,
-  'rep-credit-reversed': 15,
-  // Final closure stages
-  'write-off': 90,
-  'milestone-final-status': 100
+  'representment-status': 20,
+  'rep-evidence-reviewed': 21,
+  'rep-chargeback-recalled': 22,
+  'rep-credit-reversed': 23,
+  // Write-off
+  'write-off': 90
 };
 
 // Helper to extract stage order from activity ID
