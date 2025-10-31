@@ -1818,7 +1818,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 // Map decision to user-friendly message
                 switch (decision.decision) {
                   case 'APPROVE_WRITEOFF':
-                    statusMessage = `✅ Great news! Your dispute has been approved for a write-off.\n\n💰 We've issued a permanent credit of ${currencySymbol}${amount} to your account.\n\nSince this transaction is under $15, we've automatically approved your dispute and provided the credit. No chargeback will be filed, and this case is now closed.\n\nThe funds are yours to keep - no further action needed!`;
+                    statusMessage = `✅ Great news! We have verified your purchase and hence you are eligible for a refund of ${currencySymbol}${amount} which will be reflected in your bank account in 4-7 days.`;
                     finalStatus = 'write_off_approved';
                     break;
                   case 'FILE_CHARGEBACK':
