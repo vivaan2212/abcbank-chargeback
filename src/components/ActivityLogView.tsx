@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { ChargebackVideoModal } from "./ChargebackVideoModal";
+import KnowledgeBasePanel from "./KnowledgeBasePanel";
 import { useToast } from "@/hooks/use-toast";
 import paceAvatar from "@/assets/pace-logo-grey.png";
 import videoIcon from "@/assets/video-icon.png";
@@ -1601,116 +1602,11 @@ const ActivityLogView = ({
       <ChargebackVideoModal isOpen={videoModalOpen} onClose={() => setVideoModalOpen(false)} videoUrl={selectedVideo?.url || null} cardNetwork={selectedVideo?.cardNetwork || null} />
 
       {/* Knowledge Base Overlay */}
-      {isKnowledgeBaseOpen && <>
-          {/* Dark Backdrop */}
-          <div className={cn("fixed inset-0 bg-black/50 z-40", isKnowledgeBaseClosing ? "animate-fade-out" : "animate-fade-in")} onClick={handleCloseKnowledgeBase} />
-          
-          {/* Sliding Panel */}
-          <div className={cn("fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col", isKnowledgeBaseClosing ? "animate-slide-out-right" : "animate-slide-in-right")}>
-            {/* Header */}
-            <div className="border-b px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <BookOpen className="h-5 w-5" />
-                <h2 className="text-lg font-semibold">Knowledge Base</h2>
-              </div>
-              <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={handleCloseKnowledgeBase} className="h-8 w-8">
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-auto px-6 py-6">
-              <div className="max-w-3xl space-y-6">
-                <div>
-                  <h1 className="text-3xl font-bold mb-6">Chargeback for Banks</h1>
-                  
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    This agent automates the end-to-end chargeback filing process by eliminating manual case review, 
-                    reducing human error in dispute categorization, and ensuring timely, compliant submissions across 
-                    card networks. It processes high-volume transaction and dispute data, identifies eligible chargebacks, 
-                    compiles supporting evidence, and files them accurately within network timelines — enabling faster 
-                    recoveries and consistent adherence to Visa and Mastercard rules that would be impossible through 
-                    manual operations.
-                  </p>
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">What This Agent Does</h2>
-                  
-                  <h3 className="text-lg font-semibold mb-3">Core Function</h3>
-                  <p className="text-muted-foreground mb-4">The agent delivers four key value propositions:</p>
-                  
-                  <ul className="space-y-3 mb-6">
-                    <li className="flex gap-3">
-                      <span className="font-semibold flex-shrink-0">1. Process Automation:</span>
-                      <span className="text-muted-foreground">Automates end-to-end chargeback identification, documentation, and filing — reducing manual effort and processing time from hours to minutes.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="font-semibold flex-shrink-0">2. Error Reduction:</span>
-                      <span className="text-muted-foreground">Applies consistent dispute classification and reason-code mapping with high accuracy, minimizing subjective human errors and improving network acceptance rates.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="font-semibold flex-shrink-0">3. Real-time Alerting:</span>
-                      <span className="text-muted-foreground">Continuously monitors transactions and dispute triggers to instantly flag high-risk or time-sensitive chargebacks nearing network deadlines.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="font-semibold flex-shrink-0">4. Scalable Operations:</span>
-                      <span className="text-muted-foreground">Handles large volumes of disputes across multiple card networks (Visa, Mastercard, Amex) without additional operational overhead, enabling scale with compliance.</span>
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Key Capabilities</h3>
-                  
-                  <ul className="space-y-4">
-                    <li>
-                      <div className="font-semibold mb-1">Automated Chargeback Processing:</div>
-                      <p className="text-muted-foreground">Replaces manual case screening with AI-driven classification and filing that operates continuously across all networks.</p>
-                    </li>
-                    <li>
-                      <div className="font-semibold mb-1">Consistent Dispute Standards:</div>
-                      <p className="text-muted-foreground">Applies standardized Visa/Mastercard reason codes and evidence criteria, removing variability from individual reviewer judgment.</p>
-                    </li>
-                    <li>
-                      <div className="font-semibold mb-1">Immediate Risk Detection:</div>
-                      <p className="text-muted-foreground">Instantly flags high-value, repetitive, or time-sensitive chargebacks nearing penalty thresholds or deadlines.</p>
-                    </li>
-                    <li>
-                      <div className="font-semibold mb-1">High-Volume Handling:</div>
-                      <p className="text-muted-foreground">Manages large-scale transaction and dispute volumes without requiring proportional increases in operational staff.</p>
-                    </li>
-                    <li>
-                      <div className="font-semibold mb-1">Quality Assurance:</div>
-                      <p className="text-muted-foreground">Maintains complete audit trails, validation checks, and compliance logs to ensure accuracy and adherence to card network guidelines.</p>
-                    </li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">Process Workflow</h2>
-                  <p className="text-muted-foreground">
-                    The agent follows a structured workflow to process chargebacks efficiently and accurately, 
-                    ensuring all necessary steps are completed within required timeframes.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer with Pace Input */}
-            <div className="border-t px-6 py-4">
-              <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
-                <span className="text-2xl">⚡</span>
-                <input type="text" placeholder="Ask anything to ⚡ Pace" className="flex-1 bg-transparent border-0 outline-none text-sm" />
-                <Button size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground">
-                  <ArrowUp className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>}
+      <KnowledgeBasePanel 
+        isOpen={isKnowledgeBaseOpen}
+        isClosing={isKnowledgeBaseClosing}
+        onClose={handleCloseKnowledgeBase}
+      />
     </div>;
 };
 export default ActivityLogView;
