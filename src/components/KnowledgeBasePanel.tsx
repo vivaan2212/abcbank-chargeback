@@ -17,13 +17,11 @@ interface KnowledgeBasePanelProps {
 }
 
 const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelProps) => {
-  const [question, setQuestion] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [answer, setAnswer] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [content, setContent] = useState<string>("");
   const [isLoadingContent, setIsLoadingContent] = useState(true);
+  const [chatInput, setChatInput] = useState("");
 
   const fetchKnowledgeBase = async () => {
     setIsLoadingContent(true);
@@ -54,35 +52,6 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
     toast.success('Knowledge base has been updated');
   };
 
-  const handleAskQuestion = async () => {
-    if (!question.trim()) return;
-
-    setIsLoading(true);
-    setAnswer("");
-
-    try {
-      const { data, error } = await supabase.functions.invoke('query-knowledge-base', {
-        body: { question }
-      });
-
-      if (error) throw error;
-
-      setAnswer(data.answer);
-    } catch (error) {
-      console.error('Error asking question:', error);
-      toast.error('Failed to get answer. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAskQuestion();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -98,7 +67,7 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
       
       {/* Sliding Panel */}
       <div className={cn(
-        "fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col",
+        "fixed top-0 right-0 bottom-0 w-full md:w-2/3 lg:w-1/2 bg-background z-50 shadow-2xl overflow-hidden flex flex-col relative",
         isClosing ? "animate-slide-out-right" : "animate-slide-in-right"
       )}>
         {/* Header */}
@@ -165,56 +134,60 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
         </div>
 
         {/* AI Question Interface at Bottom */}
-        <div className="border-t px-6 py-4 bg-muted/30">
-          <div className="mb-3">
-            {answer && (
-              <div className="mb-4 p-4 bg-background rounded-lg border">
-                <p className="text-xs font-semibold mb-2">Answer:</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{answer}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 flex items-center gap-2 bg-background rounded-lg border px-4 py-2">
-              <span className="text-xl">⚡</span>
-              <Input
-                type="text"
-                placeholder="Ask anything to ⚡ Pace"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-                className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              <Button 
-                size="icon" 
-                variant="ghost" 
-                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
-                onClick={handleAskQuestion}
-                disabled={isLoading || !question.trim()}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-            </div>
+        <div className="border-t px-6 py-4 bg-background">
+          <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3 hover:bg-muted/70 transition-colors">
+            <img 
+              src="/src/assets/pace-avatar.png" 
+              alt="Pace" 
+              className="h-6 w-6 rounded-full flex-shrink-0"
+            />
+            <Input
+              type="text"
+              placeholder="Ask anything to Pace"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  setIsChatOpen(true);
+                }
+              }}
+              onClick={() => setIsChatOpen(true)}
+              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
             <Button
-              variant="default"
+              variant="ghost"
               size="sm"
               onClick={() => setIsChatOpen(true)}
-              className="gap-2"
+              className="gap-2 rounded-full hover:bg-primary hover:text-primary-foreground"
             >
               <MessageSquare className="h-4 w-4" />
-              Chat
+              Update
             </Button>
           </div>
         </div>
+
+        {/* Chat Overlay - Positioned within the panel */}
+        {isChatOpen && (
+          <>
+            {/* Backdrop within panel */}
+            <div 
+              className="absolute inset-0 bg-black/30 z-10 animate-fade-in"
+              onClick={() => setIsChatOpen(false)}
+            />
+            
+            {/* Chat Modal - Right side overlay */}
+            <div className="absolute top-0 right-0 bottom-0 w-full md:w-2/3 bg-background z-20 shadow-2xl flex flex-col animate-slide-in-right">
+              <KnowledgeBaseChat
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                onUpdateSuccess={handleUpdateSuccess}
+                initialInput={chatInput}
+              />
+            </div>
+          </>
+        )}
       </div>
-      
-      {/* Chat Modal */}
-      <KnowledgeBaseChat 
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        onUpdateSuccess={handleUpdateSuccess}
-      />
     </>
   );
 };

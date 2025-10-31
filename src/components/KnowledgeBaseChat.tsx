@@ -18,14 +18,22 @@ interface KnowledgeBaseChatProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateSuccess?: () => void;
+  initialInput?: string;
 }
 
-const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseChatProps) => {
+const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: KnowledgeBaseChatProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userRole, setUserRole] = useState<'customer' | 'bank_admin' | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Set initial input if provided
+  useEffect(() => {
+    if (initialInput && input === "") {
+      setInput(initialInput);
+    }
+  }, [initialInput]);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -192,19 +200,17 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 z-50 animate-fade-in"
-        onClick={onClose}
-      />
-      
-      {/* Chat Modal */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-[600px] bg-background rounded-lg shadow-2xl z-50 flex flex-col animate-scale-in">
+      {/* Chat Container - No backdrop, integrated into panel */}
+      <div className="h-full w-full bg-background flex flex-col">
         {/* Header */}
-        <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="border-b px-4 py-3 flex items-center justify-between bg-background">
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚡</span>
-            <h3 className="font-semibold">Chat with Pace</h3>
+            <img 
+              src="/src/assets/pace-avatar.png" 
+              alt="Pace" 
+              className="h-8 w-8 rounded-full"
+            />
+            <h3 className="font-semibold text-sm">Chat with Pace</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -262,8 +268,13 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
         </div>
 
         {/* Input */}
-        <div className="border-t p-4">
-          <div className="flex items-center gap-2 bg-muted rounded-lg border px-4 py-2">
+        <div className="border-t p-4 bg-background">
+          <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3">
+            <img 
+              src="/src/assets/pace-avatar.png" 
+              alt="Pace" 
+              className="h-6 w-6 rounded-full flex-shrink-0"
+            />
             <Input
               type="text"
               placeholder="Type your message..."
@@ -271,7 +282,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess }: KnowledgeBaseCh
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               disabled={isLoading}
-              className="flex-1 bg-transparent border-0 outline-none text-xs focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="flex-1 bg-transparent border-0 outline-none text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
             />
             <Button 
               size="icon" 
