@@ -102,8 +102,11 @@ interface Dispute {
     updated_at: string;
   }>;
   dispute_decisions?: Array<{
+    id: string;
     decision: string;
-  }> | any;
+    reason_summary: string;
+    created_at: string;
+  }>;
 }
 
 interface DisputesListProps {
@@ -226,6 +229,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
           is_facebook_meta,
           created_at,
           updated_at
+        ),
+        dispute_decisions(
+          id,
+          decision,
+          reason_summary,
+          created_at
         )
       `)
         .order("updated_at", { ascending: false });
