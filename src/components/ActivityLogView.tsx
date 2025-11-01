@@ -572,10 +572,8 @@ const ActivityLogView = ({
               repActivity.label = 'Waiting for Customer Response';
               repActivity.details = 'The bank has requested additional evidence from the customer to contest the merchant\'s representment.';
               repActivity.activityType = 'paused';
-            } else {
-              // Customer has submitted evidence, don't show waiting status
-              return;
             }
+            // If customer evidence exists, skip this log entry (don't add it to activities)
             break;
           case 'customer_evidence_approved':
             // This status means customer evidence was approved and case is resolved - don't show standalone representment activity
