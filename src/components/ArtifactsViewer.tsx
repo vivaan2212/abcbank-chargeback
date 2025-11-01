@@ -23,7 +23,6 @@ interface ArtifactsViewerProps {
 export const ArtifactsViewer = ({ title = "View Artifacts", bucket = "dispute-documents", documents }: ArtifactsViewerProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
 
   const hasDocs = documents && documents.length > 0;
   if (!hasDocs) return null;
@@ -33,14 +32,6 @@ export const ArtifactsViewer = ({ title = "View Artifacts", bucket = "dispute-do
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl && previewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
 
   const createSigned = async (path: string, expiresIn = 60 * 60) => {
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
@@ -52,19 +43,7 @@ export const ArtifactsViewer = ({ title = "View Artifacts", bucket = "dispute-do
     try {
       const url = await createSigned(doc.path, 60 * 10);
       setPreviewType(doc.type);
-      if (doc.type?.startsWith("application/pdf")) {
-        try {
-          const res = await fetch(url);
-          const blob = await res.blob();
-          const objUrl = URL.createObjectURL(blob);
-          setPreviewUrl(objUrl);
-        } catch (fetchErr) {
-          console.error("Blob preview error, falling back to direct URL", fetchErr);
-          setPreviewUrl(url);
-        }
-      } else {
-        setPreviewUrl(url);
-      }
+      setPreviewUrl(url);
     } catch (e) {
       console.error("Preview error", e);
     }
@@ -85,7 +64,7 @@ export const ArtifactsViewer = ({ title = "View Artifacts", bucket = "dispute-do
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); setPreviewType(null); } }}>
+    <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <FileText className="w-4 h-4" />
@@ -123,7 +102,7 @@ export const ArtifactsViewer = ({ title = "View Artifacts", bucket = "dispute-do
           <div className="mt-4">
             {previewType?.startsWith("image/") ? (
               <img src={previewUrl} alt="Preview" className="max-h-[60vh] w-full object-contain rounded" />
-            ) : previewType?.startsWith("application/pdf") ? (
+            ) : previewType === "application/pdf" ? (
               <iframe src={previewUrl} className="w-full h-[60vh] rounded" />
             ) : (
               <div className="text-sm text-muted-foreground">Preview not supported for this file type. Use Download instead.</div>
