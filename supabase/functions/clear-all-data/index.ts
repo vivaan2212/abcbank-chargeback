@@ -39,7 +39,11 @@ Deno.serve(async (req) => {
       .from('conversations')
       .select('*', { count: 'exact', head: true });
 
-    console.log(`Found ${messageCount} messages, ${disputeCount} disputes, ${conversationCount} conversations`);
+    const { count: documentCount } = await supabaseAdmin
+      .from('dispute_documents')
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`Found ${messageCount} messages, ${disputeCount} disputes, ${conversationCount} conversations, ${documentCount} documents`);
 
     // Delete in order: messages -> disputes -> conversations (respecting foreign keys)
     
@@ -54,6 +58,43 @@ Deno.serve(async (req) => {
       throw messagesError;
     }
     console.log(`Deleted ${messageCount} messages`);
+
+    // 1.5. Delete all uploaded documents from storage and database
+    // First, get all document paths from the database
+    const { data: documents, error: documentsSelectError } = await supabaseAdmin
+      .from('dispute_documents')
+      .select('storage_path');
+
+    if (documentsSelectError) {
+      console.error('Error fetching documents:', documentsSelectError);
+    } else if (documents && documents.length > 0) {
+      // Delete files from storage bucket
+      const filePaths = documents.map(doc => doc.storage_path);
+      console.log(`Deleting ${filePaths.length} files from storage...`);
+      
+      const { error: storageDeleteError } = await supabaseAdmin
+        .storage
+        .from('dispute-documents')
+        .remove(filePaths);
+
+      if (storageDeleteError) {
+        console.error('Error deleting files from storage:', storageDeleteError);
+      } else {
+        console.log(`Deleted ${filePaths.length} files from storage`);
+      }
+    }
+
+    // Delete document metadata from database
+    const { error: documentsError } = await supabaseAdmin
+      .from('dispute_documents')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (documentsError) {
+      console.error('Error deleting document metadata:', documentsError);
+      throw documentsError;
+    }
+    console.log(`Deleted ${documentCount} document records`);
 
     // 2. Delete all disputes
     const { error: disputesError } = await supabaseAdmin
@@ -118,7 +159,8 @@ Deno.serve(async (req) => {
         deleted: {
           messages: messageCount,
           disputes: disputeCount,
-          conversations: conversationCount
+          conversations: conversationCount,
+          documents: documentCount
         }
       }),
       {
