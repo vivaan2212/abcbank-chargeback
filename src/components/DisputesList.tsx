@@ -29,6 +29,7 @@ interface Dispute {
   customer_id: string;
   conversation_id: string | null;
   transaction_id: string | null;
+  latestActionLog?: string | null;
   transaction?: {
     id?: string;
     transaction_id?: number;
@@ -232,7 +233,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         txnsRes,
         repsRes,
         actionsRes,
-        decisionsRes
+        decisionsRes,
+        actionLogsRes
       ] = await Promise.all([
         transactionIds.length > 0
           ? supabase
@@ -263,6 +265,13 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
               .from("dispute_decisions")
               .select("dispute_id, decision, created_at")
               .in("dispute_id", disputeIds)
+          : Promise.resolve({ data: [], error: null }),
+        transactionIds.length > 0
+          ? supabase
+              .from("dispute_action_log")
+              .select("transaction_id, action, performed_at")
+              .in("transaction_id", transactionIds)
+              .order('performed_at', { ascending: false })
           : Promise.resolve({ data: [], error: null })
       ]);
 
@@ -288,15 +297,26 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         decisionsMap[d.dispute_id].push({ decision: d.decision, created_at: d.created_at });
       });
 
+      // Build map for latest action log per transaction
+      const latestActionByTxn: Record<string, string> = {};
+      (actionLogsRes.data || []).forEach((log: any) => {
+        // Only keep the first (most recent) entry for each transaction_id
+        if (!latestActionByTxn[log.transaction_id]) {
+          latestActionByTxn[log.transaction_id] = log.action;
+        }
+      });
+
       // Attach related data
       const dataWithRelations = (data || []).map((dispute: any) => {
         const txn = dispute.transaction_id ? txMap[dispute.transaction_id] : undefined;
         const rep = dispute.transaction_id ? repByTxn[dispute.transaction_id] : undefined;
+        const latestAction = dispute.transaction_id ? latestActionByTxn[dispute.transaction_id] : undefined;
         return {
           ...dispute,
           transaction: txn ? { ...txn, chargeback_representment_static: rep?.length === 1 ? rep[0] : (rep || []) } : undefined,
           chargeback_actions: actionsByDispute[dispute.id] || [],
-          dispute_decisions: decisionsMap[dispute.id] || []
+          dispute_decisions: decisionsMap[dispute.id] || [],
+          latestActionLog: latestAction || null
         } as Dispute;
       });
 
@@ -580,7 +600,12 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
   // Build activity timeline and get the most recent activity label (matches ActivityLogView)
   const getDerivedStatus = (dispute: Dispute): string => {
-    // Build activity timeline similar to ActivityLogView
+    // Use the latest action log if available
+    if (dispute.latestActionLog) {
+      return dispute.latestActionLog;
+    }
+
+    // Fallback: Build activity timeline similar to ActivityLogView
     const activityList: Array<{id: string; timestamp: string; label: string; order: number}> = [];
     
     const stagePriorityMap: Record<string, number> = {
