@@ -326,7 +326,8 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
     }
 
     // When merchant representment is accepted (merchant won)
-    if (repStatus === 'accepted_by_bank' && dispute.transaction) {
+    // Only show these logs if representment workflow actually happened (customer submitted evidence)
+    if (repStatus === 'accepted_by_bank' && dispute.transaction && customerEvidence) {
       const network = dispute.transaction.acquirer_name || "Network";
       const networkRefs: Record<string, string> = {
         "Mastercard": "https://www.mastercardconnect.com/chargeback",

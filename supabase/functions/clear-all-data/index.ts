@@ -43,15 +43,40 @@ Deno.serve(async (req) => {
       .from('dispute_documents')
       .select('*', { count: 'exact', head: true });
 
-    console.log(`Found ${messageCount} messages, ${disputeCount} disputes, ${conversationCount} conversations, ${documentCount} documents`);
+    const { count: evidenceReviewCount } = await supabaseAdmin
+      .from('customer_evidence_reviews')
+      .select('*', { count: 'exact', head: true });
 
-    // Delete in order: messages -> disputes -> conversations (respecting foreign keys)
+    const { count: actionLogCount } = await supabaseAdmin
+      .from('dispute_action_log')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: customerEvidenceCount } = await supabaseAdmin
+      .from('dispute_customer_evidence')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: evidenceRequestCount } = await supabaseAdmin
+      .from('dispute_customer_evidence_request')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: decisionCount } = await supabaseAdmin
+      .from('dispute_decisions')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: chargebackActionCount } = await supabaseAdmin
+      .from('chargeback_actions')
+      .select('*', { count: 'exact', head: true });
+
+    console.log(`Found ${messageCount} messages, ${disputeCount} disputes, ${conversationCount} conversations, ${documentCount} documents, ${evidenceReviewCount} evidence reviews, ${actionLogCount} action logs, ${customerEvidenceCount} customer evidence, ${evidenceRequestCount} evidence requests, ${decisionCount} decisions, ${chargebackActionCount} chargeback actions`);
+
+    // Delete in order (respecting foreign keys):
+    // messages -> evidence reviews -> action logs -> customer evidence -> evidence requests -> documents -> disputes -> decisions -> conversations
     
     // 1. Delete all messages
     const { error: messagesError } = await supabaseAdmin
       .from('messages')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      .neq('id', '00000000-0000-0000-0000-000000000000');
 
     if (messagesError) {
       console.error('Error deleting messages:', messagesError);
@@ -59,7 +84,67 @@ Deno.serve(async (req) => {
     }
     console.log(`Deleted ${messageCount} messages`);
 
-    // 1.5. Delete all uploaded documents from storage and database
+    // 2. Delete all customer evidence reviews
+    const { error: evidenceReviewsError } = await supabaseAdmin
+      .from('customer_evidence_reviews')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (evidenceReviewsError) {
+      console.error('Error deleting evidence reviews:', evidenceReviewsError);
+      throw evidenceReviewsError;
+    }
+    console.log(`Deleted ${evidenceReviewCount} evidence reviews`);
+
+    // 3. Delete all dispute action logs
+    const { error: actionLogsError } = await supabaseAdmin
+      .from('dispute_action_log')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (actionLogsError) {
+      console.error('Error deleting action logs:', actionLogsError);
+      throw actionLogsError;
+    }
+    console.log(`Deleted ${actionLogCount} action logs`);
+
+    // 4. Delete all customer evidence
+    const { error: customerEvidenceError } = await supabaseAdmin
+      .from('dispute_customer_evidence')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (customerEvidenceError) {
+      console.error('Error deleting customer evidence:', customerEvidenceError);
+      throw customerEvidenceError;
+    }
+    console.log(`Deleted ${customerEvidenceCount} customer evidence records`);
+
+    // 5. Delete all evidence requests
+    const { error: evidenceRequestsError } = await supabaseAdmin
+      .from('dispute_customer_evidence_request')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (evidenceRequestsError) {
+      console.error('Error deleting evidence requests:', evidenceRequestsError);
+      throw evidenceRequestsError;
+    }
+    console.log(`Deleted ${evidenceRequestCount} evidence requests`);
+
+    // 6. Delete all chargeback actions
+    const { error: chargebackActionsError } = await supabaseAdmin
+      .from('chargeback_actions')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (chargebackActionsError) {
+      console.error('Error deleting chargeback actions:', chargebackActionsError);
+      throw chargebackActionsError;
+    }
+    console.log(`Deleted ${chargebackActionCount} chargeback actions`);
+
+    // 7. Delete all uploaded documents from storage and database
     // First, get all document paths from the database
     const { data: documents, error: documentsSelectError } = await supabaseAdmin
       .from('dispute_documents')
@@ -96,7 +181,19 @@ Deno.serve(async (req) => {
     }
     console.log(`Deleted ${documentCount} document records`);
 
-    // 2. Delete all disputes
+    // 8. Delete all dispute decisions
+    const { error: decisionsError } = await supabaseAdmin
+      .from('dispute_decisions')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (decisionsError) {
+      console.error('Error deleting dispute decisions:', decisionsError);
+      throw decisionsError;
+    }
+    console.log(`Deleted ${decisionCount} dispute decisions`);
+
+    // 9. Delete all disputes
     const { error: disputesError } = await supabaseAdmin
       .from('disputes')
       .delete()
@@ -108,7 +205,7 @@ Deno.serve(async (req) => {
     }
     console.log(`Deleted ${disputeCount} disputes`);
 
-    // 2.5. Reset all representment statuses to pending
+    // 10. Reset all representment statuses to pending
     const { error: representmentError } = await supabaseAdmin
       .from('chargeback_representment_static')
       .update({
@@ -124,7 +221,7 @@ Deno.serve(async (req) => {
     }
     console.log('Reset all representment statuses to pending');
 
-    // 2.6. Reset transaction temporary credit reversal timestamps
+    // 11. Reset transaction temporary credit reversal timestamps
     const { error: transactionResetError } = await supabaseAdmin
       .from('transactions')
       .update({
@@ -138,7 +235,7 @@ Deno.serve(async (req) => {
     }
     console.log('Reset transaction temporary credit reversal timestamps');
 
-    // 3. Delete all conversations
+    // 12. Delete all conversations
     const { error: conversationsError } = await supabaseAdmin
       .from('conversations')
       .delete()
@@ -160,7 +257,13 @@ Deno.serve(async (req) => {
           messages: messageCount,
           disputes: disputeCount,
           conversations: conversationCount,
-          documents: documentCount
+          documents: documentCount,
+          evidenceReviews: evidenceReviewCount,
+          actionLogs: actionLogCount,
+          customerEvidence: customerEvidenceCount,
+          evidenceRequests: evidenceRequestCount,
+          decisions: decisionCount,
+          chargebackActions: chargebackActionCount
         }
       }),
       {
