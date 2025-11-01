@@ -2021,9 +2021,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {uploadedDocuments.length > 0 && (
-                        <UploadedDocumentsViewer documents={uploadedDocuments} />
-                      )}
                       <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
                         End Session
                       </Button>
