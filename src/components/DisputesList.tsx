@@ -598,11 +598,48 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     return statusMap[status] || status;
   };
 
+  // Format action log entries to be human-readable
+  const formatActionLog = (action: string): string => {
+    // Map of raw action log values to user-friendly labels
+    const actionMap: Record<string, string> = {
+      'rebuttal_submitted': 'Rebuttal submitted',
+      'chargeback_recalled': 'Chargeback recalled',
+      'representment_received': 'Representment received',
+      'customer_evidence_submitted': 'Customer evidence submitted',
+      'customer_evidence_approved': 'Customer evidence approved',
+      'customer_evidence_rejected': 'Customer evidence rejected',
+      'temporary_credit_issued': 'Temporary credit issued',
+      'temporary_credit_reversed': 'Temporary credit reversed',
+      'chargeback_filed': 'Chargeback filed',
+      'chargeback_approved': 'Chargeback approved',
+      'case_resolved': 'Case resolved',
+      'write_off_approved': 'Write-off approved',
+      'manual_review_required': 'Manual review required',
+      'awaiting_merchant_refund': 'Awaiting merchant refund',
+      'refund_received': 'Refund received',
+      'pre_arbitration': 'Pre-arbitration initiated',
+      'arbitration_won': 'Arbitration won',
+      'arbitration_lost': 'Arbitration lost',
+    };
+
+    // Return mapped value or format the raw action
+    if (actionMap[action]) {
+      return actionMap[action];
+    }
+
+    // Fallback: Convert snake_case to Title Case
+    return action
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+
   // Build activity timeline and get the most recent activity label (matches ActivityLogView)
   const getDerivedStatus = (dispute: Dispute): string => {
-    // Use the latest action log if available
+    // Use the latest action log if available, but format it nicely
     if (dispute.latestActionLog) {
-      return dispute.latestActionLog;
+      return formatActionLog(dispute.latestActionLog);
     }
 
     // Fallback: Build activity timeline similar to ActivityLogView
