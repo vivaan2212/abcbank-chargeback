@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,13 +41,33 @@ serve(async (req) => {
   }
 
   try {
+    // Initialize Supabase client
+    const authHeader = req.headers.get('Authorization')!;
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Get current user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Unauthorized');
+    }
+
     const formData = await req.formData();
     const requirementsJson = formData.get('requirements') as string;
     const requirements = JSON.parse(requirementsJson);
     const disputeContextJson = formData.get('disputeContext') as string;
     const disputeContext = disputeContextJson ? JSON.parse(disputeContextJson) : null;
+    const disputeId = formData.get('disputeId') as string;
+    const transactionId = formData.get('transactionId') as string;
 
-    console.log('Verifying documents:', { requirements, disputeContext });
+    if (!disputeId || !transactionId) {
+      throw new Error('disputeId and transactionId are required');
+    }
+
+    console.log('Verifying and storing documents:', { requirements, disputeContext, disputeId, transactionId });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -278,6 +299,49 @@ Respond with JSON only:
       });
 
       console.log(`Verification result for ${file.name}:`, verification);
+
+      // If document is valid, upload to storage and save metadata
+      if (verification.isValid) {
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const storagePath = `${user.id}/${disputeId}/${timestamp}-${requirement.name.replace(/\s+/g, '_')}.${fileExt}`;
+        
+        console.log(`Uploading document to storage: ${storagePath}`);
+        
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabaseClient.storage
+          .from('dispute-documents')
+          .upload(storagePath, file, {
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Storage upload error:', uploadError);
+          throw new Error(`Failed to upload document: ${uploadError.message}`);
+        }
+
+        // Save metadata to database
+        const { error: dbError } = await supabaseClient
+          .from('dispute_documents')
+          .insert({
+            dispute_id: disputeId,
+            transaction_id: transactionId,
+            customer_id: user.id,
+            requirement_name: requirement.name,
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            storage_path: storagePath
+          });
+
+        if (dbError) {
+          console.error('Database insert error:', dbError);
+          throw new Error(`Failed to save document metadata: ${dbError.message}`);
+        }
+
+        console.log(`Successfully stored document: ${file.name}`);
+      }
     }
 
     // Determine overall success

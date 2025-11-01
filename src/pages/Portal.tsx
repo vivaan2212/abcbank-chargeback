@@ -1657,6 +1657,8 @@ Let me check if this transaction is eligible for a chargeback...`;
 
           formData.append('requirements', JSON.stringify(requirements));
           formData.append('disputeContext', JSON.stringify(disputeContext));
+          formData.append('disputeId', currentDisputeId!);
+          formData.append('transactionId', selectedTransaction.id);
           
           // Add each document file
           documents.forEach(doc => {
@@ -1864,7 +1866,24 @@ Let me check if this transaction is eligible for a chargeback...`;
                     content: statusMessage,
                   });
 
-                // Reset state
+                // Reset state but load artifacts from database
+                const { data: storedDocuments } = await supabase
+                  .from('dispute_documents')
+                  .select('*')
+                  .eq('dispute_id', currentDisputeId)
+                  .order('created_at', { ascending: true });
+
+                if (storedDocuments && storedDocuments.length > 0) {
+                  const artifactDocs: ArtifactDoc[] = storedDocuments.map(doc => ({
+                    requirementName: doc.requirement_name,
+                    name: doc.file_name,
+                    size: doc.file_size,
+                    type: doc.file_type,
+                    path: doc.storage_path
+                  }));
+                  setArtifacts(artifactDocs);
+                }
+
                 setSelectedTransaction(null);
                 setSelectedReason(null);
                 setAiClassification(null);

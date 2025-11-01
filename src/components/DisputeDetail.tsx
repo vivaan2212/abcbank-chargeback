@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { RepresentmentPanel } from "./RepresentmentPanel";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import ArtifactsViewer, { ArtifactDoc } from "./ArtifactsViewer";
 
 interface DisputeDetailProps {
   dispute: {
@@ -63,6 +64,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
   const [openSections, setOpenSections] = useState<Record<number, boolean>>({});
   const [evidenceRequest, setEvidenceRequest] = useState<any>(null);
   const [customerEvidence, setCustomerEvidence] = useState<any>(null);
+  const [disputeDocuments, setDisputeDocuments] = useState<ArtifactDoc[]>([]);
   const queryClient = useQueryClient();
 
   // Load evidence request and submission data
@@ -93,10 +95,28 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
 
       setCustomerEvidence(evidenceData);
       console.log('[DisputeDetail] customerEvidence', evidenceData);
+
+      // Load dispute documents from database
+      const { data: docsData } = await supabase
+        .from('dispute_documents')
+        .select('*')
+        .eq('dispute_id', dispute.id)
+        .order('created_at', { ascending: true });
+
+      if (docsData && docsData.length > 0) {
+        const artifacts: ArtifactDoc[] = docsData.map(doc => ({
+          requirementName: doc.requirement_name,
+          name: doc.file_name,
+          size: doc.file_size,
+          type: doc.file_type,
+          path: doc.storage_path
+        }));
+        setDisputeDocuments(artifacts);
+      }
     };
 
     loadEvidenceData();
-  }, [dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status, dispute.transaction?.dispute_status]);
+  }, [dispute.id, dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status, dispute.transaction?.dispute_status]);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));
@@ -543,22 +563,22 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
             <Separator />
 
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-2">
+              <div className="text-sm font-medium text-muted-foreground mb-3">
                 Artifacts
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <div className="h-4 w-4 border rounded flex items-center justify-center text-xs">
                     📄
                   </div>
                   <span>Disputed transaction</span>
                 </div>
-                {dispute.documents && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="h-4 w-4 border rounded flex items-center justify-center text-xs">
-                      📎
-                    </div>
-                    <span>Supporting documents</span>
+                {disputeDocuments.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <ArtifactsViewer 
+                      documents={disputeDocuments} 
+                      title="View Submitted Documents"
+                    />
                   </div>
                 )}
               </div>
