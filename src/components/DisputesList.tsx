@@ -187,6 +187,83 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     };
   }, [statusFilter, userId, filters, sortField, sortDirection]);
 
+  /**
+   * Determines which bucket a transaction belongs to using MECE (Mutually Exclusive, Collectively Exhaustive) logic.
+   * Priority waterfall: DONE → NEEDS ATTENTION → IN PROGRESS
+   * 
+   * - DONE: Lifecycle complete, no further actions possible
+   * - NEEDS ATTENTION: Bank must make a decision
+   * - IN PROGRESS: Active, but no bank decision required yet
+   */
+  const determineTransactionBucket = (dispute: Dispute): 'done' | 'needs_attention' | 'in_progress' => {
+    const txn = dispute.transaction;
+    const repRel = (txn as any)?.chargeback_representment_static;
+    const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
+    const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
+    const latestAction = dispute.latestActionLog;
+    const chargebackAction = dispute.chargeback_actions?.[0];
+
+    // ========== PRIORITY 1: DONE BUCKET ==========
+    // Transaction lifecycle is complete - no further actions possible
+    
+    // 1. Dispute decision is terminal
+    if (hasWriteOffDecision || 
+        ['write_off_approved', 'approved', 'ineligible', 'completed', 'done'].includes(dispute.status)) {
+      return 'done';
+    }
+
+    // 2. Case was resolved/closed
+    if (['closed_won', 'closed_lost', 'merchant_won', 'resolved_merchant_accepted'].includes(txn?.dispute_status || '')) {
+      return 'done';
+    }
+
+    // 3. Representment concluded
+    if (['no_representment', 'accepted_by_bank', 'customer_evidence_rejected'].includes(repStatus || '')) {
+      return 'done';
+    }
+
+    // 4. Latest action indicates finality
+    if (latestAction === 'case_resolved_merchant_accepted' || latestAction === 'chargeback_recalled') {
+      return 'done';
+    }
+
+    // ========== PRIORITY 2: NEEDS ATTENTION BUCKET ==========
+    // Bank must make a decision or take action
+    
+    // 1. Awaiting bank admin review/decision
+    if (repStatus === 'pending' || 
+        txn?.needs_attention === true ||
+        ['pending_manual_review', 'requires_action'].includes(dispute.status) ||
+        chargebackAction?.requires_manual_review === true) {
+      return 'needs_attention';
+    }
+
+    // 2. Customer evidence submitted, awaiting bank review
+    if (txn?.dispute_status === 'awaiting_evidence_review') {
+      return 'needs_attention';
+    }
+
+    // 3. Rebuttal submitted, bank may need to monitor/act
+    if (repStatus === 'rebuttal_submitted') {
+      return 'needs_attention';
+    }
+
+    // 4. Settlement decisions pending
+    if (dispute.status === 'awaiting_settlement') {
+      return 'needs_attention';
+    }
+
+    // ========== PRIORITY 3: IN PROGRESS BUCKET ==========
+    // Everything else - transaction is active but no bank decision required
+    // This includes:
+    // - Customer working on dispute
+    // - Waiting for customer to provide information
+    // - Automated processes running
+    // - Waiting for external parties
+    
+    return 'in_progress';
+  };
+
   const loadDisputes = async () => {
     try {
       setLoading(true);
@@ -201,20 +278,8 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         query = query.eq("customer_id", userId);
       }
 
-      // Filter by status category (only where safe to do server-side)
-      if (statusFilter === "in_progress") {
-        query = query.in("status", [
-          "started",
-          "transaction_selected",
-          "eligibility_checked",
-          "reason_selected",
-          "documents_uploaded",
-          "under_review",
-          "awaiting_investigation",
-          "chargeback_filed",
-          "awaiting_merchant_refund"
-        ]);
-      } else if (statusFilter === "void") {
+      // No server-side filtering by status - we'll do it client-side with MECE logic
+      if (statusFilter === "void") {
         query = query.in("status", ["rejected", "cancelled", "expired"]);
       }
 
@@ -323,74 +388,19 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       // Only show disputes on dashboard after transaction selection
       let filteredData = dataWithRelations.filter((d: any) => d.transaction_id !== null);
 
-      // Special handling for needs_attention
-      if (statusFilter === 'needs_attention') {
-        filteredData = filteredData.filter((dispute: any) => {
-          // Exclude terminal "done" states from needs attention regardless of flags
-          const terminalDoneStatuses = ['done','completed','approved','ineligible','closed_lost','closed_won','representment_contested','write_off_approved'];
-          if (terminalDoneStatuses.includes(dispute.status)) return false;
-
-          // Exclude write-off approved disputes from needs attention
-          const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
-          if (hasWriteOffDecision) return false;
-          if (dispute.status === 'write_off_approved') return false;
-          
-          // Exclude in_progress cases from needs attention
-          if (dispute.status === 'in_progress') return false;
-          
-          const txn = dispute.transaction;
-          const repRel = (txn as any)?.chargeback_representment_static;
-          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
-
-          // Exclude if representment or transaction is terminal
-          if (repStatus === 'no_representment' || 
-              repStatus === 'accepted_by_bank' || 
-              repStatus === 'customer_evidence_rejected' ||
-              txn?.dispute_status === 'closed_won' || 
-              txn?.dispute_status === 'closed_lost' ||
-              txn?.dispute_status === 'merchant_won') {
-            return false;
-          }
-          
-          // Show in needs_attention if pending representment, awaiting customer info, customer evidence submitted,
-          // explicit transaction needs_attention, or dispute requires manual action
-          return repStatus === 'pending' || 
-                 repStatus === 'awaiting_customer_info' ||
-                 txn?.dispute_status === 'evidence_submitted' ||
-                 txn?.needs_attention === true ||
-                 ['requires_action', 'pending_manual_review', 'awaiting_settlement'].includes(dispute.status);
-        });
-      }
-
-      // Special handling for awaiting_customer filter
-      if (statusFilter === 'awaiting_customer') {
+      // Apply MECE bucket filtering using determineTransactionBucket
+      if (statusFilter === 'done') {
+        filteredData = filteredData.filter(d => determineTransactionBucket(d) === 'done');
+      } else if (statusFilter === 'needs_attention') {
+        filteredData = filteredData.filter(d => determineTransactionBucket(d) === 'needs_attention');
+      } else if (statusFilter === 'in_progress') {
+        filteredData = filteredData.filter(d => determineTransactionBucket(d) === 'in_progress');
+      } else if (statusFilter === 'awaiting_customer') {
+        // Special filter: subset of in_progress where customer needs to provide info
         filteredData = filteredData.filter((dispute: any) => {
           const repRel = (dispute.transaction as any)?.chargeback_representment_static;
           const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
           return repStatus === 'awaiting_customer_info';
-        });
-      }
-
-      // Special handling for done
-      if (statusFilter === 'done') {
-        filteredData = filteredData.filter((dispute: any) => {
-          // Include write-off approved disputes in done
-          const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
-          if (hasWriteOffDecision) return true;
-          if (dispute.status === 'write_off_approved') return true;
-          
-          // Include disputes with done statuses
-          if ([
-            'done', 'completed', 'approved', 'ineligible', 'closed_lost', 'closed_won', 
-            'representment_contested', 'write_off_approved'
-          ].includes(dispute.status)) return true;
-          
-          const repRel = (dispute.transaction as any)?.chargeback_representment_static;
-          const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
-          return repStatus === 'no_representment' || 
-                 repStatus === 'accepted_by_bank' ||
-                 dispute.transaction?.dispute_status === 'closed_won' ||
-                 dispute.transaction?.dispute_status === 'closed_lost';
         });
       }
 
