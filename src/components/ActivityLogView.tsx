@@ -504,6 +504,19 @@ const ActivityLogView = ({
         }
       }
 
+      // Check if customer evidence exists for this transaction (needed for representment logic)
+      let customerEvidence = null;
+      if (transactionId) {
+        const { data: evidenceData } = await supabase
+          .from('dispute_customer_evidence')
+          .select('*')
+          .eq('transaction_id', transactionId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        customerEvidence = evidenceData;
+      }
+
       // 9. Add representment info ONLY after chargeback has been filed
       const repData = (dispute.transaction as any)?.chargeback_representment_static;
       const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
@@ -554,9 +567,15 @@ const ActivityLogView = ({
             }
             break;
           case 'awaiting_customer_info':
-            repActivity.label = 'Waiting for Customer Response';
-            repActivity.details = 'The bank has requested additional evidence from the customer to contest the merchant\'s representment.';
-            repActivity.activityType = 'paused';
+            // Only show "Waiting for Customer Response" if no evidence has been submitted yet
+            if (!customerEvidence) {
+              repActivity.label = 'Waiting for Customer Response';
+              repActivity.details = 'The bank has requested additional evidence from the customer to contest the merchant\'s representment.';
+              repActivity.activityType = 'paused';
+            } else {
+              // Customer has submitted evidence, don't show waiting status
+              return;
+            }
             break;
           case 'customer_evidence_approved':
             // This status means customer evidence was approved and case is resolved - don't show standalone representment activity
