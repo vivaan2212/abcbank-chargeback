@@ -443,15 +443,50 @@ const Portal = () => {
   };
 
   const initializeNewConversation = async (userId: string) => {
-    // Guard against duplicate creation
+    // Guard against duplicate creation within this component instance
     if (isCreatingChat.current) {
       console.log('Chat creation already in progress, skipping...');
       return;
     }
-    
+
+    // Cross-instance idempotency lock (handles React.StrictMode double-mount)
+    const lockKey = `cb_chat_creation_lock::${userId}`;
+    const now = Date.now();
+    const existingLock = sessionStorage.getItem(lockKey);
+    if (existingLock && now - parseInt(existingLock, 10) < 10000) {
+      console.log('Recent chat creation lock present, skipping...');
+      return;
+    }
+    sessionStorage.setItem(lockKey, String(now));
+
     isCreatingChat.current = true;
-    
+
     try {
+      // Double-check on the server: reuse a very recent conversation if one exists
+      const recentCutoff = new Date(now - 10000).toISOString();
+      const { data: recentConvs } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("user_id", userId)
+        .gte("created_at", recentCutoff)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (recentConvs && recentConvs.length > 0) {
+        const recent = recentConvs[0];
+        setCurrentConversationId(recent.id);
+
+        // Persist to sessionStorage (per-user)
+        const activeChatKey = `cb_active_chat_id::${userId}`;
+        const activeTimestampKey = `cb_active_chat_ts::${userId}`;
+        sessionStorage.setItem(activeChatKey, recent.id);
+        sessionStorage.setItem(activeTimestampKey, new Date().toISOString());
+
+        setIsReadOnly(recent.status === "closed");
+        loadMessages(recent.id);
+        return; // Reuse recent conversation, avoid creating a duplicate
+      }
+
       // Create new conversation
       const { data: conversation, error: convError } = await supabase
         .from("conversations")
@@ -466,7 +501,7 @@ const Portal = () => {
       if (convError) throw convError;
 
       setCurrentConversationId(conversation.id);
-      
+
       // Reset help widget for new conversation
       setIsHelpWidgetOpen(false);
       setHelpWidgetMessages([
@@ -476,13 +511,13 @@ const Portal = () => {
           timestamp: new Date(),
         }
       ]);
-      
+
       // Persist to sessionStorage (per-user)
       const activeChatKey = `cb_active_chat_id::${userId}`;
       const activeTimestampKey = `cb_active_chat_ts::${userId}`;
       sessionStorage.setItem(activeChatKey, conversation.id);
       sessionStorage.setItem(activeTimestampKey, new Date().toISOString());
-      
+
       setIsReadOnly(false);
       // Reset UI state for a fresh conversation
       setShowTransactions(false);
@@ -541,11 +576,11 @@ const Portal = () => {
       let transactionQuery = supabase
         .from("transactions")
         .select("*");
-      
+
       if (!isBankAdmin) {
         transactionQuery = transactionQuery.eq("customer_id", userId);
       }
-      
+
       const { data: txns, error: txnError } = await transactionQuery
         .gte("transaction_time", cutoffDate.toISOString())
         .order("transaction_time", { ascending: false })
@@ -577,6 +612,8 @@ const Portal = () => {
     } catch (error: any) {
       toast.error("Failed to create new conversation");
     } finally {
+      // Release lock shortly after to allow user-triggered new chats
+      setTimeout(() => sessionStorage.removeItem(lockKey), 5000);
       isCreatingChat.current = false;
     }
   };
