@@ -188,79 +188,149 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
   }, [statusFilter, userId, filters, sortField, sortDirection]);
 
   /**
-   * Determines which bucket a transaction belongs to using MECE (Mutually Exclusive, Collectively Exhaustive) logic.
-   * Priority waterfall: DONE → NEEDS ATTENTION → IN PROGRESS
+   * Gets the last activity log label for a dispute.
+   * This determines the most recent meaningful activity that occurred.
+   */
+  const getLastActivityLog = (dispute: Dispute): string | null => {
+    const txn = dispute.transaction;
+    const repData = (txn as any)?.chargeback_representment_static;
+    const repStatus = Array.isArray(repData) ? repData[0]?.representment_status : repData?.representment_status;
+    const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
+    const latestAction = dispute.latestActionLog;
+    const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
+    const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
+    const customerEvidence = (dispute as any).dispute_customer_evidence?.[0];
+    const customerEvidenceReview = (dispute as any).customer_evidence_reviews?.[0];
+
+    // Check for terminal states (highest priority)
+    if (hasWriteOffDecision) return 'Write-off provided to customer';
+    if (latestAction === 'case_resolved_merchant_accepted') return 'Case Resolved - Merchant Accepted Evidence';
+    if (latestAction === 'chargeback_recalled' && repStatus === 'customer_evidence_rejected') return 'Chargeback recalled';
+    
+    // Check for customer evidence review results
+    if (customerEvidenceReview) {
+      if (customerEvidenceReview.review_decision === 'approved') {
+        return 'Chargeback request accepted by Visa; Temporary credit earlier processed has been made permanent';
+      } else if (customerEvidenceReview.review_decision === 'rejected') {
+        return 'Chargeback recalled; Merchant wins';
+      }
+    }
+
+    // Check representment statuses (only show after chargeback filed)
+    if (repData && chargebackFiledOrApproved) {
+      if (repStatus === 'accepted_by_bank') {
+        return 'Evidence reviewed and found valid; customer chargeback request to be recalled';
+      } else if (repStatus === 'rejected_by_bank') {
+        return 'Representment Rejected - Customer Wins';
+      } else if (repStatus === 'pending' && repData.merchant_document_url) {
+        return 'Merchant Representment Received';
+      } else if (repStatus === 'awaiting_customer_info' && customerEvidence) {
+        // Customer has submitted evidence, needs bank review
+        return 'Valid rebuttal representment evidence submitted by customer';
+      } else if (repStatus === 'awaiting_customer_info' && !customerEvidence) {
+        return 'Waiting for Customer Response';
+      } else if (repStatus === 'no_representment') {
+        return 'Merchant Representment Period Closed';
+      }
+    }
+
+    // Check eligibility status
+    if (dispute.eligibility_status) {
+      const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
+      if (!isEligible) {
+        return 'Transaction is not eligible for chargeback';
+      }
+    }
+
+    // Check for chargeback actions
+    const actions = dispute.chargeback_actions || [];
+    if (actions.length > 0) {
+      const action = actions[0];
+      if (action.chargeback_filed) return 'Chargeback filing completed';
+      if (action.temporary_credit_issued) return 'Temporary credit approved';
+      if (action.awaiting_merchant_refund) return 'Awaiting merchant refund';
+      if (action.requires_manual_review) return 'Case requires manual review';
+    }
+
+    // Check final statuses
+    const status = dispute.status?.toLowerCase() || '';
+    if (['completed', 'approved', 'closed_won'].includes(status)) {
+      return 'Chargeback approved - Case resolved';
+    } else if (status === 'rejected') {
+      return 'Chargeback rejected';
+    } else if (['void', 'cancelled'].includes(status)) {
+      return 'Case voided';
+    }
+
+    // Default fallback
+    return 'Received a disputed transaction';
+  };
+
+  /**
+   * Determines which bucket a transaction belongs to based on the LAST ACTIVITY LOG.
+   * MECE (Mutually Exclusive, Collectively Exhaustive) logic.
    * 
    * - DONE: Lifecycle complete, no further actions possible
    * - NEEDS ATTENTION: Bank must make a decision
    * - IN PROGRESS: Active, but no bank decision required yet
    */
   const determineTransactionBucket = (dispute: Dispute): 'done' | 'needs_attention' | 'in_progress' => {
-    const txn = dispute.transaction;
-    const repRel = (txn as any)?.chargeback_representment_static;
-    const repStatus = Array.isArray(repRel) ? repRel[0]?.representment_status : repRel?.representment_status;
-    const hasWriteOffDecision = dispute.dispute_decisions?.some((d: any) => d.decision === 'APPROVE_WRITEOFF');
-    const latestAction = dispute.latestActionLog;
-    const chargebackAction = dispute.chargeback_actions?.[0];
-
-    // ========== PRIORITY 1: DONE BUCKET ==========
-    // Transaction lifecycle is complete - no further actions possible
+    const lastLog = getLastActivityLog(dispute);
     
-    // 1. Dispute decision is terminal
-    if (hasWriteOffDecision || 
-        ['write_off_approved', 'approved', 'ineligible', 'completed', 'done'].includes(dispute.status)) {
+    if (!lastLog) return 'in_progress';
+
+    // CASE 1: Write-off approved → DONE
+    if (lastLog.includes('Write-off')) {
       return 'done';
     }
 
-    // 2. Case was resolved/closed
-    if (['closed_won', 'closed_lost', 'merchant_won', 'resolved_merchant_accepted'].includes(txn?.dispute_status || '')) {
+    // CASE 2: Transaction ineligible → DONE
+    if (lastLog.includes('not eligible for chargeback')) {
       return 'done';
     }
 
-    // 3. Representment concluded
-    if (['no_representment', 'accepted_by_bank', 'customer_evidence_rejected'].includes(repStatus || '')) {
+    // CASE 3: Merchant representment received (needs bank decision) → NEEDS ATTENTION
+    if (lastLog.includes('Merchant Representment Received')) {
+      return 'needs_attention';
+    }
+
+    // CASE 4: Bank accepted representment (evidence reviewed - done) → DONE
+    if (lastLog.includes('Evidence reviewed and found valid; customer chargeback request to be recalled')) {
       return 'done';
     }
 
-    // 4. Latest action indicates finality
-    if (latestAction === 'case_resolved_merchant_accepted' || latestAction === 'chargeback_recalled') {
+    // CASE 5: Bank rejected representment, waiting for customer → NEEDS ATTENTION
+    if (lastLog.includes('Waiting for Customer Response')) {
+      return 'needs_attention';
+    }
+
+    // CASE 6: Customer evidence submitted (needs bank review) → NEEDS ATTENTION
+    if (lastLog.includes('Valid rebuttal representment evidence submitted by customer')) {
+      return 'needs_attention';
+    }
+
+    // CASE 7: Merchant accepted customer evidence → DONE
+    if (lastLog.includes('Case Resolved - Merchant Accepted Evidence')) {
       return 'done';
     }
 
-    // ========== PRIORITY 2: NEEDS ATTENTION BUCKET ==========
-    // Bank must make a decision or take action
-    
-    // 1. Awaiting bank admin review/decision
-    if (repStatus === 'pending' || 
-        txn?.needs_attention === true ||
-        ['pending_manual_review', 'requires_action'].includes(dispute.status) ||
-        chargebackAction?.requires_manual_review === true) {
-      return 'needs_attention';
+    // CASE 8: Bank rejected customer evidence, chargeback recalled → DONE
+    if (lastLog.includes('Chargeback recalled')) {
+      return 'done';
     }
 
-    // 2. Customer evidence submitted, awaiting bank review
-    if (txn?.dispute_status === 'awaiting_evidence_review') {
-      return 'needs_attention';
+    // Additional terminal states → DONE
+    if (lastLog.includes('Chargeback approved') || 
+        lastLog.includes('Case resolved') ||
+        lastLog.includes('Chargeback request accepted by Visa') ||
+        lastLog.includes('Temporary credit earlier processed has been made permanent') ||
+        lastLog.includes('Representment Rejected - Customer Wins') ||
+        lastLog.includes('Merchant Representment Period Closed') ||
+        lastLog.includes('Merchant wins')) {
+      return 'done';
     }
 
-    // 3. Rebuttal submitted, bank may need to monitor/act
-    if (repStatus === 'rebuttal_submitted') {
-      return 'needs_attention';
-    }
-
-    // 4. Settlement decisions pending
-    if (dispute.status === 'awaiting_settlement') {
-      return 'needs_attention';
-    }
-
-    // ========== PRIORITY 3: IN PROGRESS BUCKET ==========
-    // Everything else - transaction is active but no bank decision required
-    // This includes:
-    // - Customer working on dispute
-    // - Waiting for customer to provide information
-    // - Automated processes running
-    // - Waiting for external parties
-    
+    // Default to in_progress for all other logs (customer actions, automated processes)
     return 'in_progress';
   };
 
@@ -299,7 +369,9 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         repsRes,
         actionsRes,
         decisionsRes,
-        actionLogsRes
+        actionLogsRes,
+        customerEvidenceRes,
+        evidenceReviewsRes
       ] = await Promise.all([
         transactionIds.length > 0
           ? supabase
@@ -337,6 +409,19 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
               .select("transaction_id, action, performed_at")
               .in("transaction_id", transactionIds)
               .order('performed_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        transactionIds.length > 0
+          ? supabase
+              .from("dispute_customer_evidence")
+              .select("id, transaction_id, customer_id, evidence_type, evidence_url, customer_note, ai_summary, ai_reasons, ai_sufficient, created_at")
+              .in("transaction_id", transactionIds)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        transactionIds.length > 0
+          ? supabase
+              .from("customer_evidence_reviews")
+              .select("id, customer_evidence_id, transaction_id, review_decision, review_notes, reviewed_by, reviewed_at, created_at")
+              .in("transaction_id", transactionIds)
           : Promise.resolve({ data: [], error: null })
       ]);
 
@@ -371,17 +456,35 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         }
       });
 
+      // Build map for customer evidence per transaction
+      const evidenceByTxn: Record<string, any[]> = {};
+      (customerEvidenceRes.data || []).forEach((evidence: any) => {
+        if (!evidenceByTxn[evidence.transaction_id]) evidenceByTxn[evidence.transaction_id] = [];
+        evidenceByTxn[evidence.transaction_id].push(evidence);
+      });
+
+      // Build map for evidence reviews per transaction
+      const reviewsByTxn: Record<string, any[]> = {};
+      (evidenceReviewsRes.data || []).forEach((review: any) => {
+        if (!reviewsByTxn[review.transaction_id]) reviewsByTxn[review.transaction_id] = [];
+        reviewsByTxn[review.transaction_id].push(review);
+      });
+
       // Attach related data
       const dataWithRelations = (data || []).map((dispute: any) => {
         const txn = dispute.transaction_id ? txMap[dispute.transaction_id] : undefined;
         const rep = dispute.transaction_id ? repByTxn[dispute.transaction_id] : undefined;
         const latestAction = dispute.transaction_id ? latestActionByTxn[dispute.transaction_id] : undefined;
+        const evidence = dispute.transaction_id ? evidenceByTxn[dispute.transaction_id] : undefined;
+        const reviews = dispute.transaction_id ? reviewsByTxn[dispute.transaction_id] : undefined;
         return {
           ...dispute,
           transaction: txn ? { ...txn, chargeback_representment_static: rep?.length === 1 ? rep[0] : (rep || []) } : undefined,
           chargeback_actions: actionsByDispute[dispute.id] || [],
           dispute_decisions: decisionsMap[dispute.id] || [],
-          latestActionLog: latestAction || null
+          latestActionLog: latestAction || null,
+          dispute_customer_evidence: evidence || [],
+          customer_evidence_reviews: reviews || []
         } as Dispute;
       });
 
