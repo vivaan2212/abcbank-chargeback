@@ -990,22 +990,6 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     return getStatusLabel(dispute.status);
   };
 
-  // Get the status label based on the current tab filter
-  const getTabStatusLabel = (): string => {
-    switch (statusFilter) {
-      case 'done':
-        return 'Done';
-      case 'void':
-        return 'Void';
-      case 'needs_attention':
-        return 'Needs attention';
-      case 'in_progress':
-        return 'In progress';
-      default:
-        return 'In progress';
-    }
-  };
-
   // Get the color for the status square based on current tab filter
   const getStatusColor = (dispute: Dispute): string => {
     // For needs_attention tab, still use orange even if representment is pending
@@ -1263,7 +1247,7 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
                     <Square className={`h-3 w-3 ${getStatusColor(dispute)}`} />
                   </TableCell>
                   <TableCell className="font-normal">
-                    {getTabStatusLabel()}
+                    {getDerivedStatus(dispute)}
                   </TableCell>
                   <TableCell>{dispute.transaction?.acquirer_name ?? "-"}</TableCell>
                   <TableCell>{dispute.transaction?.merchant_category_code ?? "-"}</TableCell>
