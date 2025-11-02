@@ -370,8 +370,25 @@ const Portal = () => {
             setIsReadOnly(conversation.status === "closed");
             loadMessages(conversation.id);
           } else {
-            // No conversations exist - auto-create first chat
-            initializeNewConversation(userId);
+            // No conversations exist - don't auto-create; wait briefly and re-check once
+            setTimeout(async () => {
+              const { data: convs } = await supabase
+                .from("conversations")
+                .select("*")
+                .eq("user_id", userId)
+                .order("updated_at", { ascending: false })
+                .limit(1);
+              if (convs && convs.length > 0) {
+                const conversation = convs[0];
+                setCurrentConversationId(conversation.id);
+                sessionStorage.setItem(activeChatKey, conversation.id);
+                sessionStorage.setItem(`cb_active_chat_ts::${userId}`, new Date().toISOString());
+                setIsReadOnly(conversation.status === "closed");
+                loadMessages(conversation.id);
+              } else {
+                console.log('No existing conversations; awaiting user action');
+              }
+            }, 1000);
           }
         }
       });
