@@ -132,7 +132,10 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) {
+        console.log('No active session - skipping server-side delete');
+        return; // Silently return if no session (user logged out)
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -154,6 +157,11 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // Handle 401 gracefully - user likely logged out
+        if (response.status === 401) {
+          console.log('Auth expired during delete - skipping');
+          return;
+        }
         const error = await response.json();
         throw new Error(error.error || 'Delete failed');
       }
@@ -162,6 +170,12 @@ const ChatHistory = ({ currentConversationId, onConversationSelect, onNewChat }:
       console.log('Delete succeeded:', result);
     } catch (error: any) {
       console.error(`Delete attempt ${attempt} failed:`, error);
+
+      // Don't retry auth errors
+      if (error.message?.includes('Not authenticated') || error.message?.includes('Unauthorized')) {
+        console.log('Auth error - skipping retries');
+        return;
+      }
 
       if (attempt < maxRetries) {
         const delay = retryDelays[attempt - 1] || 1200;
