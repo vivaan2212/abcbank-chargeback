@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.update-knowledge-base]
 verify_jwt = true
+
+[functions.log-transaction-update]
+verify_jwt = true
