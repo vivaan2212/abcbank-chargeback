@@ -39,10 +39,27 @@ const KnowledgeBaseUpdateHistory = () => {
     setIsLoading(false);
   };
 
+  const stripHtml = (html: string): string => {
+    // Remove HTML tags and decode common entities
+    return html
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+  };
+
   const findDifferences = (previous: string, updated: string) => {
+    // Strip HTML first
+    const cleanPrevious = stripHtml(previous);
+    const cleanUpdated = stripHtml(updated);
+    
     // Split into sentences for comparison
-    const prevSentences = previous.split(/(?<=[.!?])\s+/).filter(s => s.trim());
-    const updatedSentences = updated.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+    const prevSentences = cleanPrevious.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+    const updatedSentences = cleanUpdated.split(/(?<=[.!?])\s+/).filter(s => s.trim());
     
     // Find added content (in updated but not in previous)
     const added = updatedSentences.filter(s => 
@@ -109,6 +126,9 @@ const KnowledgeBaseUpdateHistory = () => {
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Updated by {update.updated_by}
                     </p>
                   </div>
                 </div>
