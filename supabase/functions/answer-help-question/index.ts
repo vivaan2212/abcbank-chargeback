@@ -28,15 +28,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if this is an update request
-    const isUpdateRequest = question.toLowerCase().includes('update') && 
-                           (question.toLowerCase().includes('knowledge') || 
-                            question.toLowerCase().includes('decision') ||
-                            question.toLowerCase().includes('similar transaction') ||
-                            question.toLowerCase().match(/\bupdate\b/i) && question.split(' ').length < 10);
+    // Check if this is a knowledge base update request (not just a regular note)
+    // Only trigger update flow if user explicitly mentions "update" in context of knowledge/decisions
+    const isUpdateRequest = 
+      question.toLowerCase().includes('update') && 
+      (question.toLowerCase().includes('knowledge') || 
+       question.toLowerCase().includes('pace') ||
+       question.toLowerCase().includes('decision') ||
+       question.toLowerCase().includes('similar transaction') ||
+       question.toLowerCase().includes('policy') ||
+       question.toLowerCase().includes('rule'));
 
     if (isUpdateRequest) {
-      console.log('Detected update request, redirecting to update flow');
+      console.log('Detected knowledge base update request, redirecting to update flow');
       return new Response(
         JSON.stringify({ 
           answer: "I understand you'd like to log an update for similar transactions. I'll ask you a few questions to help document this properly.\n\nFirst, what type of transaction or scenario is this update about? (For example: subscription disputes, contactless payments, specific merchant types, etc.)",
