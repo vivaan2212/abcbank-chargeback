@@ -28,6 +28,24 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if this is an update request
+    const isUpdateRequest = question.toLowerCase().includes('update') && 
+                           (question.toLowerCase().includes('knowledge') || 
+                            question.toLowerCase().includes('decision') ||
+                            question.toLowerCase().includes('similar transaction') ||
+                            question.toLowerCase().match(/\bupdate\b/i) && question.split(' ').length < 10);
+
+    if (isUpdateRequest) {
+      console.log('Detected update request, redirecting to update flow');
+      return new Response(
+        JSON.stringify({ 
+          answer: "I understand you'd like to log an update for similar transactions. I'll ask you a few questions to help document this properly.\n\nFirst, what type of transaction or scenario is this update about? (For example: subscription disputes, contactless payments, specific merchant types, etc.)",
+          isUpdateFlow: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Searching knowledge base for:', question);
 
     // Search knowledge base for relevant information

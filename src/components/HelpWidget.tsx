@@ -35,6 +35,7 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [isUpdateFlow, setIsUpdateFlow] = useState(false);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -57,37 +58,74 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
         content: msg.content
       }));
 
-      // Call edge function to get AI-powered answer from knowledge base
-      const { data: helpData, error: helpError } = await supabase.functions.invoke(
-        'answer-help-question',
-        {
-          body: {
-            question,
-            conversationHistory
+      // Check if we're in update flow
+      if (isUpdateFlow) {
+        // Call update logging function
+        const { data: updateData, error: updateError } = await supabase.functions.invoke(
+          'log-transaction-update',
+          {
+            body: {
+              userInput: question,
+              conversationHistory
+            }
           }
-        }
-      );
+        );
 
-      if (helpError) throw helpError;
+        if (updateError) throw updateError;
 
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: helpData.answer || "I'm sorry, I couldn't find an answer to that question. Please try rephrasing or contact support for more help.",
-        timestamp: new Date(),
-      };
-      
-      setMessages((prev) => [...prev, assistantMessage]);
-      
-      // Add follow-up question after a brief delay
-      setTimeout(() => {
-        const followUpMessage: Message = {
+        const assistantMessage: Message = {
           role: "assistant",
-          content: "Do you have any other questions?",
+          content: updateData.response,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, followUpMessage]);
-        setShowFollowUp(true);
-      }, 500);
+        
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // If update is completed, exit update flow
+        if (updateData.completed) {
+          setIsUpdateFlow(false);
+          setShowFollowUp(true);
+        }
+      } else {
+        // Call edge function to get AI-powered answer from knowledge base
+        const { data: helpData, error: helpError } = await supabase.functions.invoke(
+          'answer-help-question',
+          {
+            body: {
+              question,
+              conversationHistory
+            }
+          }
+        );
+
+        if (helpError) throw helpError;
+
+        // Check if this triggers update flow
+        if (helpData.isUpdateFlow) {
+          setIsUpdateFlow(true);
+        }
+
+        const assistantMessage: Message = {
+          role: "assistant",
+          content: helpData.answer || "I'm sorry, I couldn't find an answer to that question. Please try rephrasing or contact support for more help.",
+          timestamp: new Date(),
+        };
+        
+        setMessages((prev) => [...prev, assistantMessage]);
+        
+        // Add follow-up question after a brief delay (only if not in update flow)
+        if (!helpData.isUpdateFlow) {
+          setTimeout(() => {
+            const followUpMessage: Message = {
+              role: "assistant",
+              content: "Do you have any other questions?",
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, followUpMessage]);
+            setShowFollowUp(true);
+          }, 500);
+        }
+      }
     } catch (error: any) {
       console.error("Failed to get help:", error);
       toast.error("Failed to get answer. Please try again.");
