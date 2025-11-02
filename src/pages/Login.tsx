@@ -27,19 +27,6 @@ const Login = () => {
     // Set up auth listener to handle session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setExistingSession(session);
-      
-      if (session && event === 'SIGNED_IN') {
-        // Only redirect on new sign-in, not on existing session
-        setTimeout(async () => {
-          const role = await getUserRole(session.user.id);
-          if (role === 'bank_admin') {
-            navigate("/dashboard");
-          } else if (role === 'customer') {
-            sessionStorage.setItem('portal:freshLogin', '1');
-            navigate("/portal");
-          }
-        }, 0);
-      }
     });
 
     return () => subscription.unsubscribe();
