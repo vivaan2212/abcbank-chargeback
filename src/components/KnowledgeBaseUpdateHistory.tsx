@@ -128,7 +128,7 @@ const KnowledgeBaseUpdateHistory = () => {
                       {formatDistanceToNow(new Date(update.created_at), { addSuffix: true })}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
-                      Updated by {update.updated_by}
+                      Updated by Adam Smith
                     </p>
                   </div>
                 </div>
