@@ -1534,7 +1534,7 @@ const ActivityLogView = ({
           <div className="max-w-4xl">
             <div className="flex items-center gap-2 bg-muted/30 rounded-lg border px-4 py-2">
               
-              <Input value={inputText} onChange={e => setInputText(e.target.value)} onKeyPress={handleKeyPress} placeholder="Have a question? Ask Pace right away" className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm" />
+              <Input value={inputText} onChange={e => setInputText(e.target.value)} onKeyPress={handleKeyPress} placeholder="Work with Pace. Log any updates or key notes for future reference." className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm" />
               <Button onClick={handleSubmitComment} size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-primary hover:text-primary-foreground" disabled={!inputText.trim()}>
                 <ArrowUp className="h-4 w-4" />
               </Button>
