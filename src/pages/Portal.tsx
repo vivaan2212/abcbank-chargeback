@@ -2075,121 +2075,13 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleHelpRequest = () => {
-    // Capture the current active UI step before opening help widget
-    let activeStep: string | null = null;
-    
-    if (showTransactions) {
-      activeStep = 'transactions';
-    } else if (showDocumentUpload) {
-      activeStep = 'documentUpload';
-    } else if (showContinueOrEndButtons) {
-      activeStep = 'continueEnd';
-    } else if (showOrderDetailsInput && questionStep !== null) {
-      activeStep = 'questionStep';
-    } else if (showReasonPicker) {
-      activeStep = 'reasonPicker';
-    }
-    
-    // Prepare a step-specific prompt to re-state when resuming
-    let stepPrompt: string | null = null;
-    if (activeStep === 'transactions') {
-      stepPrompt = `These are your transactions from the last 120 days - please select the transaction for which you'd like to raise a dispute.`;
-    } else if (activeStep === 'questionStep') {
-      stepPrompt = null; // handled separately on resume
-    } else {
-      const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
-      stepPrompt = lastAssistantMsg?.content || null;
-    }
-    setPreviousAssistantMessage(stepPrompt);
-    
-    setPreviousActiveStep(activeStep);
+    // Simply open the help dialog - main chat stays visible
     setIsHelpWidgetOpen(true);
-
-    // Temporarily hide main flow while help is open
-    setShowTransactions(false);
-    setShowReasonPicker(false);
-    setShowDocumentUpload(false);
-    setShowOrderDetailsInput(false);
-    setShowContinueOrEndButtons(false);
   };
 
   const handleResumeQuestion = async () => {
-    // Use previousActiveStep to restore the correct UI
-    if (!previousActiveStep) {
-      console.log('No previous active step to resume');
-      return;
-    }
-
-    setTimeout(async () => {
-      // Re-display the previous assistant message first by inserting to backend
-      if (previousAssistantMessage && currentConversationId) {
-        await supabase.from("messages").insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: previousAssistantMessage,
-        });
-      }
-
-      // Then restore the UI based on the previous step
-      switch (previousActiveStep) {
-        case 'transactions':
-          setShowTransactions(true);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(false);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(false);
-          break;
-
-        case 'reasonPicker':
-          setShowTransactions(false);
-          setShowReasonPicker(true);
-          setShowDocumentUpload(false);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(false);
-          break;
-
-        case 'documentUpload':
-          setShowTransactions(false);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(true);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(false);
-          break;
-
-        case 'questionStep':
-          // Re-show the question if there is one
-          if (questionStep !== null && currentQuestion.trim().length > 0) {
-            const questionMessage: Message = {
-              id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              role: "assistant",
-              content: currentQuestion,
-              created_at: new Date().toISOString(),
-            };
-            setMessages(prev => [...prev, questionMessage]);
-            setShowOrderDetailsInput(true);
-          }
-          setShowTransactions(false);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(false);
-          setShowContinueOrEndButtons(false);
-          break;
-
-        case 'continueEnd':
-          setShowTransactions(false);
-          setShowReasonPicker(false);
-          setShowDocumentUpload(false);
-          setShowOrderDetailsInput(false);
-          setShowContinueOrEndButtons(true);
-          break;
-
-        default:
-          console.log('Unknown previous active step:', previousActiveStep);
-      }
-      
-      // Clear the saved state after restoring
-      setPreviousActiveStep(null);
-      setPreviousAssistantMessage(null);
-    }, 300);
+    // Help is in a separate dialog now, so nothing needs to be done
+    // Main chat UI remains unchanged
   };
 
   // Show nothing while checking role to prevent flash
