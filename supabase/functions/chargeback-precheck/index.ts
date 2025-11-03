@@ -186,7 +186,16 @@ Set chargeback_possible = FALSE when:
 - Customer misunderstood an authorized or recurring payment
 - Customer cannot describe a specific problem related to payment
 - Issue is within merchant's return/refund policy timeframe
-- Customer hasn't attempted to contact merchant yet`;
+- Customer hasn't attempted to contact merchant yet
+
+CRITICAL: The customer_message should ONLY confirm whether the transaction is valid for a chargeback or not. 
+DO NOT mention:
+- Temporary credit
+- Proceeding with chargeback
+- Investigation timeline
+- Any next steps that come after document verification
+
+The message should simply confirm eligibility based on the customer's responses.`;
 
       userPrompt = `Based on all three customer responses, determine if a chargeback is possible and provide clear reasoning.`;
 
@@ -209,7 +218,7 @@ Set chargeback_possible = FALSE when:
                 },
                 customer_message: {
                   type: "string",
-                  description: "Message to show the customer explaining next steps"
+                  description: "Simple message to show the customer confirming eligibility status only - DO NOT mention temporary credit, chargeback filing, or investigation timeline"
                 }
               },
               required: ["chargeback_possible", "reasoning", "customer_message"],
