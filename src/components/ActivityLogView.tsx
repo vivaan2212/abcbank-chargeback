@@ -715,7 +715,7 @@ activityList.sort(compareActivities);
             timestamp: customerEvidence.created_at,
             label: 'Customer evidence received',
             expandable: evidenceFiles.length === 0 && customerEvidence.customer_note ? true : false,
-            reasoning: evidenceFiles.length === 0 && customerEvidence.customer_note ? [customerEvidence.customer_note] : undefined,
+            details: evidenceFiles.length === 0 && customerEvidence.customer_note ? customerEvidence.customer_note : undefined,
             activityType: 'success',
             attachments: evidenceFiles.length > 0 ? evidenceFiles.map(f => ({
               label: f.name,
