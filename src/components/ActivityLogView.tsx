@@ -1228,8 +1228,18 @@ const ActivityLogView = ({
     }
   };
   const groupActivitiesByDate = () => {
-    // Sort activities by timestamp ascending (oldest first)
-    const sortedActivities = [...activities].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    // Sort activities by timestamp ascending (oldest first), then by stage priority if timestamps match
+    const sortedActivities = [...activities].sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      
+      // First, compare timestamps
+      const timeDiff = timeA - timeB;
+      if (timeDiff !== 0) return timeDiff;
+      
+      // If timestamps are identical, use stage priority
+      return getStageOrder(a.id) - getStageOrder(b.id);
+    });
     const groups: Array<{
       label: string;
       activities: Activity[];
