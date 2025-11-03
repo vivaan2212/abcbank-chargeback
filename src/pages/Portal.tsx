@@ -1131,20 +1131,11 @@ const Portal = () => {
 
       if (updateError) throw updateError;
 
-      // Add user's selection message to current messages state immediately
+      // Post user's selection; rely on realtime subscription to render
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
         new Date(transaction.transaction_time),
         "dd MMM yyyy"
       )} for ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}.`;
-      
-      const userMessageObj: Message = {
-        id: `user-selection-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        role: "user",
-        content: userMessage,
-        created_at: new Date().toISOString(),
-      };
-      
-      setMessages(prev => [...prev, userMessageObj]);
 
       const { error: userMsgError } = await supabase
         .from("messages")
@@ -1166,7 +1157,7 @@ const Portal = () => {
         .update({ title: newTitle })
         .eq("id", currentConversationId);
 
-      // Show transaction details in assistant message with delay
+      // Post transaction details to DB; subscription will add to UI
       setTimeout(async () => {
         const detailsMessage = `Thanks for choosing a transaction. Here are the details I have:
 
@@ -1175,15 +1166,6 @@ const Portal = () => {
 • Date: ${format(new Date(transaction.transaction_time), "dd MMM yyyy")}
 
 Let me check if this transaction is eligible for a chargeback...`;
-        
-        const assistantMessageObj: Message = {
-          id: `assistant-details-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          role: "assistant",
-          content: detailsMessage,
-          created_at: new Date().toISOString(),
-        };
-        
-        setMessages(prev => [...prev, assistantMessageObj]);
 
         await supabase
           .from("messages")
@@ -2137,16 +2119,14 @@ Let me check if this transaction is eligible for a chargeback...`;
       return;
     }
 
-    setTimeout(() => {
-      // Re-display the previous assistant message first
-      if (previousAssistantMessage) {
-        const resumeMessage: Message = {
-          id: `resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    setTimeout(async () => {
+      // Re-display the previous assistant message first by inserting to backend
+      if (previousAssistantMessage && currentConversationId) {
+        await supabase.from("messages").insert({
+          conversation_id: currentConversationId,
           role: "assistant",
           content: previousAssistantMessage,
-          created_at: new Date().toISOString(),
-        };
-        setMessages(prev => [...prev, resumeMessage]);
+        });
       }
 
       // Then restore the UI based on the previous step
