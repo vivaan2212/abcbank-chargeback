@@ -206,6 +206,7 @@ Deno.serve(async (req) => {
     console.log(`Deleted ${disputeCount} disputes`);
 
     // 10. Reset all representment statuses to pending
+    // First update all with default text
     const { error: representmentError } = await supabaseAdmin
       .from('chargeback_representment_static')
       .update({
@@ -213,13 +214,45 @@ Deno.serve(async (req) => {
         will_be_represented: true,
         merchant_reason_text: 'Customer received the products as ordered. We have proof of delivery with customer signature on 2024-01-15. The customer used the service for 2 weeks before disputing. All items were delivered in perfect condition according to our courier records.'
       })
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Update all records
+      .neq('id', '00000000-0000-0000-0000-000000000000');
 
     if (representmentError) {
       console.error('Error resetting representment statuses:', representmentError);
       throw representmentError;
     }
-    console.log('Reset all representment statuses to pending');
+    
+    // Then set specific merchant reasons for key merchants
+    const specificMerchantReasons = [
+      {
+        transaction_id: '3cce322e-e7c2-4ed6-9682-bff67fc952f9',
+        reason: 'The correct Gucci bag as ordered was delivered to the customer. We have proof of delivery with customer signature on September 28, 2025. The item was shipped in original packaging with all authentication documents included. Our courier records confirm the bag was in perfect condition upon delivery.'
+      },
+      {
+        transaction_id: '996d0885-9623-4694-bfa8-135db5e25422',
+        reason: 'The correct iPhone as ordered was delivered to the customer. We have proof of delivery with customer signature on October 12, 2025. The device was factory sealed and underwent quality inspection before shipping. It was not broken when sent - our packaging includes protective materials and insurance coverage. The customer received the device in perfect working condition according to our courier records.'
+      },
+      {
+        transaction_id: '5103243e-317d-47ce-b6cf-3828645c2709',
+        reason: 'The correct laptop as ordered was delivered to the customer in working condition. We have proof of delivery with customer signature on September 18, 2025. The laptop underwent comprehensive testing before shipment and was factory sealed. Our records confirm the device was fully functional with all specifications matching the order. The customer received the laptop with warranty documentation and setup guide.'
+      },
+      {
+        transaction_id: '5b7dedf6-db4f-4624-9721-cf0e3cb0740e',
+        reason: 'Old AirPods were not sent - the correct new AirPods as ordered were delivered to the customer. We have proof of delivery with customer signature on October 21, 2025. The AirPods were factory sealed in original Apple packaging. Our shipping records and courier verification confirm the correct product (new AirPods, not refurbished or old) was delivered in perfect condition.'
+      }
+    ];
+
+    for (const merchant of specificMerchantReasons) {
+      const { error: specificError } = await supabaseAdmin
+        .from('chargeback_representment_static')
+        .update({ merchant_reason_text: merchant.reason })
+        .eq('transaction_id', merchant.transaction_id);
+      
+      if (specificError) {
+        console.error(`Error updating merchant reason for ${merchant.transaction_id}:`, specificError);
+      }
+    }
+    
+    console.log('Reset all representment statuses to pending with specific merchant reasons');
 
     // 11. Reset transaction temporary credit reversal timestamps
     const { error: transactionResetError } = await supabaseAdmin
