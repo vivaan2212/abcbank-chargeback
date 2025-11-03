@@ -2111,11 +2111,9 @@ Let me check if this transaction is eligible for a chargeback...`;
       return;
     }
 
-    // Re-display the previous assistant message if it exists
-    if (previousAssistantMessage) {
-      const lastMessage = messages[messages.length - 1];
-      // Only add if it's not already the last message
-      if (!lastMessage || lastMessage.content !== previousAssistantMessage) {
+    setTimeout(() => {
+      // Re-display the previous assistant message first
+      if (previousAssistantMessage) {
         const resumeMessage: Message = {
           id: `resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           role: "assistant",
@@ -2124,9 +2122,8 @@ Let me check if this transaction is eligible for a chargeback...`;
         };
         setMessages(prev => [...prev, resumeMessage]);
       }
-    }
 
-    setTimeout(() => {
+      // Then restore the UI based on the previous step
       switch (previousActiveStep) {
         case 'transactions':
           setShowTransactions(true);
@@ -2155,16 +2152,13 @@ Let me check if this transaction is eligible for a chargeback...`;
         case 'questionStep':
           // Re-show the question if there is one
           if (questionStep !== null && currentQuestion.trim().length > 0) {
-            const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
-            if (!lastAssistant || lastAssistant.content !== currentQuestion) {
-              const questionMessage: Message = {
-                id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-                role: "assistant",
-                content: currentQuestion,
-                created_at: new Date().toISOString(),
-              };
-              setMessages(prev => [...prev, questionMessage]);
-            }
+            const questionMessage: Message = {
+              id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              role: "assistant",
+              content: currentQuestion,
+              created_at: new Date().toISOString(),
+            };
+            setMessages(prev => [...prev, questionMessage]);
             setShowOrderDetailsInput(true);
           }
           setShowTransactions(false);
@@ -2184,11 +2178,11 @@ Let me check if this transaction is eligible for a chargeback...`;
         default:
           console.log('Unknown previous active step:', previousActiveStep);
       }
+      
+      // Clear the saved state after restoring
+      setPreviousActiveStep(null);
+      setPreviousAssistantMessage(null);
     }, 300);
-
-    // Clear the previous step after restoring
-    setPreviousActiveStep(null);
-    setPreviousAssistantMessage(null);
   };
 
   // Show nothing while checking role to prevent flash
