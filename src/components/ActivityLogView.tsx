@@ -602,7 +602,6 @@ const ActivityLogView = ({
               id: 'rep-evidence-reviewed',
               timestamp: repTs,
               label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
-              color: 'orange',
               tag: 'Reviewed by Pace',
               reasoning: [
                 'Valid invoice',
@@ -625,7 +624,6 @@ const ActivityLogView = ({
               id: 'rep-chargeback-recalled',
               timestamp: new Date(new Date(repTs).getTime() + 1000).toISOString(),
               label: `Chargeback request Ref. No. ${caseRef} has been recalled from ${network}`,
-              color: 'green',
               tag: 'Recall details',
               link: networkPortal,
               activityType: 'success'
@@ -639,7 +637,6 @@ const ActivityLogView = ({
               id: 'rep-credit-reversed',
               timestamp: new Date(new Date(repTs).getTime() + 2000).toISOString(),
               label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. ${reversalRef}.`,
-              color: 'green',
               tag: 'Transaction details',
               activityType: 'success'
             });
@@ -819,7 +816,6 @@ const ActivityLogView = ({
           expandable: true,
           details: `${resolvedLog.note || 'Customer evidence submitted. Merchant accepted evidence and case is resolved.'}\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been converted to permanent credit.\n\nCase is now closed.`,
           activityType: 'done',
-          color: 'green'
         });
       }
 
@@ -839,9 +835,8 @@ const ActivityLogView = ({
           timestamp: evidenceReviewTimestamp,
           label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
           expandable: true,
-          details: 'Pill: Reviewed by Pace\n\n✓ Valid invoice\n✓ Service delivered\n✓ Non-refundable terms\n✓ Usage confirmed\n✓ No fraud risk',
+          details: 'Reviewed by Pace\n\n✓ Valid invoice\n✓ Service delivered\n✓ Non-refundable terms\n✓ Usage confirmed\n✓ No fraud risk',
           activityType: 'human_action',
-          color: 'orange',
           attachments: merchantDocUrl ? [{
             label: 'Merchant docs, invoice, terms',
             icon: 'document',
@@ -856,9 +851,8 @@ const ActivityLogView = ({
           timestamp: recalledLog.performed_at,
           label: `Chargeback request Ref. No. ${referenceNo} has been recalled from ${recalledLog.network || 'Visa'}`,
           expandable: true,
-          details: `Pill: Recall details     🔗 Network Portal\n\n${recalledLog.note || 'Bank rejected customer evidence and recalled chargeback from card network'}`,
+          details: `Recall details     🔗 Network Portal\n\n${recalledLog.note || 'Bank rejected customer evidence and recalled chargeback from card network'}`,
           activityType: 'done',
-          color: 'green'
         });
 
         // Add credit reversal activity if applicable
@@ -869,9 +863,8 @@ const ActivityLogView = ({
             timestamp: reversalTimestamp,
             label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. REV-${Date.now()}.`,
             expandable: true,
-            details: `Pill: Transaction details\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from the customer's account.\n\nMerchant wins the dispute.`,
+            details: `Transaction details\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from the customer's account.\n\nMerchant wins the dispute.`,
             activityType: 'done',
-            color: 'green'
           });
         }
       }
@@ -898,7 +891,6 @@ const ActivityLogView = ({
                 expandable: true,
                 details: `${action.admin_message}\n\n${creditReversed ? `Temporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from your account.` : 'No temporary credit was issued.'}\n\n${action.internal_notes || ''}`,
                 activityType: 'human_action',
-                color: 'orange'
               });
             }
           }
@@ -1533,19 +1525,13 @@ const ActivityLogView = ({
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          <div className={cn(
-                            "rounded-lg p-3",
-                            activity.color === 'green' && "border-l-4 border-green-600 bg-green-50 dark:bg-green-950/30",
-                            activity.color === 'blue' && "border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/30",
-                            activity.color === 'orange' && "border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30",
-                            activity.color === 'yellow' && "border-l-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30"
-                          )}>
+                          <div className="rounded-lg p-3">
                           <div className="font-medium text-sm mb-1">{activity.label}</div>
                           
-                          {/* Tag Pill */}
+                          {/* Tag */}
                           {activity.tag && (
                             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium mb-2">
-                              <span>Pill: {activity.tag}</span>
+                              <span>{activity.tag}</span>
                             </div>
                           )}
                           
