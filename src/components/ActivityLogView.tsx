@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
-import { ChargebackVideoModal } from "./ChargebackVideoModal";
+import { PreviewPane } from "./PreviewPane";
 import KnowledgeBasePanel from "./KnowledgeBasePanel";
 import { useToast } from "@/hooks/use-toast";
 import paceAvatar from "@/assets/pace-logo-grey.png";
@@ -99,10 +99,13 @@ const ActivityLogView = ({
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [videoModalOpen, setVideoModalOpen] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<{
+  const [previewPaneOpen, setPreviewPaneOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState<{
+    type: "video" | "document";
     url: string;
-    cardNetwork: string;
+    cardNetwork?: string;
+    extractedFields?: Array<{ label: string; value: string }>;
+    title?: string;
   } | null>(null);
   const [isBankAdmin, setIsBankAdmin] = useState(false);
   const [processingRepresentment, setProcessingRepresentment] = useState(false);
@@ -965,16 +968,26 @@ const ActivityLogView = ({
         } = await supabase.storage.from('chargeback-videos').createSignedUrl(attachment.videoData.video_path, 3600); // 1 hour expiry
 
         if (error) throw error;
-        setSelectedVideo({
+        setPreviewContent({
+          type: "video",
           url: data.signedUrl,
-          cardNetwork: attachment.videoData.card_network
+          cardNetwork: attachment.videoData.card_network,
+          title: "Chargeback Filing"
         });
-        setVideoModalOpen(true);
+        setPreviewPaneOpen(true);
       } catch (error) {
         console.error('Failed to load video:', error);
       }
     } else if (attachment.action === 'document') {
-      // Handle document view (existing functionality)
+      // Handle document view - show in preview pane with extracted fields
+      // For now, just placeholder - can be enhanced with actual document URLs and extracted data
+      setPreviewContent({
+        type: "document",
+        url: "https://example.com/document.pdf", // This should come from actual document storage
+        extractedFields: [], // This should come from actual extracted data
+        title: "Document"
+      });
+      setPreviewPaneOpen(true);
     }
   };
   const handleApproveEvidence = async (transactionId: string) => {
@@ -1615,8 +1628,17 @@ const ActivityLogView = ({
         </div>
       </div>
 
-      {/* Video Modal */}
-      <ChargebackVideoModal isOpen={videoModalOpen} onClose={() => setVideoModalOpen(false)} videoUrl={selectedVideo?.url || null} cardNetwork={selectedVideo?.cardNetwork || null} />
+      {/* Preview Pane */}
+      <PreviewPane 
+        isOpen={previewPaneOpen} 
+        onClose={() => setPreviewPaneOpen(false)} 
+        type={previewContent?.type || null}
+        videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
+        cardNetwork={previewContent?.cardNetwork}
+        documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
+        extractedFields={previewContent?.extractedFields}
+        title={previewContent?.title}
+      />
 
       {/* Knowledge Base Overlay */}
       <KnowledgeBasePanel 

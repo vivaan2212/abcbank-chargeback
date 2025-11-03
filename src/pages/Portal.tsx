@@ -15,6 +15,7 @@ import { ReasonPicker, ChargebackReason } from "@/components/ReasonPicker";
 import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/components/DocumentUpload";
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
+import { PreviewPane } from "@/components/PreviewPane";
 import { HelpWidget } from "@/components/HelpWidget";
 import { CustomerEvidenceUpload } from "@/components/CustomerEvidenceUpload";
 import { Card } from "@/components/ui/card";
@@ -114,6 +115,11 @@ const Portal = () => {
     }
   ]);
   const [awaitingEvidenceTransaction, setAwaitingEvidenceTransaction] = useState<Transaction | null>(null);
+  const [previewPaneOpen, setPreviewPaneOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState<{
+    url: string;
+    extractedFields: Array<{ label: string; value: string }>;
+  } | null>(null);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -2364,12 +2370,19 @@ Let me check if this transaction is eligible for a chargeback...`;
                  </>
                )}
                
-                 {/* Show artifacts after successful completion */}
-                 {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
-                   <div className="mt-6 flex justify-center">
-                     <ArtifactsViewer documents={artifacts} title="View Submitted Documents" />
-                   </div>
-                 )}
+                  {/* Show artifacts after successful completion */}
+                  {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
+                    <div className="mt-6 flex justify-center">
+                      <ArtifactsViewer 
+                        documents={artifacts} 
+                        title="View Submitted Documents"
+                        onPreviewDocument={(url, extractedFields) => {
+                          setPreviewContent({ url, extractedFields });
+                          setPreviewPaneOpen(true);
+                        }}
+                      />
+                    </div>
+                  )}
 
 
                   {/* Help Widget inline - only show input area when open */}
@@ -2405,6 +2418,16 @@ Let me check if this transaction is eligible for a chargeback...`;
             </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+      
+      {/* Preview Pane */}
+      <PreviewPane 
+        isOpen={previewPaneOpen}
+        onClose={() => setPreviewPaneOpen(false)}
+        type="document"
+        documentUrl={previewContent?.url}
+        extractedFields={previewContent?.extractedFields}
+        title="Document Preview"
+      />
     </div>
   );
 };

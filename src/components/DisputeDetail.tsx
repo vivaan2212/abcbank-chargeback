@@ -9,6 +9,7 @@ import { RepresentmentPanel } from "./RepresentmentPanel";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ArtifactsViewer, { ArtifactDoc } from "./ArtifactsViewer";
+import { PreviewPane } from "./PreviewPane";
 
 interface DisputeDetailProps {
   dispute: {
@@ -65,6 +66,11 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
   const [evidenceRequest, setEvidenceRequest] = useState<any>(null);
   const [customerEvidence, setCustomerEvidence] = useState<any>(null);
   const [disputeDocuments, setDisputeDocuments] = useState<ArtifactDoc[]>([]);
+  const [previewPaneOpen, setPreviewPaneOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState<{
+    url: string;
+    extractedFields: Array<{ label: string; value: string }>;
+  } | null>(null);
   const queryClient = useQueryClient();
 
   // Load evidence request and submission data
@@ -579,6 +585,10 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
                     <ArtifactsViewer 
                       documents={disputeDocuments} 
                       title="View Submitted Documents"
+                      onPreviewDocument={(url, extractedFields) => {
+                        setPreviewContent({ url, extractedFields });
+                        setPreviewPaneOpen(true);
+                      }}
                     />
                   </div>
                 )}
@@ -601,6 +611,16 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Preview Pane */}
+      <PreviewPane 
+        isOpen={previewPaneOpen}
+        onClose={() => setPreviewPaneOpen(false)}
+        type="document"
+        documentUrl={previewContent?.url}
+        extractedFields={previewContent?.extractedFields}
+        title="Document Preview"
+      />
     </div>
   );
 };
