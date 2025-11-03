@@ -795,7 +795,7 @@ const Portal = () => {
           
           // Determine which UI elements to show based on status
           const shouldShowTransactions = dispute.status === "started";
-          const shouldShowReasonPicker = dispute.status === "eligibility_checked";
+          const shouldShowReasonPicker = dispute.status === "eligibility_checked" || dispute.status === "precheck_passed";
           const shouldShowDocumentUpload = dispute.status === "reason_selected";
           const shouldShowOrderInput = dispute.status === "awaiting_order_details";
           
@@ -807,7 +807,10 @@ const Portal = () => {
             "awaiting_settlement",
             "pending_manual_review",
             "expired",
-            "closed"
+            "closed",
+            "approved",
+            "denied",
+            "write_off_approved"
           ].includes(dispute.status);
           
           const shouldShowContinueButtons = dispute.status === "documents_uploaded" && !isFinalState;
