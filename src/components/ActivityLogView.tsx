@@ -985,8 +985,7 @@ const ActivityLogView = ({
     } else if (attachment.action === 'document') {
       try {
         // Handle document view - show in preview pane with extracted fields
-        if (!attachment.docUrl && !attachment.docData) {
-          // If no document data, show a message
+        if (!attachment.docData) {
           toast({
             title: "Document not available",
             description: "This document is not available for preview.",
@@ -995,55 +994,61 @@ const ActivityLogView = ({
           return;
         }
         
-        let signedUrl = attachment.docUrl;
+        // Generate signed URL from storage path
+        const storagePath = attachment.docData.path;
+        if (!storagePath) {
+          toast({
+            title: "Document not available",
+            description: "Document path not found.",
+            variant: "default"
+          });
+          return;
+        }
         
-        // If we have a storage path, generate a signed URL
-        if (attachment.docData?.path) {
-          const { data, error } = await supabase.storage
-            .from('dispute-documents')
-            .createSignedUrl(attachment.docData.path, 3600); // 1 hour expiry
-          
-          if (error) throw error;
-          signedUrl = data.signedUrl;
+        console.log('Generating signed URL for path:', storagePath);
+        
+        const { data, error } = await supabase.storage
+          .from('dispute-documents')
+          .createSignedUrl(storagePath, 3600); // 1 hour expiry
+        
+        if (error) {
+          console.error('Storage error:', error);
+          throw error;
         }
         
         // Create extracted fields from document metadata
         const extractedFields: Array<{ label: string; value: string }> = [];
         
-        if (attachment.docData) {
-          if (attachment.docData.requirementName) {
-            extractedFields.push({ label: "Document Type", value: attachment.docData.requirementName });
-          }
-          if (attachment.docData.name || attachment.label) {
-            extractedFields.push({ label: "File Name", value: attachment.docData.name || attachment.label });
-          }
-          if (attachment.docData.size) {
-            const formatSize = (bytes: number) => {
-              if (bytes < 1024) return bytes + " B";
-              if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-              return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-            };
-            extractedFields.push({ label: "File Size", value: formatSize(attachment.docData.size) });
-          }
-          if (attachment.docData.type) {
-            extractedFields.push({ label: "File Type", value: attachment.docData.type });
-          }
+        if (attachment.docData.requirementName) {
+          extractedFields.push({ label: "Document Type", value: attachment.docData.requirementName });
+        }
+        if (attachment.docData.name || attachment.label) {
+          extractedFields.push({ label: "File Name", value: attachment.docData.name || attachment.label });
+        }
+        if (attachment.docData.size) {
+          const formatSize = (bytes: number) => {
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+          };
+          extractedFields.push({ label: "File Size", value: formatSize(attachment.docData.size) });
+        }
+        if (attachment.docData.type) {
+          extractedFields.push({ label: "File Type", value: attachment.docData.type });
         }
         
-        if (signedUrl) {
-          setPreviewContent({
-            type: "document",
-            url: signedUrl,
-            extractedFields,
-            title: attachment.label || "Document"
-          });
-          setPreviewPaneOpen(true);
-        }
+        setPreviewContent({
+          type: "document",
+          url: data.signedUrl,
+          extractedFields,
+          title: attachment.label || "Document"
+        });
+        setPreviewPaneOpen(true);
       } catch (error) {
         console.error('Failed to load document:', error);
         toast({
-          title: "Error",
-          description: "Failed to load document. Please try again.",
+          title: "Error loading document",
+          description: error instanceof Error ? error.message : "Failed to load document. The file may not exist in storage.",
           variant: "destructive"
         });
       }
