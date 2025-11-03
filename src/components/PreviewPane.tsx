@@ -352,12 +352,11 @@ export const PreviewPane = ({
                 </div>
               )}
               {imageUrl ? (
-                <div className="w-full h-full p-8 flex items-center justify-center overflow-auto">
+                <div className="w-full h-full flex items-center justify-center bg-background p-4 overflow-auto">
                   <img
                     src={imageUrl}
-                    alt="Document preview"
-                    className="max-w-[90%] h-auto object-contain"
-                    style={{ maxHeight: '90%' }}
+                    alt={title}
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
               ) : (
