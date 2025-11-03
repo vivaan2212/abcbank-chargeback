@@ -177,7 +177,7 @@ export const PreviewPane = ({
   if (!isOpen) return null;
 
   return (
-    <div className="h-screen w-full bg-background flex flex-col">
+    <div className="h-full w-full bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30 shrink-0">
         <div className="flex items-center gap-3">
