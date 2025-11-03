@@ -454,7 +454,7 @@ const ActivityLogView = ({
               label = `Chargeback filed on ${cardNetwork}, Ref No: ${refNumber}`;
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
-              details = `Chargeback has been filed on the ${cardNetwork} portal. They are having a look at it.\n\nDisputed amount: $${resolvedAmount.toLocaleString()}`;
+              details = `Chargeback has been filed on the ${cardNetwork} portal.\n\nDisputed amount: $${resolvedAmount.toLocaleString()}`;
 
               // Add video attachment for approved cases - fetch video based on card network
               attachments = [{
