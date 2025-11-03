@@ -2027,12 +2027,31 @@ Let me check if this transaction is eligible for a chargeback...`;
     setIsHelpWidgetOpen(true);
   };
 
-  const handleResumeQuestion = () => {
-    // Simply re-display the input for the current question (already in messages)
-    if (questionStep) {
+  const handleResumeQuestion = async () => {
+    // Fetch current dispute to determine what UI to restore
+    if (!currentDisputeId) return;
+    
+    try {
+      const { data: dispute } = await supabase
+        .from('disputes')
+        .select('status')
+        .eq('id', currentDisputeId)
+        .maybeSingle();
+      
+      if (!dispute) return;
+      
+      // Re-display the appropriate UI based on dispute status
       setTimeout(() => {
-        setShowOrderDetailsInput(true);
+        if (dispute.status === "eligibility_checked") {
+          // Re-show reason picker
+          setShowReasonPicker(true);
+        } else if (questionStep) {
+          // Re-show question input if in question flow
+          setShowOrderDetailsInput(true);
+        }
       }, 500);
+    } catch (error) {
+      console.error('Failed to fetch dispute status:', error);
     }
   };
 
