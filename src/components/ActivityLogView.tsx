@@ -44,17 +44,32 @@ const stagePriorityMap: Record<string, number> = {
   'write-off': 90
 };
 
+// Helper to normalize action IDs by stripping numeric indices
+const normalizeStageId = (id: string): string => {
+  // Strip patterns like "action-0-filed" to "action-filed"
+  return id.replace(/^action-\d+-/, 'action-');
+};
+
 // Helper to extract stage order from activity ID
 const getStageOrder = (id: string): number => {
-  // Direct match
-  if (stagePriorityMap[id]) return stagePriorityMap[id];
+  const normalized = normalizeStageId(id);
   
-  // Check for prefixes like "action-0-temp-credit" or "write-off-timestamp"
+  // Direct match
+  if (stagePriorityMap[normalized]) return stagePriorityMap[normalized];
+  
+  // Check for prefixes like "action-temp-credit" or "write-off-timestamp"
   for (const [key, priority] of Object.entries(stagePriorityMap)) {
-    if (id.startsWith(key)) return priority;
+    if (normalized.startsWith(key)) return priority;
   }
   
   return 999; // Default for unknown stages
+};
+
+// Unified comparator: timestamp (oldest first), then stage priority
+const compareActivities = (a: Activity, b: Activity) => {
+  const timeDiff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+  if (timeDiff !== 0) return timeDiff;
+  return getStageOrder(a.id) - getStageOrder(b.id);
 };
 interface Activity {
   id: string;
@@ -532,26 +547,25 @@ const ActivityLogView = ({
       const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
       const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
       if (repData && chargebackFiledOrApproved) {
-        // Calculate chargeback filing timestamp - find the last chargeback filed action
-        let chargebackFiledTs: number | null = null;
+// Calculate a 'filed-like' barrier timestamp: max of filed actions and final approved status
+        let maxFiledLikeTs = 0;
         if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
           const filedActions = (dispute.chargeback_actions as any[]).filter(a => a.chargeback_filed);
           if (filedActions.length > 0) {
-            const lastFiled = filedActions[filedActions.length - 1];
-            chargebackFiledTs = new Date(lastFiled.updated_at || lastFiled.created_at).getTime();
+            maxFiledLikeTs = filedActions.reduce((max, action) => {
+              const ts = new Date(action.updated_at || action.created_at).getTime();
+              return Math.max(max, ts);
+            }, 0);
           }
         }
-
-        // Ensure representment appears AFTER chargeback filing
-        const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
-        let repTs: string;
-        if (chargebackFiledTs) {
-          // If we have a chargeback filing time, ensure representment is at least 1ms after it
-          repTs = new Date(Math.max(repBaseTs, chargebackFiledTs + 1)).toISOString();
-        } else {
-          // Fallback to using dispute updated_at
-          repTs = new Date(repBaseTs).toISOString();
+        const isFinalApproved = ['completed', 'approved', 'closed_won'].includes(dispute.status?.toLowerCase() || '');
+        if (isFinalApproved && dispute.updated_at) {
+          maxFiledLikeTs = Math.max(maxFiledLikeTs, new Date(dispute.updated_at).getTime());
         }
+
+        // Ensure representment appears AFTER the 'filed-like' barrier
+        const repBaseTs = new Date(repData.updated_at || dispute.updated_at).getTime();
+        const repTs = new Date(Math.max(repBaseTs, (maxFiledLikeTs || 0) + 1)).toISOString();
         const repActivity: Activity = {
           id: 'representment-status',
           timestamp: repTs,
@@ -630,11 +644,7 @@ const ActivityLogView = ({
             
             // Don't push repActivity for accepted_by_bank since we've added the 3 activities above
             // Finalize activity list now so UI updates immediately and action buttons disappear
-            activityList.sort((a, b) => {
-              const orderDiff = getStageOrder(a.id) - getStageOrder(b.id);
-              if (orderDiff !== 0) return orderDiff;
-              return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-            });
+activityList.sort(compareActivities);
             setActivities(activityList);
             setTransactionDetails(dispute.transaction);
             return; // Exit early to skip the repActivity.push and the rest of the builder for this flow
@@ -686,17 +696,34 @@ const ActivityLogView = ({
 
           const showReviewActions = isBankAdmin && !review && repData?.representment_status !== 'customer_evidence_approved';
 
+          // Parse evidence files from evidence_url
+          let evidenceFiles: { label: string; icon: string }[] = [];
+          if (customerEvidence.evidence_url) {
+            try {
+              const parsed = typeof customerEvidence.evidence_url === 'string' 
+                ? JSON.parse(customerEvidence.evidence_url) 
+                : customerEvidence.evidence_url;
+              const paths = Array.isArray(parsed) ? parsed : [parsed];
+              evidenceFiles = paths.map((path: string) => ({
+                label: path.split('/').pop() || 'Evidence document',
+                icon: 'document' as const
+              }));
+            } catch {
+              // If parsing fails, treat as single path
+              evidenceFiles = [{
+                label: customerEvidence.evidence_url.split('/').pop() || 'Evidence document',
+                icon: 'document' as const
+              }];
+            }
+          }
+
           activityList.push({
             id: 'customer-evidence-submitted',
             timestamp: customerEvidence.created_at,
-            label: 'Valid rebuttal representment evidence submitted by customer',
-            expandable: true,
-            details: `Attached screenshots of email/chat with "SHARAF DG" customer care reporting receipt of damaged goods in <4 hours of delivery time\n\nRebuttal evidence reviewed and found sufficient; customer-provided evidence deemed more credible. Merchant representment`,
+            label: 'Customer evidence received',
+            expandable: false,
             activityType: 'success',
-            attachments: [{
-              label: 'Chat with merchant.jpg',
-              icon: 'document'
-            }],
+            attachments: evidenceFiles.length > 0 ? evidenceFiles : undefined,
             showRepresentmentActions: showReviewActions,
             representmentTransactionId: transactionId
           });
@@ -902,13 +929,8 @@ const ActivityLogView = ({
         });
       }
       
-      // Sort by stage order first, then timestamp
-      activityList.sort((a, b) => {
-        const orderDiff = getStageOrder(a.id) - getStageOrder(b.id);
-        if (orderDiff !== 0) return orderDiff;
-        
-        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      });
+// Sort using unified comparator: time then stage
+      activityList.sort(compareActivities);
       
       setActivities(activityList);
       setTransactionDetails(dispute.transaction);
@@ -1228,8 +1250,8 @@ const ActivityLogView = ({
     }
   };
   const groupActivitiesByDate = () => {
-    // Sort activities by timestamp ascending (oldest first)
-    const sortedActivities = [...activities].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+// Sort activities by timestamp ascending (oldest first), then by stage priority if timestamps match
+    const sortedActivities = [...activities].sort(compareActivities);
     const groups: Array<{
       label: string;
       activities: Activity[];

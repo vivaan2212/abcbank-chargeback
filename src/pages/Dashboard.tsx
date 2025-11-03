@@ -73,6 +73,9 @@ const Dashboard = () => {
       const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
       if (!isEligible) {
         return 'Transaction is not eligible for chargeback';
+      } else if (isEligible && !hasChargebackAction && !actions.length) {
+        // If eligible but no chargeback actions yet, explicitly return this status
+        return 'Transaction is eligible for chargeback';
       }
     }
 
@@ -135,6 +138,9 @@ const Dashboard = () => {
         lastLog.includes('Merchant wins')) {
       return 'done';
     }
+
+    // Transaction eligible (no actions yet) → IN PROGRESS
+    if (lastLog.includes('Transaction is eligible for chargeback')) return 'in_progress';
 
     // Case voided
     if (lastLog.includes('voided')) return 'void';
