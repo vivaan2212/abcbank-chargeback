@@ -104,10 +104,16 @@ async function computeInputsHash(tx: Transaction, dispute: Dispute, docCheck: Do
 
 function checkDocumentSufficiency(reasonCode: string, docCheck: DocCheck[]): { sufficient: boolean; missing: string[] } {
   const normalizeKey = (k: string) => {
-    const s = k.toLowerCase().replace(/\s+/g, '_');
+    // Normalize aggressively: lowercase, collapse non-alphanumerics to underscores
+    const s = k.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    // Shipping/Delivery → tracking proof
     if (['delivery_receipt','tracking_number','proof_of_delivery','proof_of_shipment','shipment_proof'].includes(s)) return 'tracking_proof';
-    if (['order_confirmation_or_invoice','order_confirmation','transaction_receipt_or_invoice','transaction_receipt'].includes(s)) return 'invoice';
-    if (['bank_statement_showing_duplicate_charges','bank_statement_showing_incorrect_charge'].includes(s)) return 'bank_statement';
+    // Invoices/receipts/purchase proof → invoice
+    if (['order_confirmation_or_invoice','order_confirmation','transaction_receipt_or_invoice','transaction_receipt','proof_of_purchase','proof_of_purchase_eg_invoice_receipt_order_confirmation','purchase_receipt','payment_receipt','order_invoice','invoice_receipt'].includes(s)) return 'invoice';
+    // Bank statements
+    if (['bank_statement_showing_duplicate_charges','bank_statement_showing_incorrect_charge','bank_statement'].includes(s)) return 'bank_statement';
+    // Product photos / issue photos → product_photo
+    if (['photo_of_the_product_showing_the_issue','product_photo','product_photos','photos_of_damaged_or_defective_product','photo_of_product_showing_issue','product_issue_photo','product_issue_photos'].includes(s)) return 'product_photo';
     return s;
   };
   const validDocs = new Set(docCheck.filter(d => d.isValid).map(d => normalizeKey(d.key)));

@@ -1808,7 +1808,9 @@ Let me check if this transaction is eligible for a chargeback...`;
                 
                 // Product quality issues
                 'Photos of damaged or defective product': 'product_photo',
+                'Photo of the product showing the issue': 'product_photo',
                 'Original invoice or order confirmation': 'invoice',
+                'Proof of purchase (e.g., invoice, receipt, order confirmation)': 'invoice',
                 'Communication with merchant about the issue': 'communication'
               };
               
