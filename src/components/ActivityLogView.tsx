@@ -1385,18 +1385,20 @@ const ActivityLogView = ({
   const groupedActivities = groupActivitiesByDate();
   const statusBadge = getStatusBadge();
   return <div className="flex h-screen bg-background">
-      {/* Main Content Area - takes full width or 50% depending on preview state */}
-      <div className={cn(
-        "flex h-full transition-all duration-300 ease-in-out",
-        previewPaneOpen ? "w-1/2" : "w-full"
-      )}>
-        {/* Left Sidebar */}
-        <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", isSidebarOpen ? "w-56" : "w-0")}>
-          <DashboardSidebar activeSection="chargebacks" />
-        </div>
+      {/* Left Sidebar */}
+      <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", isSidebarOpen ? "w-56" : "w-0")}>
+        <DashboardSidebar activeSection="chargebacks" />
+      </div>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0 bg-background">
+      {/* Main & Preview Split */}
+      <div className="flex flex-1 h-full min-w-0">
+        {/* Activity + Key Details container */}
+        <div className={cn(
+          "flex h-full min-w-0 transition-all duration-300 ease-in-out",
+          previewPaneOpen ? "w-1/2" : "w-full"
+        )}>
+          {/* Main content */}
+          <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
         <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
@@ -1698,28 +1700,28 @@ const ActivityLogView = ({
       </div>
       </div>
 
-      {/* Preview Pane - slides in from the right */}
-      {previewPaneOpen && (
-        <div className="w-1/2 border-l border-border animate-in slide-in-from-right duration-300">
-          <PreviewPane 
-            isOpen={previewPaneOpen} 
-            onClose={() => setPreviewPaneOpen(false)} 
-            type={previewContent?.type || null}
-            videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
-            cardNetwork={previewContent?.cardNetwork}
-            documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
-            extractedFields={previewContent?.extractedFields}
-            title={previewContent?.title}
-          />
-        </div>
-      )}
+        {/* Preview Pane - slides in from the right */}
+        {previewPaneOpen && (
+          <div className="w-1/2 border-l border-border animate-in slide-in-from-right duration-300 overflow-hidden">
+            <PreviewPane 
+              isOpen={previewPaneOpen} 
+              onClose={() => setPreviewPaneOpen(false)} 
+              type={previewContent?.type || null}
+              videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
+              cardNetwork={previewContent?.cardNetwork}
+              documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
+              extractedFields={previewContent?.extractedFields}
+              title={previewContent?.title}
+            />
+          </div>
+        )}
 
-      {/* Knowledge Base Overlay */}
-      <KnowledgeBasePanel 
-        isOpen={isKnowledgeBaseOpen}
-        isClosing={isKnowledgeBaseClosing}
-        onClose={handleCloseKnowledgeBase}
-      />
-    </div>;
-};
+        {/* Knowledge Base Overlay */}
+        <KnowledgeBasePanel 
+          isOpen={isKnowledgeBaseOpen}
+          isClosing={isKnowledgeBaseClosing}
+          onClose={handleCloseKnowledgeBase}
+        />
+      </div>
+  };
 export default ActivityLogView;
