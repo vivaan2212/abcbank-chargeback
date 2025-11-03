@@ -1382,12 +1382,16 @@ Let me check if this transaction is eligible for a chargeback...`;
           .eq("id", currentDisputeId);
 
         // Show result to customer
+        const sanitizedMessage = (evaluation.customer_message || "").replace(/There is nothing further[^.]*\./i, "").trim();
+
+        const nextStepsMessage = `${sanitizedMessage ? sanitizedMessage + "\n\n" : ""}Next, please select a chargeback reason below so we can capture the required details and documents.`;
+
         await supabase
           .from("messages")
           .insert({
             conversation_id: currentConversationId,
             role: "assistant",
-            content: evaluation.customer_message,
+            content: nextStepsMessage,
           });
 
         if (evaluation.chargeback_possible) {
