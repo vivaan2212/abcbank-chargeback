@@ -2028,17 +2028,18 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleResumeQuestion = async () => {
-    console.log('Resuming question/step...', { 
-      currentDisputeId, 
-      questionStep, 
-      showReasonPicker,
-      showOrderDetailsInput,
-      selectedTransaction: !!selectedTransaction,
-      selectedReason: !!selectedReason 
-    });
-    
-    // If we're in the middle of questions, just restore the input
-    if (questionStep) {
+    // If we're in the middle of questions, re-ask the question in chat
+    if (questionStep && currentQuestion) {
+      // Add the question back to messages
+      const questionMessage: Message = {
+        id: `question-resume-${Date.now()}`,
+        role: "assistant",
+        content: currentQuestion,
+        created_at: new Date().toISOString(),
+      };
+      
+      setMessages(prev => [...prev, questionMessage]);
+      
       setTimeout(() => {
         setShowOrderDetailsInput(true);
       }, 500);
@@ -2055,14 +2056,11 @@ Let me check if this transaction is eligible for a chargeback...`;
         .eq('id', currentDisputeId)
         .maybeSingle();
       
-      console.log('Current dispute status:', dispute?.status);
-      
       if (!dispute) return;
       
       // Re-display the appropriate UI based on dispute status
       setTimeout(() => {
         if (dispute.status === "eligibility_checked") {
-          console.log('Restoring reason picker');
           setShowReasonPicker(true);
         }
       }, 500);
