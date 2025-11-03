@@ -121,6 +121,7 @@ const Portal = () => {
     extractedFields: Array<{ label: string; value: string }>;
   } | null>(null);
   const [previousActiveStep, setPreviousActiveStep] = useState<string | null>(null);
+  const [previousAssistantMessage, setPreviousAssistantMessage] = useState<string | null>(null);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -154,6 +155,7 @@ const Portal = () => {
       currentQuestion,
       precheckResult,
       previousActiveStep,
+      previousAssistantMessage,
       timestamp: new Date().toISOString()
     };
     
@@ -199,6 +201,7 @@ const Portal = () => {
       if (uiState.currentQuestion) setCurrentQuestion(uiState.currentQuestion);
       if (uiState.precheckResult) setPrecheckResult(uiState.precheckResult);
       if (uiState.previousActiveStep !== undefined) setPreviousActiveStep(uiState.previousActiveStep);
+      if (uiState.previousAssistantMessage !== undefined) setPreviousAssistantMessage(uiState.previousAssistantMessage);
       
       return true;
     } catch (e) {
@@ -240,6 +243,7 @@ const Portal = () => {
     currentQuestion,
     precheckResult,
     previousActiveStep,
+    previousAssistantMessage,
     isSwitchingConversation
   ]);
   
@@ -2085,6 +2089,10 @@ Let me check if this transaction is eligible for a chargeback...`;
       activeStep = 'reasonPicker';
     }
     
+    // Capture the last assistant message before opening help widget
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+    setPreviousAssistantMessage(lastAssistantMsg?.content || null);
+    
     setPreviousActiveStep(activeStep);
     setIsHelpWidgetOpen(true);
 
@@ -2101,6 +2109,21 @@ Let me check if this transaction is eligible for a chargeback...`;
     if (!previousActiveStep) {
       console.log('No previous active step to resume');
       return;
+    }
+
+    // Re-display the previous assistant message if it exists
+    if (previousAssistantMessage) {
+      const lastMessage = messages[messages.length - 1];
+      // Only add if it's not already the last message
+      if (!lastMessage || lastMessage.content !== previousAssistantMessage) {
+        const resumeMessage: Message = {
+          id: `resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          role: "assistant",
+          content: previousAssistantMessage,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, resumeMessage]);
+      }
     }
 
     setTimeout(() => {
@@ -2165,6 +2188,7 @@ Let me check if this transaction is eligible for a chargeback...`;
 
     // Clear the previous step after restoring
     setPreviousActiveStep(null);
+    setPreviousAssistantMessage(null);
   };
 
   // Show nothing while checking role to prevent flash
