@@ -437,7 +437,21 @@ const ActivityLogView = ({
             case 'completed':
             case 'approved':
             case 'closed_won':
-              label = 'Chargeback approved - Case resolved';
+              // Determine card network from transaction's acquirer_name
+              let cardNetwork = 'Visa'; // default
+              if (dispute.transaction?.acquirer_name) {
+                const acquirer = dispute.transaction.acquirer_name.toLowerCase();
+                if (acquirer.includes('mastercard') || acquirer.includes('master card')) {
+                  cardNetwork = 'Mastercard';
+                } else if (acquirer.includes('visa')) {
+                  cardNetwork = 'Visa';
+                }
+              }
+
+              // Get reference number from chargeback action
+              const refNumber = dispute.chargeback_actions?.[0]?.id?.substring(0, 10) || 'N/A';
+              
+              label = `Chargeback filed on ${cardNetwork}, Ref No: ${refNumber}`;
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
               details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
@@ -459,17 +473,6 @@ const ActivityLogView = ({
                 });
               } else {
                 // If no chargeback_actions but dispute is approved, fetch video by card network
-                // Determine card network from transaction's acquirer_name
-                let cardNetwork = 'Visa'; // default
-                if (dispute.transaction?.acquirer_name) {
-                  const acquirer = dispute.transaction.acquirer_name.toLowerCase();
-                  if (acquirer.includes('mastercard') || acquirer.includes('master card')) {
-                    cardNetwork = 'Mastercard';
-                  } else if (acquirer.includes('visa')) {
-                    cardNetwork = 'Visa';
-                  }
-                }
-
                 // Fetch video from database
                 const {
                   data: videoData
