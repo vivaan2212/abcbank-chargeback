@@ -87,6 +87,7 @@ interface Activity {
     docData?: any; // Document data for preview
     link?: string;
   }>;
+  evidenceDocuments?: Array<{name: string; path: string; size: number; type: string}>;
   reviewer?: string;
   activityType?: 'error' | 'needs_attention' | 'paused' | 'loading' | 'message' | 'success' | 'human_action' | 'done' | 'void' | 'review_decision';
   showRepresentmentActions?: boolean;
@@ -696,24 +697,16 @@ activityList.sort(compareActivities);
 
           const showReviewActions = isBankAdmin && !review && repData?.representment_status !== 'customer_evidence_approved';
 
-          // Parse evidence files from evidence_url
-          let evidenceFiles: { label: string; icon: string }[] = [];
+          // Parse evidence files from evidence_url with proper structure
+          let evidenceFiles: Array<{name: string; path: string; size: number; type: string}> = [];
           if (customerEvidence.evidence_url) {
             try {
               const parsed = typeof customerEvidence.evidence_url === 'string' 
                 ? JSON.parse(customerEvidence.evidence_url) 
                 : customerEvidence.evidence_url;
-              const paths = Array.isArray(parsed) ? parsed : [parsed];
-              evidenceFiles = paths.map((path: string) => ({
-                label: path.split('/').pop() || 'Evidence document',
-                icon: 'document' as const
-              }));
+              evidenceFiles = Array.isArray(parsed) ? parsed : [parsed];
             } catch {
-              // If parsing fails, treat as single path
-              evidenceFiles = [{
-                label: customerEvidence.evidence_url.split('/').pop() || 'Evidence document',
-                icon: 'document' as const
-              }];
+              console.error('Failed to parse evidence_url');
             }
           }
 
@@ -723,7 +716,11 @@ activityList.sort(compareActivities);
             label: 'Customer evidence received',
             expandable: false,
             activityType: 'success',
-            attachments: evidenceFiles.length > 0 ? evidenceFiles : undefined,
+            attachments: evidenceFiles.length > 0 ? evidenceFiles.map(f => ({
+              label: f.name,
+              icon: 'document' as const
+            })) : undefined,
+            evidenceDocuments: evidenceFiles,
             showRepresentmentActions: showReviewActions,
             representmentTransactionId: transactionId
           });
@@ -1581,6 +1578,50 @@ activityList.sort(compareActivities);
                                     <span>{attachment.label}</span>
                                   </button>;
                               })}
+                            </div>}
+
+                          {/* Evidence Documents with Download */}
+                          {activity.evidenceDocuments && activity.evidenceDocuments.length > 0 && <div className="mt-3 space-y-2">
+                              {activity.evidenceDocuments.map((doc, i) => <button 
+                                  key={i}
+                                  onClick={async () => {
+                                    try {
+                                      const { data, error } = await supabase.storage
+                                        .from('dispute-documents')
+                                        .download(doc.path);
+                                      
+                                      if (error) throw error;
+                                      
+                                      const url = URL.createObjectURL(data);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = doc.name;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(url);
+                                      
+                                      toast({
+                                        title: "Downloaded",
+                                        description: `Downloaded ${doc.name}`,
+                                      });
+                                    } catch (error) {
+                                      console.error('Download error:', error);
+                                      toast({
+                                        title: "Download Failed",
+                                        description: "Failed to download document",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-md hover:bg-muted transition-colors text-sm"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  <span>{doc.name}</span>
+                                  <span className="text-xs text-muted-foreground ml-auto">
+                                    ({(doc.size / 1024).toFixed(1)} KB)
+                                  </span>
+                                </button>)}
                             </div>}
 
                           {/* Reviewer */}

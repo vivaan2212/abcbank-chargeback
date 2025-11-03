@@ -40,8 +40,36 @@ export const CustomerEvidenceUpload = ({
 
     setIsSubmitting(true);
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Upload files to storage first
+      const uploadedPaths: Array<{name: string; path: string; size: number; type: string}> = [];
+      
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user.id}/${transactionId}/evidence/${Date.now()}_${file.name}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('dispute-documents')
+          .upload(filePath, file);
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+        
+        uploadedPaths.push({
+          name: file.name,
+          path: filePath,
+          size: file.size,
+          type: file.type
+        });
+      }
+
       // Prepare file information for AI evaluation
-      const evidenceFiles = files.map((f) => ({
+      const evidenceFiles = uploadedPaths.map((f) => ({
         name: f.name,
         type: f.type,
         size: f.size,
@@ -55,6 +83,7 @@ export const CustomerEvidenceUpload = ({
             transaction_id: transactionId,
             customer_note: customerNote,
             evidence_files: evidenceFiles,
+            uploaded_paths: uploadedPaths,
           },
         }
       );

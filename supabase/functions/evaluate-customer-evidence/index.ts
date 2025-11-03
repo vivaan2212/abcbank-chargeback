@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { transaction_id, customer_note, evidence_files } = await req.json();
+    const { transaction_id, customer_note, evidence_files, uploaded_paths } = await req.json();
 
     if (!transaction_id) {
       return new Response(
@@ -124,6 +124,7 @@ Respond with a JSON object ONLY (no other text):
         transaction_id: transaction_id,
         customer_id: transaction.customer_id,
         evidence_type: evidence_files?.length > 0 ? 'files' : 'text',
+        evidence_url: uploaded_paths && uploaded_paths.length > 0 ? JSON.stringify(uploaded_paths) : null,
         customer_note: customer_note,
         ai_sufficient: evaluation.sufficient,
         ai_summary: evaluation.summary,
