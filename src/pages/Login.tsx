@@ -35,13 +35,28 @@ const Login = () => {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
+      // Try global sign out first
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+
+      if (error) {
+        // If the session is already gone on the server, clear locally
+        const message = (error as any)?.message?.toString()?.toLowerCase() || '';
+        if (message.includes('session') || message.includes('not exist')) {
+          await supabase.auth.signOut({ scope: 'local' });
+        } else {
+          throw error;
+        }
+      }
+
+      // Clear local UI state regardless
       setExistingSession(null);
       toast.success('Logged out successfully');
     } catch (error: any) {
       console.error('Logout error:', error);
-      toast.error('Failed to log out');
+      // Best-effort local clear to avoid being stuck logged in
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+      setExistingSession(null);
+      toast.success('Logged out successfully');
     } finally {
       setIsLoading(false);
     }
