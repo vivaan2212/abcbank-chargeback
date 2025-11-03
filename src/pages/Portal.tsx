@@ -1393,17 +1393,18 @@ Let me check if this transaction is eligible for a chargeback...`;
         // Show result to customer
         const sanitizedMessage = (evaluation.customer_message || "").replace(/There is nothing further[^.]*\./i, "").trim();
 
-        const nextStepsMessage = `${sanitizedMessage ? sanitizedMessage + "\n\n" : ""}Next, please select a chargeback reason below so we can capture the required details and documents.`;
-
-        await supabase
-          .from("messages")
-          .insert({
-            conversation_id: currentConversationId,
-            role: "assistant",
-            content: nextStepsMessage,
-          });
-
         if (evaluation.chargeback_possible) {
+          // Chargeback is possible - show next steps
+          const nextStepsMessage = `${sanitizedMessage ? sanitizedMessage + "\n\n" : ""}Next, please select a chargeback reason below so we can capture the required details and documents.`;
+
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: nextStepsMessage,
+            });
+
           // Proceed to reason picker
           setTimeout(() => {
             setQuestionStep(null);
@@ -1411,10 +1412,29 @@ Let me check if this transaction is eligible for a chargeback...`;
             setShowReasonPicker(true);
           }, 500);
         } else {
+          // Chargeback not possible - show ineligibility message and ask for next action
+          await supabase
+            .from("messages")
+            .insert({
+              conversation_id: currentConversationId,
+              role: "assistant",
+              content: sanitizedMessage,
+            });
+
+          // Ask if they want to select another transaction or end chat
+          setTimeout(async () => {
+            await supabase
+              .from("messages")
+              .insert({
+                conversation_id: currentConversationId,
+                role: "assistant",
+                content: "Would you like to select another transaction to dispute or end this chat?",
+              });
+          }, 500);
+
           // End the flow - chargeback not possible
           setQuestionStep(null);
           setCurrentQuestion("");
-          // Conversation ends here
         }
       }
     } catch (error: any) {
