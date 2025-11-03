@@ -1394,11 +1394,13 @@ Let me check if this transaction is eligible for a chargeback...`;
           // Proceed to reason picker
           setTimeout(() => {
             setQuestionStep(null);
+            setCurrentQuestion("");
             setShowReasonPicker(true);
           }, 500);
         } else {
           // End the flow - chargeback not possible
           setQuestionStep(null);
+          setCurrentQuestion("");
           // Conversation ends here
         }
       }
@@ -2028,17 +2030,21 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleResumeQuestion = async () => {
-    // If we have a current question text, re-ask it in chat and show input
-    if (currentQuestion && currentQuestion.trim().length > 0) {
-      const questionMessage: Message = {
-        id: `question-resume-${Date.now()}`,
-        role: "assistant",
-        content: currentQuestion,
-        created_at: new Date().toISOString(),
-      };
+    // Only resume if we actually have a pending question step
+    const hasPendingQuestion = questionStep !== null && currentQuestion.trim().length > 0;
 
-      setMessages(prev => [...prev, questionMessage]);
-
+    if (hasPendingQuestion) {
+      // Avoid duplicating if it's already the last assistant message
+      const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+      if (!lastAssistant || lastAssistant.content !== currentQuestion) {
+        const questionMessage: Message = {
+          id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          role: "assistant",
+          content: currentQuestion,
+          created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, questionMessage]);
+      }
       setTimeout(() => {
         setShowOrderDetailsInput(true);
       }, 300);
@@ -2063,7 +2069,6 @@ Let me check if this transaction is eligible for a chargeback...`;
       if (!dispute) return;
 
       setTimeout(() => {
-        // Reason picker stage resumes when precheck passed
         if (dispute.status === "precheck_passed") {
           setShowReasonPicker(true);
         }
@@ -2365,8 +2370,10 @@ Let me check if this transaction is eligible for a chargeback...`;
                     <HelpWidget 
                       onClose={() => {
                         setIsHelpWidgetOpen(false);
-                        // After closing, resume the pending question immediately
-                        handleResumeQuestion();
+                        // Resume only if there's a pending step
+                        if (questionStep !== null || showReasonPicker) {
+                          handleResumeQuestion();
+                        }
                       }}
                       messages={helpWidgetMessages}
                       setMessages={setHelpWidgetMessages}
