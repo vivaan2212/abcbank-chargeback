@@ -1131,11 +1131,20 @@ const Portal = () => {
 
       if (updateError) throw updateError;
 
-      // Add user's selection message
+      // Add user's selection message to current messages state immediately
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
         new Date(transaction.transaction_time),
         "dd MMM yyyy"
       )} for ${transaction.transaction_amount.toFixed(2)} ${transaction.transaction_currency}.`;
+      
+      const userMessageObj: Message = {
+        id: `user-selection-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        role: "user",
+        content: userMessage,
+        created_at: new Date().toISOString(),
+      };
+      
+      setMessages(prev => [...prev, userMessageObj]);
 
       const { error: userMsgError } = await supabase
         .from("messages")
@@ -1166,6 +1175,15 @@ const Portal = () => {
 • Date: ${format(new Date(transaction.transaction_time), "dd MMM yyyy")}
 
 Let me check if this transaction is eligible for a chargeback...`;
+        
+        const assistantMessageObj: Message = {
+          id: `assistant-details-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          role: "assistant",
+          content: detailsMessage,
+          created_at: new Date().toISOString(),
+        };
+        
+        setMessages(prev => [...prev, assistantMessageObj]);
 
         await supabase
           .from("messages")
@@ -2089,9 +2107,17 @@ Let me check if this transaction is eligible for a chargeback...`;
       activeStep = 'reasonPicker';
     }
     
-    // Capture the last assistant message before opening help widget
-    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
-    setPreviousAssistantMessage(lastAssistantMsg?.content || null);
+    // Prepare a step-specific prompt to re-state when resuming
+    let stepPrompt: string | null = null;
+    if (activeStep === 'transactions') {
+      stepPrompt = `These are your transactions from the last 120 days - please select the transaction for which you'd like to raise a dispute.`;
+    } else if (activeStep === 'questionStep') {
+      stepPrompt = null; // handled separately on resume
+    } else {
+      const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+      stepPrompt = lastAssistantMsg?.content || null;
+    }
+    setPreviousAssistantMessage(stepPrompt);
     
     setPreviousActiveStep(activeStep);
     setIsHelpWidgetOpen(true);
