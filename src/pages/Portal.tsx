@@ -2028,7 +2028,24 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleResumeQuestion = async () => {
-    // Fetch current dispute to determine what UI to restore
+    console.log('Resuming question/step...', { 
+      currentDisputeId, 
+      questionStep, 
+      showReasonPicker,
+      showOrderDetailsInput,
+      selectedTransaction: !!selectedTransaction,
+      selectedReason: !!selectedReason 
+    });
+    
+    // If we're in the middle of questions, just restore the input
+    if (questionStep) {
+      setTimeout(() => {
+        setShowOrderDetailsInput(true);
+      }, 500);
+      return;
+    }
+    
+    // Otherwise, fetch current dispute to determine what UI to restore
     if (!currentDisputeId) return;
     
     try {
@@ -2038,16 +2055,15 @@ Let me check if this transaction is eligible for a chargeback...`;
         .eq('id', currentDisputeId)
         .maybeSingle();
       
+      console.log('Current dispute status:', dispute?.status);
+      
       if (!dispute) return;
       
       // Re-display the appropriate UI based on dispute status
       setTimeout(() => {
         if (dispute.status === "eligibility_checked") {
-          // Re-show reason picker
+          console.log('Restoring reason picker');
           setShowReasonPicker(true);
-        } else if (questionStep) {
-          // Re-show question input if in question flow
-          setShowOrderDetailsInput(true);
         }
       }, 500);
     } catch (error) {
