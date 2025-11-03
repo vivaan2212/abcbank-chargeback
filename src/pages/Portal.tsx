@@ -2331,7 +2331,7 @@ Let me check if this transaction is eligible for a chargeback...`;
               className="w-full bg-card border-t border-border px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
             >
               <MessageCircleQuestion className="w-5 h-5 text-primary" />
-              <span className="text-sm font-semibold">Work with Pace. Log any updates or key notes for future reference.</span>
+              <span className="text-sm font-semibold">Have a question? Ask Pace for help</span>
             </div>
           )}
               </>
