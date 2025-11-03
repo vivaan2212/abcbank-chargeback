@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import DashboardSidebar from "./DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { PreviewPane } from "./PreviewPane";
@@ -1455,13 +1456,8 @@ const ActivityLogView = ({
 
       {/* Main & Preview Split */}
       <div className="flex flex-1 h-full min-w-0">
-        {/* Activity + Key Details container */}
-        <div className={cn(
-          "flex h-full min-w-0 transition-all duration-300 ease-in-out",
-          previewPaneOpen ? "w-1/2" : "w-full"
-        )}>
-          {/* Main content */}
-          <div className="flex-1 flex flex-col min-w-0 bg-background">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
         <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
@@ -1690,11 +1686,10 @@ const ActivityLogView = ({
         </div>
       </div>
 
-      {/* Key Details Sidebar - hidden when preview is open */}
-      {!previewPaneOpen && (
-        <div className="w-80 border-l bg-card flex flex-col">
-          {/* Knowledge Base and Share buttons at top */}
-          <div className="border-b px-4 py-3">
+      {/* Key Details Sidebar */}
+      <div className="w-80 border-l bg-card flex flex-col">
+        {/* Knowledge Base and Share buttons at top */}
+        <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2 justify-end">
             <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={() => setIsKnowledgeBaseOpen(true)}>
               <BookOpen className="h-4 w-4" />
@@ -1706,6 +1701,48 @@ const ActivityLogView = ({
             </Button>
           </div>
         </div>
+
+        {/* Preview Section - appears below buttons when open */}
+        {previewPaneOpen && previewContent && (
+          <div className="border-b animate-in slide-in-from-top duration-300">
+            <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
+              <h3 className="text-sm font-semibold">{previewContent.title}</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPreviewPaneOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {previewContent.type === "video" && previewContent.url && (
+              <div className="p-4">
+                <video 
+                  src={previewContent.url} 
+                  controls 
+                  className="w-full rounded-lg"
+                  style={{ maxHeight: '300px' }}
+                />
+              </div>
+            )}
+
+            {previewContent.type === "document" && previewContent.extractedFields && previewContent.extractedFields.length > 0 && (
+              <ScrollArea className="max-h-96">
+                <div className="p-4 space-y-2">
+                  {previewContent.extractedFields.map((field, idx) => (
+                    <Card key={idx} className="p-3 bg-background">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {field.label}
+                        </p>
+                        <p className="text-sm font-medium text-foreground break-all">
+                          {field.value}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        )}
 
         {/* Key Details Header */}
         <div className="border-b px-4 py-3">
@@ -1762,24 +1799,6 @@ const ActivityLogView = ({
             </div> : <div className="text-sm text-muted-foreground">No transaction details available</div>}
         </div>
       </div>
-      )}
-      </div>
-
-        {/* Preview Pane - slides in from the right */}
-        {previewPaneOpen && (
-          <div className="w-1/2 border-l border-border animate-in slide-in-from-right duration-300 overflow-hidden">
-            <PreviewPane 
-              isOpen={previewPaneOpen} 
-              onClose={() => setPreviewPaneOpen(false)} 
-              type={previewContent?.type || null}
-              videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
-              cardNetwork={previewContent?.cardNetwork}
-              documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
-              extractedFields={previewContent?.extractedFields}
-              title={previewContent?.title}
-            />
-          </div>
-        )}
       </div>
 
       {/* Knowledge Base Overlay */}
