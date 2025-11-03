@@ -16,7 +16,8 @@ import { DocumentUpload, UploadedDocument, DOCUMENT_REQUIREMENTS } from "@/compo
 import { UploadedDocumentsViewer } from "@/components/UploadedDocumentsViewer";
 import ArtifactsViewer, { ArtifactDoc } from "@/components/ArtifactsViewer";
 import { PreviewPane } from "@/components/PreviewPane";
-import { HelpWidget } from "@/components/HelpWidget";
+import { FloatingHelpButton } from "@/components/FloatingHelpButton";
+import { HelpDialog } from "@/components/HelpDialog";
 import { CustomerEvidenceUpload } from "@/components/CustomerEvidenceUpload";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -2450,44 +2451,33 @@ Let me check if this transaction is eligible for a chargeback...`;
                     onComplete={handleDocumentsComplete}
                   />
                 </div>
-              )}
-                 </>
-               )}
-
-
-                  {/* Help Widget inline - only show input area when open */}
-                  {isHelpWidgetOpen && (
-                    <HelpWidget 
-                      onClose={() => {
-                        setIsHelpWidgetOpen(false);
-                        handleResumeQuestion();
-                      }}
-                      messages={helpWidgetMessages}
-                      setMessages={setHelpWidgetMessages}
-                      onResumeQuestion={handleResumeQuestion}
-                    />
-                  )}
+                 )}
+                  </>
+                )}
               </div>
             </div>
           </ScrollArea>
-
-          {/* Help button at bottom */}
-          {!isReadOnly && !isHelpWidgetOpen && (
-            <div 
-              onClick={handleHelpRequest}
-              className="w-full bg-card border-t border-border px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
-            >
-              <MessageCircleQuestion className="w-5 h-5 text-primary" />
-              <span className="text-sm font-semibold">Have a question? Ask Pace for help</span>
-            </div>
-          )}
               </>
             </div>
         </ResizablePanel>
       </ResizablePanelGroup>
       
+      {/* Floating Help Button */}
+      {!isReadOnly && (
+        <FloatingHelpButton onClick={handleHelpRequest} />
+      )}
+
+      {/* Help Dialog */}
+      <HelpDialog
+        open={isHelpWidgetOpen}
+        onOpenChange={setIsHelpWidgetOpen}
+        messages={helpWidgetMessages}
+        setMessages={setHelpWidgetMessages}
+        onResumeQuestion={handleResumeQuestion}
+      />
+
       {/* Preview Pane */}
-      <PreviewPane 
+      <PreviewPane
         isOpen={previewPaneOpen}
         onClose={() => setPreviewPaneOpen(false)}
         type="document"
