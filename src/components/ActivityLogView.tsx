@@ -717,10 +717,6 @@ activityList.sort(compareActivities);
             expandable: customerEvidence.customer_note ? true : false,
             details: customerEvidence.customer_note || undefined,
             activityType: 'success',
-            attachments: evidenceFiles.length > 0 ? evidenceFiles.map(f => ({
-              label: f.name,
-              icon: 'document' as const
-            })) : undefined,
             evidenceDocuments: evidenceFiles,
             showRepresentmentActions: showReviewActions,
             representmentTransactionId: transactionId
