@@ -983,88 +983,26 @@ const ActivityLogView = ({
           throw error;
         }
         
-        // Create extracted fields from document metadata
+        // Create document metadata fields
         const extractedFields: Array<{ label: string; value: string }> = [];
         
-        // Check if this looks like an invoice document
-        const isInvoice = attachment.docData.name?.toLowerCase().includes('invoice') || 
-                         attachment.docData.requirementName?.toLowerCase().includes('invoice') ||
-                         attachment.label?.toLowerCase().includes('invoice');
-        
-        if (isInvoice) {
-          // Try to extract invoice data using AI
-          toast({
-            title: "Extracting invoice data",
-            description: "Analyzing document with AI...",
-            variant: "default"
-          });
-          
-          try {
-            const { data: invoiceData, error: extractError } = await supabase.functions.invoke('extract-invoice-data', {
-              body: { 
-                storagePath: storagePath,
-                bucket: 'dispute-documents'
-              }
-            });
-            
-            if (extractError) {
-              console.error('Invoice extraction error:', extractError);
-              throw extractError;
-            }
-            
-            if (invoiceData?.data) {
-              const inv = invoiceData.data;
-              if (inv.vendor_name) extractedFields.push({ label: "Vendor Name", value: inv.vendor_name });
-              if (inv.invoice_date) extractedFields.push({ label: "Invoice Date", value: inv.invoice_date });
-              if (inv.invoice_number) extractedFields.push({ label: "Invoice Number", value: inv.invoice_number });
-              if (inv.customer_name) extractedFields.push({ label: "Customer Name", value: inv.customer_name });
-              if (inv.subtotal) extractedFields.push({ label: "Subtotal", value: `${inv.currency || ''} ${inv.subtotal}`.trim() });
-              if (inv.tax) extractedFields.push({ label: "Tax", value: `${inv.currency || ''} ${inv.tax}`.trim() });
-              if (inv.total) extractedFields.push({ label: "Total Amount", value: `${inv.currency || ''} ${inv.total}`.trim() });
-              if (inv.items && inv.items.length > 0) {
-                inv.items.forEach((item: any, idx: number) => {
-                  extractedFields.push({ 
-                    label: `Item ${idx + 1}`, 
-                    value: `${item.description}${item.quantity ? ` (Qty: ${item.quantity})` : ''}${item.price ? ` - ${item.price}` : ''}` 
-                  });
-                });
-              }
-              
-              toast({
-                title: "Invoice data extracted",
-                description: "Successfully analyzed invoice",
-                variant: "default"
-              });
-            }
-          } catch (aiError) {
-            console.error('Invoice extraction failed:', aiError);
-            toast({
-              title: "Could not extract invoice data",
-              description: "Showing basic document info",
-              variant: "default"
-            });
-          }
+        // Add basic document metadata
+        if (attachment.docData.requirementName) {
+          extractedFields.push({ label: "Document Type", value: attachment.docData.requirementName });
         }
-        
-        // Add basic metadata if no invoice fields or as fallback
-        if (extractedFields.length === 0) {
-          if (attachment.docData.requirementName) {
-            extractedFields.push({ label: "Document Type", value: attachment.docData.requirementName });
-          }
-          if (attachment.docData.name || attachment.label) {
-            extractedFields.push({ label: "File Name", value: attachment.docData.name || attachment.label });
-          }
-          if (attachment.docData.size) {
-            const formatSize = (bytes: number) => {
-              if (bytes < 1024) return bytes + " B";
-              if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-              return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-            };
-            extractedFields.push({ label: "File Size", value: formatSize(attachment.docData.size) });
-          }
-          if (attachment.docData.type) {
-            extractedFields.push({ label: "File Type", value: attachment.docData.type });
-          }
+        if (attachment.docData.name || attachment.label) {
+          extractedFields.push({ label: "File Name", value: attachment.docData.name || attachment.label });
+        }
+        if (attachment.docData.size) {
+          const formatSize = (bytes: number) => {
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+          };
+          extractedFields.push({ label: "File Size", value: formatSize(attachment.docData.size) });
+        }
+        if (attachment.docData.type) {
+          extractedFields.push({ label: "File Type", value: attachment.docData.type });
         }
         
         setPreviewContent({
