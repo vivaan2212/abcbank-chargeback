@@ -354,7 +354,7 @@ const ActivityLogView = ({
               timestamp: action.created_at,
               label: `Temporary credit approved`,
               expandable: true,
-              details: `Credit amount: ₹${creditAmount.toLocaleString()}\n\nA temporary credit has been issued to your account while we investigate the dispute. This credit will be made permanent if the chargeback is successful.`,
+              details: `Credit amount: $${creditAmount.toLocaleString()}\n\nA temporary credit has been issued to your account while we investigate the dispute. This credit will be made permanent if the chargeback is successful.`,
               activityType: 'done'
             });
           }
