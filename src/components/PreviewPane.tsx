@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Download } from "lucide-react";
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ExtractedField {
   label: string;
@@ -42,6 +43,8 @@ export const PreviewPane = ({
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [docBlobUrl, setDocBlobUrl] = useState<string | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,7 +70,12 @@ export const PreviewPane = ({
       })
       .then((blob) => {
         createdUrl = URL.createObjectURL(blob);
-        setDocBlobUrl(createdUrl);
+        // Check if it's an image
+        if (blob.type.startsWith('image/')) {
+          setImageUrl(createdUrl);
+        } else {
+          setDocBlobUrl(createdUrl);
+        }
         setIsLoading(false);
       })
       .catch((e) => {
@@ -79,6 +87,7 @@ export const PreviewPane = ({
     return () => {
       if (createdUrl) URL.revokeObjectURL(createdUrl);
       setDocBlobUrl(null);
+      setImageUrl(null);
     };
   }, [isOpen, type, documentUrl]);
 
@@ -295,34 +304,43 @@ export const PreviewPane = ({
             {extractedFields.length > 0 && (
               <div className="w-[35%] border-r border-border bg-muted/20">
                 <ScrollArea className="h-full">
-                  <div className="p-6 space-y-1">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        Extracted Details
-                      </h3>
-                      <Button variant="ghost" size="sm" onClick={handleDownloadDocument}>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {extractedFields.map((field, idx) => (
-                      <Card key={idx} className="p-4 bg-background">
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            {field.label}
-                          </p>
-                          <p className="text-sm font-medium text-foreground break-all">
-                            {field.value}
-                          </p>
-                        </div>
-                      </Card>
-                    ))}
+                  <div className="p-6">
+                    <Collapsible open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+                      <div className="flex items-center justify-between mb-4">
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" className="p-0 hover:bg-transparent">
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                              Extracted Details
+                              {isDetailsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </h3>
+                          </Button>
+                        </CollapsibleTrigger>
+                        <Button variant="ghost" size="sm" onClick={handleDownloadDocument}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <CollapsibleContent className="space-y-1">
+                        {extractedFields.map((field, idx) => (
+                          <Card key={idx} className="p-4 bg-background">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {field.label}
+                              </p>
+                              <p className="text-sm font-medium text-foreground break-all">
+                                {field.value}
+                              </p>
+                            </div>
+                          </Card>
+                        ))}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
                 </ScrollArea>
               </div>
             )}
 
-            {/* Right: PDF Viewer */}
+            {/* Right: Document/Image Viewer */}
             <div className={cn(
               "flex-1 bg-gray-100 relative",
               extractedFields.length === 0 && "w-full"
@@ -332,11 +350,21 @@ export const PreviewPane = ({
                   <div className="text-muted-foreground">Loading document...</div>
                 </div>
               )}
-              <iframe
-                src={docBlobUrl || (getResolvedDocumentUrl(documentUrl) || undefined)}
-                className="w-full h-full"
-                title="Document Preview"
-              />
+              {imageUrl ? (
+                <div className="w-full h-full p-4 flex items-start justify-center overflow-auto">
+                  <img
+                    src={imageUrl}
+                    alt="Document preview"
+                    className="max-w-full h-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <iframe
+                  src={docBlobUrl || (getResolvedDocumentUrl(documentUrl) || undefined)}
+                  className="w-full h-full"
+                  title="Document Preview"
+                />
+              )}
             </div>
           </div>
         )}
