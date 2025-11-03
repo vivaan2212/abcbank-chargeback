@@ -35,11 +35,12 @@ const Login = () => {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setExistingSession(null);
       toast.success('Logged out successfully');
     } catch (error: any) {
+      console.error('Logout error:', error);
       toast.error('Failed to log out');
     } finally {
       setIsLoading(false);
