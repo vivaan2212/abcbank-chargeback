@@ -2028,25 +2028,10 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleResumeQuestion = () => {
-    // Re-display the current question if it exists
-    if (currentQuestion && questionStep) {
-      setShowOrderDetailsInput(false); // Hide input temporarily
-      
+    // Simply re-display the input for the current question (already in messages)
+    if (questionStep) {
       setTimeout(() => {
-        // Re-add the question to messages with proper Message structure
-        const questionMessage: Message = {
-          id: `resume-q-${Date.now()}`,
-          role: "assistant",
-          content: currentQuestion,
-          created_at: new Date().toISOString(),
-        };
-        
-        setMessages((prev) => [...prev, questionMessage]);
-        
-        // Show the input again after a brief delay
-        setTimeout(() => {
-          setShowOrderDetailsInput(true);
-        }, 300);
+        setShowOrderDetailsInput(true);
       }, 500);
     }
   };
