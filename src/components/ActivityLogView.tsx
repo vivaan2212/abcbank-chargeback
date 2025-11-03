@@ -454,7 +454,7 @@ const ActivityLogView = ({
               label = `Chargeback filed on ${cardNetwork}, Ref No: ${refNumber}`;
               activityType = 'done';
               const resolvedAmount = dispute.chargeback_actions?.[0]?.net_amount || dispute.transaction?.transaction_amount || 0;
-              details = `Your chargeback has been approved by the card network.\n\nResolved amount: ₹${resolvedAmount.toLocaleString()}\n\nThe funds have been permanently credited to your account. The case is now closed.`;
+              details = `Chargeback has been filed on the ${cardNetwork} portal. They are having a look at it.\n\nDisputed amount: $${resolvedAmount.toLocaleString()}`;
 
               // Add video attachment for approved cases - fetch video based on card network
               attachments = [{
