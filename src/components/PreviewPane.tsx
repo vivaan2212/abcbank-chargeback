@@ -138,9 +138,9 @@ export const PreviewPane = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 right-0 h-screen w-1/2 bg-background border-l border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+    <div className="h-screen w-full bg-background flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30 shrink-0">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
           {cardNetwork && (

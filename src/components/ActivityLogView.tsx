@@ -1384,14 +1384,19 @@ const ActivityLogView = ({
   }
   const groupedActivities = groupActivitiesByDate();
   const statusBadge = getStatusBadge();
-  return <div className="h-full flex animate-fade-in">
-      {/* Left Sidebar */}
-      <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", isSidebarOpen ? "w-56" : "w-0")}>
-        <DashboardSidebar activeSection="chargebacks" />
-      </div>
+  return <div className="flex h-screen bg-background">
+      {/* Main Content Area - takes full width or 50% depending on preview state */}
+      <div className={cn(
+        "flex h-full transition-all duration-300 ease-in-out",
+        previewPaneOpen ? "w-1/2" : "w-full"
+      )}>
+        {/* Left Sidebar */}
+        <div className={cn("transition-all duration-300 ease-in-out overflow-hidden", isSidebarOpen ? "w-56" : "w-0")}>
+          <DashboardSidebar activeSection="chargebacks" />
+        </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-background">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col min-w-0 bg-background">
         {/* Header */}
         <div className="border-b px-6 py-3 bg-background">
           <div className="flex items-center justify-between">
@@ -1691,18 +1696,23 @@ const ActivityLogView = ({
             </div> : <div className="text-sm text-muted-foreground">No transaction details available</div>}
         </div>
       </div>
+      </div>
 
-      {/* Preview Pane */}
-      <PreviewPane 
-        isOpen={previewPaneOpen} 
-        onClose={() => setPreviewPaneOpen(false)} 
-        type={previewContent?.type || null}
-        videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
-        cardNetwork={previewContent?.cardNetwork}
-        documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
-        extractedFields={previewContent?.extractedFields}
-        title={previewContent?.title}
-      />
+      {/* Preview Pane - slides in from the right */}
+      {previewPaneOpen && (
+        <div className="w-1/2 border-l border-border animate-in slide-in-from-right duration-300">
+          <PreviewPane 
+            isOpen={previewPaneOpen} 
+            onClose={() => setPreviewPaneOpen(false)} 
+            type={previewContent?.type || null}
+            videoUrl={previewContent?.type === "video" ? previewContent.url : undefined}
+            cardNetwork={previewContent?.cardNetwork}
+            documentUrl={previewContent?.type === "document" ? previewContent.url : undefined}
+            extractedFields={previewContent?.extractedFields}
+            title={previewContent?.title}
+          />
+        </div>
+      )}
 
       {/* Knowledge Base Overlay */}
       <KnowledgeBasePanel 
