@@ -122,7 +122,7 @@ const DisputeDetail = ({ dispute, onUpdate }: DisputeDetailProps) => {
     };
 
     loadEvidenceData();
-  }, [dispute.id, dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status, dispute.transaction?.dispute_status]);
+  }, [dispute.id, dispute.transaction?.id, dispute.chargeback_representment_static?.representment_status, dispute.chargeback_representment_static?.merchant_reason_text, dispute.chargeback_representment_static?.merchant_document_url, dispute.transaction?.dispute_status]);
 
   const toggleSection = (index: number) => {
     setOpenSections(prev => ({ ...prev, [index]: !prev[index] }));

@@ -171,7 +171,7 @@ const Dashboard = () => {
       // 2) Fetch related data in bulk
       const [txRes, repRes, decRes, actionsRes, evidenceRes, reviewsRes] = await Promise.all([
         supabase.from('transactions').select('id').in('id', transactionIds),
-        supabase.from('chargeback_representment_static').select('transaction_id, representment_status, merchant_document_url').in('transaction_id', transactionIds),
+        supabase.from('chargeback_representment_static').select('transaction_id, representment_status, merchant_document_url, merchant_reason_text').in('transaction_id', transactionIds),
         supabase.from('dispute_decisions').select('dispute_id, decision').in('dispute_id', disputeIds),
         supabase.from('chargeback_actions').select('dispute_id, chargeback_filed, temporary_credit_issued, awaiting_merchant_refund, requires_manual_review').in('dispute_id', disputeIds),
         supabase.from('dispute_customer_evidence').select('transaction_id').in('transaction_id', transactionIds),
