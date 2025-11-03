@@ -605,34 +605,19 @@ const ActivityLogView = ({
               id: 'rep-evidence-reviewed',
               timestamp: repTs,
               label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
-              tag: 'Reviewed by Pace',
-              reasoning: [
-                'Valid invoice',
-                'Service delivered',
-                'Non-refundable terms',
-                'Usage confirmed',
-                'No fraud risk'
-              ],
-              attachments: [{
-                label: 'Merchant docs, invoice, terms',
-                icon: 'document'
-              }],
-              activityType: 'review_decision',
-              expandable: true
+              activityType: 'review_decision'
             });
             
-            // 2. Chargeback recalled (green box)
+            // 2. Chargeback recalled
             const caseRef = dispute.transaction.chargeback_case_id?.substring(0, 10) || 'REF-' + transactionId?.substring(0, 8);
             activityList.push({
               id: 'rep-chargeback-recalled',
               timestamp: new Date(new Date(repTs).getTime() + 1000).toISOString(),
               label: `Chargeback request Ref. No. ${caseRef} has been recalled from ${network}`,
-              tag: 'Recall details',
-              link: networkPortal,
               activityType: 'success'
             });
             
-            // 3. Temporary credit reversed (green box)
+            // 3. Temporary credit reversed
             const reversalRef = dispute.transaction.temporary_credit_reversal_at 
               ? 'REV-' + new Date(dispute.transaction.temporary_credit_reversal_at).getTime().toString().substring(0, 10)
               : 'REV-' + Date.now().toString().substring(0, 10);
@@ -640,7 +625,6 @@ const ActivityLogView = ({
               id: 'rep-credit-reversed',
               timestamp: new Date(new Date(repTs).getTime() + 2000).toISOString(),
               label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. ${reversalRef}.`,
-              tag: 'Transaction details',
               activityType: 'success'
             });
             
@@ -837,15 +821,7 @@ const ActivityLogView = ({
           id: 'evidence-reviewed-rejected',
           timestamp: evidenceReviewTimestamp,
           label: 'Evidence reviewed and found valid; customer chargeback request to be recalled',
-          expandable: true,
-          details: 'Reviewed by Pace\n\n✓ Valid invoice\n✓ Service delivered\n✓ Non-refundable terms\n✓ Usage confirmed\n✓ No fraud risk',
-          activityType: 'human_action',
-          attachments: merchantDocUrl ? [{
-            label: 'Merchant docs, invoice, terms',
-            icon: 'document',
-            action: 'download',
-            docUrl: merchantDocUrl
-          }] : []
+          activityType: 'human_action'
         });
 
         // Add chargeback recalled activity
@@ -853,9 +829,7 @@ const ActivityLogView = ({
           id: 'chargeback-recalled',
           timestamp: recalledLog.performed_at,
           label: `Chargeback request Ref. No. ${referenceNo} has been recalled from ${recalledLog.network || 'Visa'}`,
-          expandable: true,
-          details: `Recall details     🔗 Network Portal\n\n${recalledLog.note || 'Bank rejected customer evidence and recalled chargeback from card network'}`,
-          activityType: 'done',
+          activityType: 'done'
         });
 
         // Add credit reversal activity if applicable
@@ -865,9 +839,7 @@ const ActivityLogView = ({
             id: 'credit-reversed-recalled',
             timestamp: reversalTimestamp,
             label: `Temporary credit has been reversed. Reversal recorded under transaction Ref. No. REV-${Date.now()}.`,
-            expandable: true,
-            details: `Transaction details\n\nTemporary credit of ${currency === 'USD' ? '$' : '₹'}${creditAmount.toLocaleString()} has been reversed and deducted from the customer's account.\n\nMerchant wins the dispute.`,
-            activityType: 'done',
+            activityType: 'done'
           });
         }
       }
