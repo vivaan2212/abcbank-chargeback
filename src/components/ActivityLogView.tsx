@@ -69,6 +69,7 @@ interface Activity {
     action?: string;
     videoData?: any;
     docUrl?: string;
+    docData?: any; // Document data for preview
     link?: string;
   }>;
   reviewer?: string;
@@ -301,7 +302,10 @@ const ActivityLogView = ({
             label: `Customer uploaded ${docsArray.length} document${docsArray.length > 1 ? 's' : ''}`,
             attachments: docsArray.map((doc: any, idx: number) => ({
               label: doc.name || `Document ${idx + 1}`,
-              icon: 'document'
+              icon: 'document',
+              action: 'document',
+              docUrl: doc.path || doc.url, // Store path for later retrieval
+              docData: doc // Store full document data
             })),
             activityType: 'success'
           });
@@ -979,15 +983,70 @@ const ActivityLogView = ({
         console.error('Failed to load video:', error);
       }
     } else if (attachment.action === 'document') {
-      // Handle document view - show in preview pane with extracted fields
-      // For now, just placeholder - can be enhanced with actual document URLs and extracted data
-      setPreviewContent({
-        type: "document",
-        url: "https://example.com/document.pdf", // This should come from actual document storage
-        extractedFields: [], // This should come from actual extracted data
-        title: "Document"
-      });
-      setPreviewPaneOpen(true);
+      try {
+        // Handle document view - show in preview pane with extracted fields
+        if (!attachment.docUrl && !attachment.docData) {
+          // If no document data, show a message
+          toast({
+            title: "Document not available",
+            description: "This document is not available for preview.",
+            variant: "default"
+          });
+          return;
+        }
+        
+        let signedUrl = attachment.docUrl;
+        
+        // If we have a storage path, generate a signed URL
+        if (attachment.docData?.path) {
+          const { data, error } = await supabase.storage
+            .from('dispute-documents')
+            .createSignedUrl(attachment.docData.path, 3600); // 1 hour expiry
+          
+          if (error) throw error;
+          signedUrl = data.signedUrl;
+        }
+        
+        // Create extracted fields from document metadata
+        const extractedFields: Array<{ label: string; value: string }> = [];
+        
+        if (attachment.docData) {
+          if (attachment.docData.requirementName) {
+            extractedFields.push({ label: "Document Type", value: attachment.docData.requirementName });
+          }
+          if (attachment.docData.name || attachment.label) {
+            extractedFields.push({ label: "File Name", value: attachment.docData.name || attachment.label });
+          }
+          if (attachment.docData.size) {
+            const formatSize = (bytes: number) => {
+              if (bytes < 1024) return bytes + " B";
+              if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+              return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+            };
+            extractedFields.push({ label: "File Size", value: formatSize(attachment.docData.size) });
+          }
+          if (attachment.docData.type) {
+            extractedFields.push({ label: "File Type", value: attachment.docData.type });
+          }
+        }
+        
+        if (signedUrl) {
+          setPreviewContent({
+            type: "document",
+            url: signedUrl,
+            extractedFields,
+            title: attachment.label || "Document"
+          });
+          setPreviewPaneOpen(true);
+        }
+      } catch (error) {
+        console.error('Failed to load document:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load document. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
   const handleApproveEvidence = async (transactionId: string) => {

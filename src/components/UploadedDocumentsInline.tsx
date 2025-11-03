@@ -2,13 +2,17 @@ import React, { useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadedDocument } from "./DocumentUpload";
-import { Download, FileText, Image as ImageIcon } from "lucide-react";
+import { Download, FileText, Image as ImageIcon, Eye } from "lucide-react";
 
 interface UploadedDocumentsInlineProps {
   documents: UploadedDocument[];
+  onPreviewDocument?: (url: string, extractedFields: Array<{ label: string; value: string }>) => void;
 }
 
-export const UploadedDocumentsInline: React.FC<UploadedDocumentsInlineProps> = ({ documents }) => {
+export const UploadedDocumentsInline: React.FC<UploadedDocumentsInlineProps> = ({ 
+  documents, 
+  onPreviewDocument 
+}) => {
   const previews = useMemo(() => {
     return documents.map((d) => ({
       requirementName: d.requirementName,
@@ -40,12 +44,28 @@ export const UploadedDocumentsInline: React.FC<UploadedDocumentsInlineProps> = (
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const handlePreview = (p: typeof previews[0]) => {
+    if (onPreviewDocument) {
+      const extractedFields = [
+        { label: "Document Type", value: p.requirementName },
+        { label: "File Name", value: p.file.name },
+        { label: "File Size", value: formatFileSize(p.file.size) },
+        { label: "File Type", value: p.file.type || "Unknown" }
+      ];
+      onPreviewDocument(p.url, extractedFields);
+    }
+  };
+
   if (!documents.length) return null;
 
   return (
     <div className="mt-3 space-y-2">
       {previews.map((p, idx) => (
-        <Card key={idx} className="p-3 flex items-center gap-3 hover:bg-accent/50 transition-colors">
+        <Card 
+          key={idx} 
+          className="p-3 flex items-center gap-3 hover:bg-accent/50 transition-colors cursor-pointer"
+          onClick={() => handlePreview(p)}
+        >
           <div className="shrink-0 w-12 h-12 bg-muted rounded flex items-center justify-center">
             {p.isImage ? (
               <img src={p.url} alt={p.file.name} className="w-full h-full object-cover rounded" />
@@ -58,14 +78,29 @@ export const UploadedDocumentsInline: React.FC<UploadedDocumentsInlineProps> = (
             <p className="text-xs text-muted-foreground truncate">{p.file.name}</p>
             <p className="text-xs text-muted-foreground">{formatFileSize(p.file.size)}</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => handleDownload(p.file, p.url)}
-            className="shrink-0"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-1 shrink-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePreview(p);
+              }}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(p.file, p.url);
+              }}
+              className="shrink-0"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          </div>
         </Card>
       ))}
     </div>
