@@ -103,7 +103,14 @@ async function computeInputsHash(tx: Transaction, dispute: Dispute, docCheck: Do
 }
 
 function checkDocumentSufficiency(reasonCode: string, docCheck: DocCheck[]): { sufficient: boolean; missing: string[] } {
-  const validDocs = new Set(docCheck.filter(d => d.isValid).map(d => d.key));
+  const normalizeKey = (k: string) => {
+    const s = k.toLowerCase().replace(/\s+/g, '_');
+    if (['delivery_receipt','tracking_number','proof_of_delivery','proof_of_shipment','shipment_proof'].includes(s)) return 'tracking_proof';
+    if (['order_confirmation_or_invoice','order_confirmation','transaction_receipt_or_invoice','transaction_receipt'].includes(s)) return 'invoice';
+    if (['bank_statement_showing_duplicate_charges','bank_statement_showing_incorrect_charge'].includes(s)) return 'bank_statement';
+    return s;
+  };
+  const validDocs = new Set(docCheck.filter(d => d.isValid).map(d => normalizeKey(d.key)));
   const missing: string[] = [];
   
   const requirements: Record<string, string[]> = {

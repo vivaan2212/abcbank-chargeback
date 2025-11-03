@@ -1787,6 +1787,9 @@ Let me check if this transaction is eligible for a chargeback...`;
                 // Not Received
                 'Order confirmation or invoice': 'invoice',
                 'Shipping tracking number or delivery receipt': 'tracking_proof',
+                'Delivery receipt': 'tracking_proof',
+                'Tracking number': 'tracking_proof',
+                'Proof of shipment or delivery': 'tracking_proof',
                 'Correspondence (e.g., emails) showing failure to deliver': 'communication',
                 
                 // Duplicate
