@@ -2194,15 +2194,6 @@ Let me check if this transaction is eligible for a chargeback...`;
                     />
                   ))}
 
-                  {/* Help messages inline with conversation */}
-                  {helpWidgetMessages.length > 1 && helpWidgetMessages.map((msg, idx) => (
-                    <ChatMessage
-                      key={`help-${idx}`}
-                      role={msg.role}
-                      content={msg.content}
-                      timestamp={msg.timestamp}
-                    />
-                  ))}
 
                   {isCheckingEligibility && (
                 <div className="mt-6 flex items-center justify-center">
