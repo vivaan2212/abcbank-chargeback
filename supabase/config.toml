@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.log-transaction-update]
 verify_jwt = true
+
+[functions.extract-invoice-data]
+verify_jwt = true
