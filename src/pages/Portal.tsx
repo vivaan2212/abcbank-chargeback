@@ -120,6 +120,7 @@ const Portal = () => {
     url: string;
     extractedFields: Array<{ label: string; value: string }>;
   } | null>(null);
+  const [previousActiveStep, setPreviousActiveStep] = useState<string | null>(null);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -152,6 +153,7 @@ const Portal = () => {
       answer3,
       currentQuestion,
       precheckResult,
+      previousActiveStep,
       timestamp: new Date().toISOString()
     };
     
@@ -196,6 +198,7 @@ const Portal = () => {
       if (uiState.answer3) setAnswer3(uiState.answer3);
       if (uiState.currentQuestion) setCurrentQuestion(uiState.currentQuestion);
       if (uiState.precheckResult) setPrecheckResult(uiState.precheckResult);
+      if (uiState.previousActiveStep !== undefined) setPreviousActiveStep(uiState.previousActiveStep);
       
       return true;
     } catch (e) {
@@ -236,6 +239,7 @@ const Portal = () => {
     answer3,
     currentQuestion,
     precheckResult,
+    previousActiveStep,
     isSwitchingConversation
   ]);
   
@@ -2066,56 +2070,94 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleHelpRequest = () => {
+    // Capture the current active UI step before opening help widget
+    let activeStep: string | null = null;
+    
+    if (showTransactions) {
+      activeStep = 'transactions';
+    } else if (showDocumentUpload) {
+      activeStep = 'documentUpload';
+    } else if (showContinueOrEndButtons) {
+      activeStep = 'continueEnd';
+    } else if (showOrderDetailsInput && questionStep !== null) {
+      activeStep = 'questionStep';
+    } else if (showReasonPicker) {
+      activeStep = 'reasonPicker';
+    }
+    
+    setPreviousActiveStep(activeStep);
     setIsHelpWidgetOpen(true);
   };
 
   const handleResumeQuestion = async () => {
-    // Only resume if we actually have a pending question step
-    const hasPendingQuestion = questionStep !== null && currentQuestion.trim().length > 0;
-
-    if (hasPendingQuestion) {
-      // Avoid duplicating if it's already the last assistant message
-      const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
-      if (!lastAssistant || lastAssistant.content !== currentQuestion) {
-        const questionMessage: Message = {
-          id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          role: "assistant",
-          content: currentQuestion,
-          created_at: new Date().toISOString(),
-        };
-        setMessages(prev => [...prev, questionMessage]);
-      }
-      setTimeout(() => {
-        setShowOrderDetailsInput(true);
-      }, 300);
+    // Use previousActiveStep to restore the correct UI
+    if (!previousActiveStep) {
+      console.log('No previous active step to resume');
       return;
     }
 
-    // Otherwise, restore the appropriate UI step
-    if (showReasonPicker) {
-      setShowReasonPicker(true);
-      return;
-    }
+    setTimeout(() => {
+      switch (previousActiveStep) {
+        case 'transactions':
+          setShowTransactions(true);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(false);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(false);
+          break;
 
-    if (!currentDisputeId) return;
-
-    try {
-      const { data: dispute } = await supabase
-        .from('disputes')
-        .select('status')
-        .eq('id', currentDisputeId)
-        .maybeSingle();
-
-      if (!dispute) return;
-
-      setTimeout(() => {
-        if (dispute.status === "precheck_passed") {
+        case 'reasonPicker':
+          setShowTransactions(false);
           setShowReasonPicker(true);
-        }
-      }, 300);
-    } catch (error) {
-      console.error('Failed to fetch dispute status:', error);
-    }
+          setShowDocumentUpload(false);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(false);
+          break;
+
+        case 'documentUpload':
+          setShowTransactions(false);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(true);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(false);
+          break;
+
+        case 'questionStep':
+          // Re-show the question if there is one
+          if (questionStep !== null && currentQuestion.trim().length > 0) {
+            const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+            if (!lastAssistant || lastAssistant.content !== currentQuestion) {
+              const questionMessage: Message = {
+                id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                role: "assistant",
+                content: currentQuestion,
+                created_at: new Date().toISOString(),
+              };
+              setMessages(prev => [...prev, questionMessage]);
+            }
+            setShowOrderDetailsInput(true);
+          }
+          setShowTransactions(false);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(false);
+          setShowContinueOrEndButtons(false);
+          break;
+
+        case 'continueEnd':
+          setShowTransactions(false);
+          setShowReasonPicker(false);
+          setShowDocumentUpload(false);
+          setShowOrderDetailsInput(false);
+          setShowContinueOrEndButtons(true);
+          break;
+
+        default:
+          console.log('Unknown previous active step:', previousActiveStep);
+      }
+    }, 300);
+
+    // Clear the previous step after restoring
+    setPreviousActiveStep(null);
   };
 
   // Show nothing while checking role to prevent flash
@@ -2386,10 +2428,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                     <HelpWidget 
                       onClose={() => {
                         setIsHelpWidgetOpen(false);
-                        // Resume only if there's a pending step
-                        if (questionStep !== null || showReasonPicker) {
-                          handleResumeQuestion();
-                        }
+                        handleResumeQuestion();
                       }}
                       messages={helpWidgetMessages}
                       setMessages={setHelpWidgetMessages}
