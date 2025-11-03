@@ -44,14 +44,22 @@ const stagePriorityMap: Record<string, number> = {
   'write-off': 90
 };
 
+// Helper to normalize action IDs by stripping numeric indices
+const normalizeStageId = (id: string): string => {
+  // Strip patterns like "action-0-filed" to "action-filed"
+  return id.replace(/^action-\d+-/, 'action-');
+};
+
 // Helper to extract stage order from activity ID
 const getStageOrder = (id: string): number => {
-  // Direct match
-  if (stagePriorityMap[id]) return stagePriorityMap[id];
+  const normalized = normalizeStageId(id);
   
-  // Check for prefixes like "action-0-temp-credit" or "write-off-timestamp"
+  // Direct match
+  if (stagePriorityMap[normalized]) return stagePriorityMap[normalized];
+  
+  // Check for prefixes like "action-temp-credit" or "write-off-timestamp"
   for (const [key, priority] of Object.entries(stagePriorityMap)) {
-    if (id.startsWith(key)) return priority;
+    if (normalized.startsWith(key)) return priority;
   }
   
   return 999; // Default for unknown stages
@@ -532,13 +540,15 @@ const ActivityLogView = ({
       const hasChargebackAction = dispute.chargeback_actions && dispute.chargeback_actions.length > 0;
       const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
       if (repData && chargebackFiledOrApproved) {
-        // Calculate chargeback filing timestamp - find the last chargeback filed action
+        // Calculate chargeback filing timestamp - find the maximum timestamp of all filed actions
         let chargebackFiledTs: number | null = null;
         if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0) {
           const filedActions = (dispute.chargeback_actions as any[]).filter(a => a.chargeback_filed);
           if (filedActions.length > 0) {
-            const lastFiled = filedActions[filedActions.length - 1];
-            chargebackFiledTs = new Date(lastFiled.updated_at || lastFiled.created_at).getTime();
+            chargebackFiledTs = filedActions.reduce((max, action) => {
+              const ts = new Date(action.updated_at || action.created_at).getTime();
+              return Math.max(max, ts);
+            }, 0);
           }
         }
 
