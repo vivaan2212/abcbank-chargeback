@@ -18,6 +18,7 @@ interface HelpWidgetProps {
   onClose: () => void;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  onResumeQuestion?: () => void;
 }
 
 const addClosingMessage = (setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => {
@@ -31,7 +32,7 @@ const addClosingMessage = (setMessages: React.Dispatch<React.SetStateAction<Mess
   ]);
 };
 
-export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) => {
+export const HelpWidget = ({ onClose, messages, setMessages, onResumeQuestion }: HelpWidgetProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
@@ -156,10 +157,11 @@ export const HelpWidget = ({ onClose, messages, setMessages }: HelpWidgetProps) 
       setMessages((prev) => [...prev, closingMessage]);
       setShowFollowUp(false);
       
-      // Close after showing the message
+      // Close and trigger question resume after showing the message
       setTimeout(() => {
         onClose();
-      }, 2000);
+        onResumeQuestion?.();
+      }, 1500);
     }
   };
 

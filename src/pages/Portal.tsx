@@ -2027,6 +2027,30 @@ Let me check if this transaction is eligible for a chargeback...`;
     setIsHelpWidgetOpen(true);
   };
 
+  const handleResumeQuestion = () => {
+    // Re-display the current question if it exists
+    if (currentQuestion && questionStep) {
+      setShowOrderDetailsInput(false); // Hide input temporarily
+      
+      setTimeout(() => {
+        // Re-add the question to messages with proper Message structure
+        const questionMessage: Message = {
+          id: `resume-q-${Date.now()}`,
+          role: "assistant",
+          content: currentQuestion,
+          created_at: new Date().toISOString(),
+        };
+        
+        setMessages((prev) => [...prev, questionMessage]);
+        
+        // Show the input again after a brief delay
+        setTimeout(() => {
+          setShowOrderDetailsInput(true);
+        }, 300);
+      }, 500);
+    }
+  };
+
   // Show nothing while checking role to prevent flash
   if (isCheckingRole) {
     return null;
@@ -2318,6 +2342,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                       onClose={() => setIsHelpWidgetOpen(false)}
                       messages={helpWidgetMessages}
                       setMessages={setHelpWidgetMessages}
+                      onResumeQuestion={handleResumeQuestion}
                     />
                   )}
               </div>
