@@ -62,6 +62,21 @@ serve(async (req) => {
                      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
                      ext === 'png' ? 'image/png' : 'application/octet-stream';
 
+    // Only process image files - PDFs can't be extracted via vision API
+    if (mimeType === 'application/pdf' || mimeType === 'application/octet-stream') {
+      console.log('Skipping non-image file:', mimeType);
+      return new Response(JSON.stringify({ 
+        success: true,
+        data: {
+          vendor_name: 'Document uploaded',
+          total: 'See document for details',
+          note: 'PDF documents require manual review'
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Sending document to AI for extraction, type:', mimeType);
 
     // Use Lovable AI to extract invoice data
