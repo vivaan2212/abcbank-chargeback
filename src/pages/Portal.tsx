@@ -121,7 +121,6 @@ const Portal = () => {
     extractedFields: Array<{ label: string; value: string }>;
   } | null>(null);
   const [previousActiveStep, setPreviousActiveStep] = useState<string | null>(null);
-  const [previousAssistantMessage, setPreviousAssistantMessage] = useState<string | null>(null);
   
   const [userFirstName, setUserFirstName] = useState("there");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -155,7 +154,6 @@ const Portal = () => {
       currentQuestion,
       precheckResult,
       previousActiveStep,
-      previousAssistantMessage,
       timestamp: new Date().toISOString()
     };
     
@@ -201,7 +199,6 @@ const Portal = () => {
       if (uiState.currentQuestion) setCurrentQuestion(uiState.currentQuestion);
       if (uiState.precheckResult) setPrecheckResult(uiState.precheckResult);
       if (uiState.previousActiveStep !== undefined) setPreviousActiveStep(uiState.previousActiveStep);
-      if (uiState.previousAssistantMessage !== undefined) setPreviousAssistantMessage(uiState.previousAssistantMessage);
       
       return true;
     } catch (e) {
@@ -243,7 +240,6 @@ const Portal = () => {
     currentQuestion,
     precheckResult,
     previousActiveStep,
-    previousAssistantMessage,
     isSwitchingConversation
   ]);
   
@@ -1131,7 +1127,7 @@ const Portal = () => {
 
       if (updateError) throw updateError;
 
-      // Post user's selection; rely on realtime subscription to render
+      // Add user's selection message
       const userMessage = `I'd like to dispute the ${transaction.merchant_name} transaction on ${format(
         new Date(transaction.transaction_time),
         "dd MMM yyyy"
@@ -1157,7 +1153,7 @@ const Portal = () => {
         .update({ title: newTitle })
         .eq("id", currentConversationId);
 
-      // Post transaction details to DB; subscription will add to UI
+      // Show transaction details in assistant message with delay
       setTimeout(async () => {
         const detailsMessage = `Thanks for choosing a transaction. Here are the details I have:
 
@@ -2089,18 +2085,6 @@ Let me check if this transaction is eligible for a chargeback...`;
       activeStep = 'reasonPicker';
     }
     
-    // Prepare a step-specific prompt to re-state when resuming
-    let stepPrompt: string | null = null;
-    if (activeStep === 'transactions') {
-      stepPrompt = `These are your transactions from the last 120 days - please select the transaction for which you'd like to raise a dispute.`;
-    } else if (activeStep === 'questionStep') {
-      stepPrompt = null; // handled separately on resume
-    } else {
-      const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
-      stepPrompt = lastAssistantMsg?.content || null;
-    }
-    setPreviousAssistantMessage(stepPrompt);
-    
     setPreviousActiveStep(activeStep);
     setIsHelpWidgetOpen(true);
 
@@ -2119,17 +2103,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       return;
     }
 
-    setTimeout(async () => {
-      // Re-display the previous assistant message first by inserting to backend
-      if (previousAssistantMessage && currentConversationId) {
-        await supabase.from("messages").insert({
-          conversation_id: currentConversationId,
-          role: "assistant",
-          content: previousAssistantMessage,
-        });
-      }
-
-      // Then restore the UI based on the previous step
+    setTimeout(() => {
       switch (previousActiveStep) {
         case 'transactions':
           setShowTransactions(true);
@@ -2158,13 +2132,16 @@ Let me check if this transaction is eligible for a chargeback...`;
         case 'questionStep':
           // Re-show the question if there is one
           if (questionStep !== null && currentQuestion.trim().length > 0) {
-            const questionMessage: Message = {
-              id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              role: "assistant",
-              content: currentQuestion,
-              created_at: new Date().toISOString(),
-            };
-            setMessages(prev => [...prev, questionMessage]);
+            const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+            if (!lastAssistant || lastAssistant.content !== currentQuestion) {
+              const questionMessage: Message = {
+                id: `question-resume-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                role: "assistant",
+                content: currentQuestion,
+                created_at: new Date().toISOString(),
+              };
+              setMessages(prev => [...prev, questionMessage]);
+            }
             setShowOrderDetailsInput(true);
           }
           setShowTransactions(false);
@@ -2184,11 +2161,10 @@ Let me check if this transaction is eligible for a chargeback...`;
         default:
           console.log('Unknown previous active step:', previousActiveStep);
       }
-      
-      // Clear the saved state after restoring
-      setPreviousActiveStep(null);
-      setPreviousAssistantMessage(null);
     }, 300);
+
+    // Clear the previous step after restoring
+    setPreviousActiveStep(null);
   };
 
   // Show nothing while checking role to prevent flash

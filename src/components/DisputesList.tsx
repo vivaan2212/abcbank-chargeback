@@ -201,7 +201,6 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
     const chargebackFiledOrApproved = hasChargebackAction || ['completed', 'approved', 'closed_won'].includes(dispute.status.toLowerCase());
     const customerEvidence = (dispute as any).dispute_customer_evidence?.[0];
     const customerEvidenceReview = (dispute as any).customer_evidence_reviews?.[0];
-    const actions = dispute.chargeback_actions || [];
 
     // Check for terminal states (highest priority)
     if (hasWriteOffDecision) return 'Write-off provided to customer';
@@ -240,13 +239,11 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
       const isEligible = dispute.eligibility_status.toUpperCase() === 'ELIGIBLE';
       if (!isEligible) {
         return 'Transaction is not eligible for chargeback';
-      } else if (isEligible && !hasChargebackAction && !actions.length) {
-        // If eligible but no chargeback actions yet, explicitly return this status
-        return 'Transaction is eligible for chargeback';
       }
     }
 
     // Check for chargeback actions
+    const actions = dispute.chargeback_actions || [];
     if (actions.length > 0) {
       const action = actions[0];
       if (action.chargeback_filed) return 'Chargeback filing completed';
@@ -332,9 +329,6 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
         lastLog.includes('Merchant wins')) {
       return 'done';
     }
-
-    // Transaction eligible (no actions yet) → IN PROGRESS
-    if (lastLog.includes('Transaction is eligible for chargeback')) return 'in_progress';
 
     // Default to in_progress for all other logs (customer actions, automated processes)
     return 'in_progress';

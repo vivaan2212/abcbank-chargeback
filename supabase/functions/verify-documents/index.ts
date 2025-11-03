@@ -46,17 +46,7 @@ function validateFilename(
     // For merchant documents: validate against merchant name
     const merchantLower = merchantName.toLowerCase();
     
-    // Extract core merchant name (e.g., "noon" from "Noon.com" or "amazon" from "Amazon.com")
-    // Remove common domain extensions and special characters
-    const coreMerchantName = merchantLower
-      .replace(/\.(com|net|org|co|io|app|store|shop|inc|ltd)$/i, '')
-      .replace(/[^a-z0-9]/g, '');
-    
-    // Check if filename contains either the full merchant name or the core name
-    const hasFullName = fileNameLower.includes(merchantLower);
-    const hasCoreName = coreMerchantName && fileNameLower.includes(coreMerchantName);
-    
-    if (hasFullName || hasCoreName) {
+    if (fileNameLower.includes(merchantLower)) {
       return {
         isValid: true,
         reason: "Filename matches merchant name"
