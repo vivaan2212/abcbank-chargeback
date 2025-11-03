@@ -1061,6 +1061,18 @@ const Portal = () => {
     if (!currentConversationId) return;
 
     try {
+      // Show thank you message before closing
+      await supabase
+        .from("messages")
+        .insert({
+          conversation_id: currentConversationId,
+          role: "assistant",
+          content: "Thank you for contacting ABC Bank. If you need further assistance, please feel free to start a new chat. Have a great day!",
+        });
+
+      // Small delay to show the message
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Close current conversation
       await supabase
         .from("conversations")
@@ -1198,7 +1210,7 @@ Let me check if this transaction is eligible for a chargeback...`;
       // Add delay before showing eligibility result
       setTimeout(async () => {
         if (result.status === "INELIGIBLE") {
-          // Show ineligibility message with reasons - this should be the final message
+          // Show ineligibility message with reasons
           const reasonsList = result.ineligibleReasons?.map((r) => `- ${r}`).join("\n") || "";
           const ineligibleMessage = `This transaction isn't eligible for a chargeback right now:\n\n${reasonsList}`;
 
@@ -1210,9 +1222,8 @@ Let me check if this transaction is eligible for a chargeback...`;
               content: ineligibleMessage,
             });
           
-          // Do NOT show any UI elements or allow any further interaction
-          // The dispute is now in terminal "ineligible" state
-          // No transaction list, no buttons - conversation ends here for this dispute
+          // Show action buttons - select another transaction or end chat
+          setShowContinueOrEndButtons(true);
         } else {
           // Start the 3-question AI conversation
           const eligibleMessage = `Thank you for selecting your transaction. We have checked the eligibility, and this transaction is eligible for a chargeback.\n\nTo help us understand your situation better, I'll need to ask you a few questions.`;
@@ -1412,7 +1423,7 @@ Let me check if this transaction is eligible for a chargeback...`;
             setShowReasonPicker(true);
           }, 500);
         } else {
-          // Chargeback not possible - show ineligibility message and ask for next action
+          // Chargeback not possible - show ineligibility message
           await supabase
             .from("messages")
             .insert({
@@ -1421,20 +1432,10 @@ Let me check if this transaction is eligible for a chargeback...`;
               content: sanitizedMessage,
             });
 
-          // Ask if they want to select another transaction or end chat
-          setTimeout(async () => {
-            await supabase
-              .from("messages")
-              .insert({
-                conversation_id: currentConversationId,
-                role: "assistant",
-                content: "Would you like to select another transaction to dispute or end this chat?",
-              });
-          }, 500);
-
-          // End the flow - chargeback not possible
+          // Show action buttons - select another transaction or end chat
           setQuestionStep(null);
           setCurrentQuestion("");
+          setShowContinueOrEndButtons(true);
         }
       }
     } catch (error: any) {
@@ -1520,16 +1521,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                 content: classification.userMessage,
               });
 
-            // Add follow-up message with options
-            await supabase
-              .from("messages")
-              .insert({
-                conversation_id: currentConversationId,
-                role: "assistant",
-                content: "Would you like to select another transaction to dispute or end this chat?",
-              });
-
-            // Reset state to allow selecting another transaction
+            // Reset state to allow selecting another transaction or ending chat
             setSelectedTransaction(null);
             setSelectedReason(null);
             setAiClassification(null);
@@ -2059,6 +2051,7 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleSelectAnotherTransaction = () => {
+    setShowContinueOrEndButtons(false);
     setShowTransactions(true);
     setEligibilityResult(null);
     setSelectedTransaction(null);
@@ -2279,36 +2272,19 @@ Let me check if this transaction is eligible for a chargeback...`;
               {showContinueOrEndButtons && !needsReupload && (
                 <div key={`continue-buttons-${currentConversationId}`} className="mt-6 flex gap-3 justify-center">
                   <Button 
-                    onClick={() => {
-                      setShowContinueOrEndButtons(false);
-                      setShowTransactions(true);
-                    }} 
+                    onClick={handleSelectAnotherTransaction} 
                     variant="default"
                     size="lg"
                   >
-                    Transaction List
+                    Select Another Transaction
                   </Button>
                   <Button 
                     onClick={handleEndSession} 
                     variant="outline"
                     size="lg"
                   >
-                    End Session
+                    End Chat
                   </Button>
-                </div>
-              )}
-              {eligibilityResult?.status === "INELIGIBLE" && !showTransactions && (
-                <div className="mt-6">
-                  <Card className="p-6 space-y-4">
-                    <div className="flex gap-2">
-                      <Button onClick={handleSelectAnotherTransaction} variant="default">
-                        Select Another Transaction
-                      </Button>
-                      <Button onClick={handleEndSession} variant="outline">
-                        End Session
-                      </Button>
-                    </div>
-                  </Card>
                 </div>
               )}
               {showOrderDetailsInput && (
