@@ -1627,10 +1627,11 @@ const ActivityLogView = ({
         </div>
       </div>
 
-      {/* Key Details Sidebar */}
-      <div className="w-80 border-l bg-card flex flex-col">
-        {/* Knowledge Base and Share buttons at top */}
-        <div className="border-b px-4 py-3">
+      {/* Key Details Sidebar - hidden when preview is open */}
+      {!previewPaneOpen && (
+        <div className="w-80 border-l bg-card flex flex-col">
+          {/* Knowledge Base and Share buttons at top */}
+          <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2 justify-end">
             <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={() => setIsKnowledgeBaseOpen(true)}>
               <BookOpen className="h-4 w-4" />
@@ -1698,6 +1699,7 @@ const ActivityLogView = ({
             </div> : <div className="text-sm text-muted-foreground">No transaction details available</div>}
         </div>
       </div>
+      )}
       </div>
 
         {/* Preview Pane - slides in from the right */}
