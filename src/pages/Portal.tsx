@@ -2087,6 +2087,13 @@ Let me check if this transaction is eligible for a chargeback...`;
     
     setPreviousActiveStep(activeStep);
     setIsHelpWidgetOpen(true);
+
+    // Temporarily hide main flow while help is open
+    setShowTransactions(false);
+    setShowReasonPicker(false);
+    setShowDocumentUpload(false);
+    setShowOrderDetailsInput(false);
+    setShowContinueOrEndButtons(false);
   };
 
   const handleResumeQuestion = async () => {
@@ -2296,7 +2303,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
-              {awaitingEvidenceTransaction ? (
+              {!isHelpWidgetOpen && awaitingEvidenceTransaction ? (
                 <div key={`evidence-upload-${currentConversationId}`} className="mt-6">
                   <CustomerEvidenceUpload
                     transactionId={awaitingEvidenceTransaction.id}
@@ -2306,12 +2313,13 @@ Let me check if this transaction is eligible for a chargeback...`;
                     }}
                   />
                 </div>
-              ) : showTransactions ? (
+              ) : null}
+              {showTransactions && !awaitingEvidenceTransaction && !isHelpWidgetOpen && (
                 <div key={`txn-list-${currentConversationId}`} className="mt-6">
                   <TransactionList transactions={transactions} onSelect={handleTransactionSelect} />
                 </div>
-              ) : null}
-              {showContinueOrEndButtons && !needsReupload && (
+              )}
+              {showContinueOrEndButtons && !needsReupload && !isHelpWidgetOpen && (
                 <div key={`continue-buttons-${currentConversationId}`} className="mt-6 flex gap-3 justify-center">
                   <Button 
                     onClick={handleSelectAnotherTransaction} 
@@ -2329,7 +2337,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Button>
                 </div>
               )}
-              {showOrderDetailsInput && (
+              {showOrderDetailsInput && !isHelpWidgetOpen && (
                 <div key={`order-details-${currentConversationId}`} className="mt-6">
                   <Card className="p-6 space-y-4">
                     <div className="space-y-2">
@@ -2383,7 +2391,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
-              {isGeneratingQuestion && (
+              {isGeneratingQuestion && !isHelpWidgetOpen && (
                 <div key={`generating-question-${currentConversationId}`} className="mt-6">
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
@@ -2393,12 +2401,12 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
-              {showReasonPicker && (
+              {showReasonPicker && !isHelpWidgetOpen && (
                 <div key={`reason-picker-${currentConversationId}`} className="mt-6">
                   <ReasonPicker onSelect={handleReasonSelect} />
                 </div>
               )}
-              {isAnalyzingReason && (
+              {isAnalyzingReason && !isHelpWidgetOpen && (
                 <div key={`analyzing-${currentConversationId}`} className="mt-6">
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
@@ -2408,7 +2416,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
-              {showDocumentUpload && selectedReason && (
+              {showDocumentUpload && selectedReason && !isHelpWidgetOpen && (
                 <div key={`doc-upload-${currentConversationId}`} className="mt-6">
                   <DocumentUpload
                     reasonId={selectedReason.id}
