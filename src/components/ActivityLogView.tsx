@@ -1715,13 +1715,14 @@ const ActivityLogView = ({
             />
           </div>
         )}
-
-        {/* Knowledge Base Overlay */}
-        <KnowledgeBasePanel 
-          isOpen={isKnowledgeBaseOpen}
-          isClosing={isKnowledgeBaseClosing}
-          onClose={handleCloseKnowledgeBase}
-        />
       </div>
-  };
+
+      {/* Knowledge Base Overlay */}
+      <KnowledgeBasePanel 
+        isOpen={isKnowledgeBaseOpen}
+        isClosing={isKnowledgeBaseClosing}
+        onClose={handleCloseKnowledgeBase}
+      />
+    </div>;
+};
 export default ActivityLogView;
