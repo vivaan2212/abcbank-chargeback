@@ -1677,8 +1677,17 @@ Let me check if this transaction is eligible for a chargeback...`;
         .eq("id", currentDisputeId);
 
       // Add user message about documents uploaded with document attachments
-      const docNames = documents.map(d => d.file.name).join(", ");
-      const userMessage = `Uploaded ${documents.length} documents: ${docNames}`;
+      const userMessage = `Uploaded ${documents.length} document${documents.length > 1 ? 's' : ''}`;
+
+      // Add message with documents attached for inline display
+      const messageWithDocs: Message = {
+        id: `upload-${Date.now()}`,
+        role: "user",
+        content: userMessage,
+        created_at: new Date().toISOString(),
+        documents: documents
+      };
+      setMessages(prev => [...prev, messageWithDocs]);
 
       const { data: newMessage } = await supabase
         .from("messages")
@@ -2369,20 +2378,6 @@ Let me check if this transaction is eligible for a chargeback...`;
               )}
                  </>
                )}
-               
-                  {/* Show artifacts after successful completion */}
-                  {artifacts.length > 0 && !showDocumentUpload && !showTransactions && !showReasonPicker && !showContinueOrEndButtons && (
-                    <div className="mt-6 flex justify-center">
-                      <ArtifactsViewer 
-                        documents={artifacts} 
-                        title="View Submitted Documents"
-                        onPreviewDocument={(url, extractedFields) => {
-                          setPreviewContent({ url, extractedFields });
-                          setPreviewPaneOpen(true);
-                        }}
-                      />
-                    </div>
-                  )}
 
 
                   {/* Help Widget inline - only show input area when open */}
