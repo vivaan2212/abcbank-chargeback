@@ -41,6 +41,7 @@ export const PreviewPane = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [docBlobUrl, setDocBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -50,6 +51,36 @@ export const PreviewPane = ({
       setError(null);
     }
   }, [isOpen]);
+
+  // Fetch document as blob to ensure inline rendering in iframe
+  useEffect(() => {
+    if (!isOpen || type !== 'document' || !documentUrl) return;
+    setIsLoading(true);
+    setError(null);
+    let createdUrl: string | null = null;
+    const resolved = getResolvedDocumentUrl(documentUrl)!;
+
+    fetch(resolved)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch document');
+        return res.blob();
+      })
+      .then((blob) => {
+        createdUrl = URL.createObjectURL(blob);
+        setDocBlobUrl(createdUrl);
+        setIsLoading(false);
+      })
+      .catch((e) => {
+        console.error('Document fetch error:', e);
+        setError('Failed to load document. Please try again.');
+        setIsLoading(false);
+      });
+
+    return () => {
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+      setDocBlobUrl(null);
+    };
+  }, [isOpen, type, documentUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -120,12 +151,20 @@ export const PreviewPane = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getResolvedDocumentUrl = (url?: string | null) => {
+    if (!url) return null;
+    return url.startsWith('/')
+      ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${url}`
+      : url;
+  };
+
   const handleDownloadDocument = async () => {
     if (!documentUrl) return;
     
     try {
       const link = document.createElement('a');
-      link.href = documentUrl;
+      const href = getResolvedDocumentUrl(documentUrl) as string;
+      link.href = href;
       link.download = 'document.pdf';
       document.body.appendChild(link);
       link.click();
@@ -285,11 +324,16 @@ export const PreviewPane = ({
 
             {/* Right: PDF Viewer */}
             <div className={cn(
-              "flex-1 bg-gray-100",
+              "flex-1 bg-gray-100 relative",
               extractedFields.length === 0 && "w-full"
             )}>
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="text-muted-foreground">Loading document...</div>
+                </div>
+              )}
               <iframe
-                src={documentUrl}
+                src={docBlobUrl || (getResolvedDocumentUrl(documentUrl) || undefined)}
                 className="w-full h-full"
                 title="Document Preview"
               />
