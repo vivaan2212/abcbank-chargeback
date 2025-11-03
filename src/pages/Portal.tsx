@@ -447,7 +447,7 @@ const Portal = () => {
         });
       }
     }
-  }, [messages, showTransactions, showReasonPicker, showDocumentUpload, showOrderDetailsInput, showContinueOrEndButtons, isCheckingEligibility, isCheckingDocuments, isAnalyzingReason]);
+  }, [messages, helpWidgetMessages, showTransactions, showReasonPicker, showDocumentUpload, showOrderDetailsInput, showContinueOrEndButtons, isCheckingEligibility, isCheckingDocuments, isAnalyzingReason]);
 
   const checkConversationStatus = async (conversationId: string) => {
     const { data } = await supabase
@@ -2028,42 +2028,46 @@ Let me check if this transaction is eligible for a chargeback...`;
   };
 
   const handleResumeQuestion = async () => {
-    // If we're in the middle of questions, re-ask the question in chat
-    if (questionStep && currentQuestion) {
-      // Add the question back to messages
+    // If we have a current question text, re-ask it in chat and show input
+    if (currentQuestion && currentQuestion.trim().length > 0) {
       const questionMessage: Message = {
         id: `question-resume-${Date.now()}`,
         role: "assistant",
         content: currentQuestion,
         created_at: new Date().toISOString(),
       };
-      
+
       setMessages(prev => [...prev, questionMessage]);
-      
+
       setTimeout(() => {
         setShowOrderDetailsInput(true);
-      }, 500);
+      }, 300);
       return;
     }
-    
-    // Otherwise, fetch current dispute to determine what UI to restore
+
+    // Otherwise, restore the appropriate UI step
+    if (showReasonPicker) {
+      setShowReasonPicker(true);
+      return;
+    }
+
     if (!currentDisputeId) return;
-    
+
     try {
       const { data: dispute } = await supabase
         .from('disputes')
         .select('status')
         .eq('id', currentDisputeId)
         .maybeSingle();
-      
+
       if (!dispute) return;
-      
-      // Re-display the appropriate UI based on dispute status
+
       setTimeout(() => {
-        if (dispute.status === "eligibility_checked") {
+        // Reason picker stage resumes when precheck passed
+        if (dispute.status === "precheck_passed") {
           setShowReasonPicker(true);
         }
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error('Failed to fetch dispute status:', error);
     }
@@ -2178,7 +2182,18 @@ Let me check if this transaction is eligible for a chargeback...`;
                       documents={message.documents}
                     />
                   ))}
-              {isCheckingEligibility && (
+
+                  {/* Help messages inline with conversation */}
+                  {helpWidgetMessages.length > 1 && helpWidgetMessages.map((msg, idx) => (
+                    <ChatMessage
+                      key={`help-${idx}`}
+                      role={msg.role}
+                      content={msg.content}
+                      timestamp={msg.timestamp}
+                    />
+                  ))}
+
+                  {isCheckingEligibility && (
                 <div className="mt-6 flex items-center justify-center">
                   <Card className="p-6 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -2344,20 +2359,15 @@ Let me check if this transaction is eligible for a chargeback...`;
                    </div>
                  )}
 
-                  {/* Help messages - always visible in chat */}
-                  {helpWidgetMessages.length > 1 && helpWidgetMessages.map((msg, idx) => (
-                    <ChatMessage
-                      key={`help-${idx}`}
-                      role={msg.role}
-                      content={msg.content}
-                      timestamp={msg.timestamp}
-                    />
-                  ))}
 
                   {/* Help Widget inline - only show input area when open */}
                   {isHelpWidgetOpen && (
                     <HelpWidget 
-                      onClose={() => setIsHelpWidgetOpen(false)}
+                      onClose={() => {
+                        setIsHelpWidgetOpen(false);
+                        // After closing, resume the pending question immediately
+                        handleResumeQuestion();
+                      }}
                       messages={helpWidgetMessages}
                       setMessages={setHelpWidgetMessages}
                       onResumeQuestion={handleResumeQuestion}
