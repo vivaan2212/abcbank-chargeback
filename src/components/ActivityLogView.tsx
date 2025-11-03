@@ -415,11 +415,7 @@ const ActivityLogView = ({
           // (to avoid duplicate "Chargeback filed" and "Chargeback approved" entries)
           const isFinalApproved = ['completed', 'approved', 'closed_won'].includes(dispute.status?.toLowerCase() || '');
           if (action.chargeback_filed && !isFinalApproved) {
-            const attachments: Activity['attachments'] = [{
-              label: 'View Document',
-              icon: 'document',
-              action: 'document'
-            }];
+            const attachments: Activity['attachments'] = [];
 
             // Add video recording if available
             if (action.video) {
@@ -473,11 +469,7 @@ const ActivityLogView = ({
               details = `Chargeback has been filed on the ${cardNetwork} portal.\n\nDisputed amount: $${resolvedAmount.toLocaleString()}`;
 
               // Add video attachment for approved cases - fetch video based on card network
-              attachments = [{
-                label: 'View Document',
-                icon: 'document',
-                action: 'document'
-              }];
+              attachments = [];
 
               // Check if video exists in chargeback_actions
               if (dispute.chargeback_actions && dispute.chargeback_actions.length > 0 && dispute.chargeback_actions[0].video) {
