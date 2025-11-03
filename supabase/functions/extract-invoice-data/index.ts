@@ -43,9 +43,18 @@ serve(async (req) => {
       throw new Error(`Failed to download document: ${downloadError.message}`);
     }
 
-    // Convert blob to base64
+    // Convert blob to base64 (process in chunks to avoid stack overflow)
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    const chunkSize = 8192;
+    let binary = '';
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.slice(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    const base64 = btoa(binary);
     
     // Determine mime type from file extension
     const ext = storagePath.toLowerCase().split('.').pop();
