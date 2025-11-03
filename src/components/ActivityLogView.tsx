@@ -696,17 +696,34 @@ activityList.sort(compareActivities);
 
           const showReviewActions = isBankAdmin && !review && repData?.representment_status !== 'customer_evidence_approved';
 
+          // Parse evidence files from evidence_url
+          let evidenceFiles: { label: string; icon: string }[] = [];
+          if (customerEvidence.evidence_url) {
+            try {
+              const parsed = typeof customerEvidence.evidence_url === 'string' 
+                ? JSON.parse(customerEvidence.evidence_url) 
+                : customerEvidence.evidence_url;
+              const paths = Array.isArray(parsed) ? parsed : [parsed];
+              evidenceFiles = paths.map((path: string) => ({
+                label: path.split('/').pop() || 'Evidence document',
+                icon: 'document' as const
+              }));
+            } catch {
+              // If parsing fails, treat as single path
+              evidenceFiles = [{
+                label: customerEvidence.evidence_url.split('/').pop() || 'Evidence document',
+                icon: 'document' as const
+              }];
+            }
+          }
+
           activityList.push({
             id: 'customer-evidence-submitted',
             timestamp: customerEvidence.created_at,
-            label: 'Valid rebuttal representment evidence submitted by customer',
-            expandable: true,
-            details: `Attached screenshots of email/chat with "SHARAF DG" customer care reporting receipt of damaged goods in <4 hours of delivery time\n\nRebuttal evidence reviewed and found sufficient; customer-provided evidence deemed more credible. Merchant representment`,
+            label: 'Customer evidence received',
+            expandable: false,
             activityType: 'success',
-            attachments: [{
-              label: 'Chat with merchant.jpg',
-              icon: 'document'
-            }],
+            attachments: evidenceFiles.length > 0 ? evidenceFiles : undefined,
             showRepresentmentActions: showReviewActions,
             representmentTransactionId: transactionId
           });
