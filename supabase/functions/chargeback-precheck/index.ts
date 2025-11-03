@@ -37,12 +37,19 @@ They just answered Question 1: "Could you please tell us what this transaction w
 
 Their answer: "${answer1}"
 
+CRITICAL VALIDATION: First, check if the customer mentioned a different merchant name in their answer.
+- If they mention a merchant name that doesn't match "${merchantName}", set merchant_mismatch to true
+- If merchant_mismatch is true, ask: "I see this transaction is with ${merchantName}. Are you referring to a different transaction, or did you mean ${merchantName}?"
+- Only proceed with normal follow-up questions if merchant names match or no merchant was mentioned
+
 Your task is to generate a second follow-up question that:
-1. Digs deeper into the specific issue they mentioned
-2. Helps determine if this is a legitimate chargeback situation
-3. Asks about specific details like delivery dates, merchant communication attempts, or authorization
+1. Validates merchant name consistency first (highest priority)
+2. Digs deeper into the specific issue they mentioned
+3. Helps determine if this is a legitimate chargeback situation
+4. Asks about specific details like delivery dates, merchant communication attempts, or authorization
 
 Guidelines for generating Q2:
+- If they mention a different merchant name → ask for clarification about which transaction they're referring to
 - If they mention "didn't receive" → ask about delivery date or updates from merchant
 - If they mention "charged twice/duplicate" → ask if both were for same order or separate
 - If they mention "wrong amount" → ask what amount they expected
@@ -50,7 +57,7 @@ Guidelines for generating Q2:
 - If they mention "refund" → ask when merchant promised the refund
 - If unclear/vague → ask what they were expecting from the transaction
 
-The question should be conversational and reference details they already mentioned (like the merchant name).`;
+The question should be conversational and always reference the correct merchant name from the transaction.`;
 
       userPrompt = `Generate the second follow-up question based on the customer's first answer.`;
 
@@ -69,11 +76,15 @@ The question should be conversational and reference details they already mention
                 },
                 detected_issue: {
                   type: "string",
-                  enum: ["non_delivery", "duplicate_charge", "wrong_amount", "unauthorized", "refund_not_received", "defective_product", "unclear"],
+                  enum: ["merchant_mismatch", "non_delivery", "duplicate_charge", "wrong_amount", "unauthorized", "refund_not_received", "defective_product", "unclear"],
                   description: "The type of issue detected from their answer"
+                },
+                merchant_mismatch: {
+                  type: "boolean",
+                  description: "True if customer mentioned a different merchant name than the transaction merchant"
                 }
               },
-              required: ["question", "detected_issue"],
+              required: ["question", "detected_issue", "merchant_mismatch"],
               additionalProperties: false
             }
           }
@@ -95,12 +106,18 @@ Answer 1: "${answer1}"
 Question 2: [Dynamic follow-up]
 Answer 2: "${answer2}"
 
-Your task is to generate the third and final question that:
-1. Helps determine if they've taken reasonable steps to resolve with the merchant
-2. Clarifies timing and urgency of the issue
-3. Confirms key facts needed to assess chargeback eligibility
+CRITICAL VALIDATION: Check if the customer mentioned a different merchant name in any of their answers.
+- If they mention a merchant that doesn't match "${merchantName}", set merchant_mismatch to true
+- If merchant_mismatch is true, ask: "I notice you mentioned [other merchant]. This transaction is with ${merchantName}. Are you referring to a different transaction?"
+- Only ask normal follow-up questions if merchant names are consistent
 
-The question should reference their previous answers and be conversational.`;
+Your task is to generate the third and final question that:
+1. Validates merchant name consistency first (highest priority)
+2. Helps determine if they've taken reasonable steps to resolve with the merchant
+3. Clarifies timing and urgency of the issue
+4. Confirms key facts needed to assess chargeback eligibility
+
+The question should reference their previous answers, use the correct merchant name, and be conversational.`;
 
       userPrompt = `Generate the third follow-up question based on both previous answers.`;
 
@@ -116,9 +133,13 @@ The question should reference their previous answers and be conversational.`;
                 question: { 
                   type: "string",
                   description: "The final follow-up question to ask the customer"
+                },
+                merchant_mismatch: {
+                  type: "boolean",
+                  description: "True if customer mentioned a different merchant name than the transaction merchant"
                 }
               },
-              required: ["question"],
+              required: ["question", "merchant_mismatch"],
               additionalProperties: false
             }
           }
