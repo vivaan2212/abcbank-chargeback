@@ -264,7 +264,9 @@ const ActivityLogView = ({
 
       // 2. Transaction security analysis milestone
       if (dispute.transaction) {
-        const isSecured = dispute.transaction.secured_indication === 1;
+        const isSecuredOTP = dispute.transaction.secured_indication === 2 || dispute.transaction.secured_indication === 212;
+        const isWalletTransaction = dispute.transaction.is_wallet_transaction === true;
+        const isSecured = isSecuredOTP || isWalletTransaction;
         const posEntryMode = String(dispute.transaction.pos_entry_mode || '').padStart(2, '0');
         const walletType = dispute.transaction.wallet_type || 'None';
         activityList.push({

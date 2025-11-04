@@ -803,7 +803,9 @@ const DisputesList = ({ statusFilter, userId, filters, onDisputeSelect }: Disput
 
     // 2. Security analysis
     if (dispute.transaction) {
-      const isSecured = dispute.transaction.secured_indication === 1;
+      const isSecuredOTP = dispute.transaction.secured_indication === 2 || dispute.transaction.secured_indication === 212;
+      const isWalletTransaction = dispute.transaction.is_wallet_transaction === true;
+      const isSecured = isSecuredOTP || isWalletTransaction;
       activityList.push({
         id: 'milestone-security',
         timestamp: dispute.created_at,
