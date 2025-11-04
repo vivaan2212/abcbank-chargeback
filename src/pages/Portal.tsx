@@ -2337,13 +2337,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                  )}
                   {uploadedDocuments.length > 0 && !isHelpWidgetOpen && (
                 <div key={`uploaded-docs-${currentConversationId}`} className="mt-6 flex justify-center">
-                  <UploadedDocumentsViewer
-                    documents={uploadedDocuments}
-                    onPreviewDocument={(url, extractedFields) => {
-                      setPreviewContent({ url, extractedFields });
-                      setPreviewPaneOpen(true);
-                    }}
-                  />
+                  <UploadedDocumentsViewer documents={uploadedDocuments} />
                 </div>
               )}
                   </>

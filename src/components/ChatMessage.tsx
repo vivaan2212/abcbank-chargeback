@@ -37,10 +37,11 @@ const ChatMessage = ({ role, content, timestamp, documents }: ChatMessageProps) 
   }, [documents]);
 
   useEffect(() => {
-    return () => {
-      previews.forEach((p) => URL.revokeObjectURL(p.url));
-    };
-  }, [previews]);
+    if (!previewOpen && selectedPreview?.url) {
+      URL.revokeObjectURL(selectedPreview.url);
+      setSelectedPreview(null);
+    }
+  }, [previewOpen, selectedPreview]);
 
   const handleDownload = (file: File, url: string) => {
     const a = document.createElement("a");
