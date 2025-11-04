@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import KnowledgeBaseChat from "./KnowledgeBaseChat";
 import KnowledgeBaseUpdateHistory from "./KnowledgeBaseUpdateHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import paceAvatar from "@/assets/pace-avatar.png";
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
@@ -159,7 +160,7 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
                 </div>
                 <div className="flex items-start gap-3 pt-3 border-t">
                   <img 
-                    src="/src/assets/pace-avatar.png" 
+                    src={paceAvatar} 
                     alt="Pace" 
                     className="h-8 w-8 rounded-full flex-shrink-0 mt-1"
                   />
@@ -235,7 +236,7 @@ const KnowledgeBasePanel = ({ isOpen, isClosing, onClose }: KnowledgeBasePanelPr
           ) : (
             <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3 hover:bg-muted/70 transition-colors">
               <img 
-                src="/src/assets/pace-avatar.png" 
+                src={paceAvatar} 
                 alt="Pace" 
                 className="h-6 w-6 rounded-full flex-shrink-0"
               />

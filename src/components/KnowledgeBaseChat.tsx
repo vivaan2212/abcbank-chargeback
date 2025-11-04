@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getUserRole } from "@/lib/auth";
+import paceAvatar from "@/assets/pace-avatar.png";
 
 interface Message {
   id: string;
@@ -204,7 +205,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
       <div className="border-b px-4 py-3 flex items-center justify-between bg-background mb-4">
         <div className="flex items-center gap-2">
           <img 
-            src="/src/assets/pace-avatar.png" 
+            src={paceAvatar} 
             alt="Pace" 
             className="h-8 w-8 rounded-full"
           />
@@ -228,7 +229,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
               {message.role !== "user" && (
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <img 
-                    src="/src/assets/pace-avatar.png" 
+                    src={paceAvatar} 
                     alt="Pace" 
                     className="h-8 w-8 rounded-full"
                   />
@@ -260,7 +261,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <img 
-                  src="/src/assets/pace-avatar.png" 
+                  src={paceAvatar} 
                   alt="Pace" 
                   className="h-8 w-8 rounded-full"
                 />
@@ -277,7 +278,7 @@ const KnowledgeBaseChat = ({ isOpen, onClose, onUpdateSuccess, initialInput }: K
         <div className="border-t p-4 bg-background">
           <div className="flex items-center gap-3 bg-muted/50 rounded-full border px-5 py-3">
             <img 
-              src="/src/assets/pace-avatar.png" 
+              src={paceAvatar} 
               alt="Pace" 
               className="h-6 w-6 rounded-full flex-shrink-0"
             />
