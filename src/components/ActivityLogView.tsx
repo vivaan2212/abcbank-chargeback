@@ -1033,9 +1033,6 @@ activityList.sort(compareActivities);
     }
   };
   const handleApproveEvidence = async (transactionId: string) => {
-    if (!confirm('Approve customer evidence and submit rebuttal to card network?')) {
-      return;
-    }
     setProcessingRepresentment(true);
     try {
       // Get most recent customer evidence
@@ -1081,9 +1078,6 @@ activityList.sort(compareActivities);
   };
 
   const handleRejectEvidence = async (transactionId: string) => {
-    if (!confirm('Reject customer evidence and recall chargeback? This will uphold the merchant response.')) {
-      return;
-    }
     setProcessingRepresentment(true);
     try {
       // Get most recent customer evidence
@@ -1129,9 +1123,6 @@ activityList.sort(compareActivities);
   };
 
   const handleAcceptRepresentment = async (transactionId: string) => {
-    if (!confirm('Accept merchant representment? This will close the case in favor of the merchant and reverse any temporary credit.')) {
-      return;
-    }
     setProcessingRepresentment(true);
     try {
       const {
@@ -1159,9 +1150,6 @@ activityList.sort(compareActivities);
     }
   };
   const handleRejectRepresentment = async (transactionId: string) => {
-    if (!confirm('Reject merchant representment? This will ask the customer for additional evidence.')) {
-      return;
-    }
     setProcessingRepresentment(true);
     try {
       const {
