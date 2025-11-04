@@ -2211,6 +2211,18 @@ Let me check if this transaction is eligible for a chargeback...`;
                   </Card>
                 </div>
               )}
+              {artifacts.length > 0 && !isHelpWidgetOpen && (
+                <div key={`artifacts-${currentConversationId}`} className="mt-6">
+                  <ArtifactsViewer 
+                    documents={artifacts} 
+                    title="View Submitted Documents"
+                    onPreviewDocument={(url, extractedFields) => {
+                      setPreviewContent({ url, extractedFields });
+                      setPreviewPaneOpen(true);
+                    }}
+                  />
+                </div>
+              )}
               {!isHelpWidgetOpen && awaitingEvidenceTransaction ? (
                 <div key={`evidence-upload-${currentConversationId}`} className="mt-6">
                   <CustomerEvidenceUpload
