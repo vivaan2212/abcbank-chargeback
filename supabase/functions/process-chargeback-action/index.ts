@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
     const merchant_lower = tx.merchant_name.toLowerCase();
     const is_facebook_meta = merchant_lower.includes('facebook') || merchant_lower.includes('meta');
 
-    console.log(`Analysis: net=${net_amount}, days_tx=${days_since_transaction}, days_settle=${days_since_settlement}, otp=${is_secured_otp}, unsecured=${is_unsecured}, magstripe=${is_magstripe}, mcc=${tx.merchant_category_code}, fb=${is_facebook_meta}`);
+    const security_status = is_secured_otp ? 'SECURED_OTP' : (tx.is_wallet_transaction ? 'SECURED_WALLET' : 'UNSECURED');
+    console.log(`Analysis: net=${net_amount}, days_tx=${days_since_transaction}, days_settle=${days_since_settlement}, security=${security_status}, magstripe=${is_magstripe}, mcc=${tx.merchant_category_code}, fb=${is_facebook_meta}`);
 
     // Decision Logic - Priority Order Matters!
     let action_type: string;
