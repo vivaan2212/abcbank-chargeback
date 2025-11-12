@@ -1487,8 +1487,13 @@ activityList.sort(compareActivities);
 
                               {/* Expanded Details */}
                               {expandedActivities.has(activity.id) && activity.details && (
-                                <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground whitespace-pre-line max-h-48 overflow-y-auto">
-                                  {activity.details}
+                                <div className="mt-3 pl-4 text-sm text-muted-foreground max-h-48 overflow-y-auto">
+                                  {activity.details.split('\n').filter(line => line.trim()).map((line, idx) => (
+                                    <div key={idx} className="flex items-start gap-2 mb-1">
+                                      <span className="text-muted-foreground/50 flex-shrink-0">└─</span>
+                                      <span className="flex-1">{line.trim()}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
