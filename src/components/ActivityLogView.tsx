@@ -1471,19 +1471,28 @@ activityList.sort(compareActivities);
                           )}
                           
                           {/* Expandable Details */}
-                          {activity.expandable && !activity.reasoning && <button onClick={() => toggleExpand(activity.id)} className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
-                              <span>See reasoning</span>
-                              {expandedActivities.has(activity.id) ? (
-                                <ChevronDown className="h-3 w-3" />
-                              ) : (
-                                <ChevronRight className="h-3 w-3" />
-                              )}
-                            </button>}
+                          {activity.expandable && !activity.reasoning && (
+                            <div className="border rounded-lg p-3 bg-card">
+                              <button 
+                                onClick={() => toggleExpand(activity.id)} 
+                                className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <span>See reasoning</span>
+                                {expandedActivities.has(activity.id) ? (
+                                  <ChevronDown className="h-3 w-3" />
+                                ) : (
+                                  <ChevronRight className="h-3 w-3" />
+                                )}
+                              </button>
 
-                          {/* Expanded Details */}
-                          {expandedActivities.has(activity.id) && activity.details && <div className="mt-2 p-3 bg-muted/50 rounded-md text-sm text-muted-foreground whitespace-pre-line">
-                              {activity.details}
-                            </div>}
+                              {/* Expanded Details */}
+                              {expandedActivities.has(activity.id) && activity.details && (
+                                <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground whitespace-pre-line">
+                                  {activity.details}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Pending Representment Action Buttons */}
                           {activity.showPendingRepresentmentActions && activity.representmentTransactionId && <div className="mt-3 flex gap-2">
