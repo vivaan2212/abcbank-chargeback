@@ -1487,7 +1487,7 @@ activityList.sort(compareActivities);
 
                               {/* Expanded Details */}
                               {expandedActivities.has(activity.id) && activity.details && (
-                                <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground whitespace-pre-line">
+                                <div className="mt-3 pl-4 border-l-2 border-muted text-sm text-muted-foreground whitespace-pre-line max-h-48 overflow-y-auto">
                                   {activity.details}
                                 </div>
                               )}
