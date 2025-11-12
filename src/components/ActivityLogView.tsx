@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronRight, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers, FileText } from "lucide-react";
+import { ArrowLeft, ChevronRight, ChevronDown, Database, BookOpen, Share2, PanelLeft, ArrowUp, Check, X, Layers, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -1471,9 +1471,13 @@ activityList.sort(compareActivities);
                           )}
                           
                           {/* Expandable Details */}
-                          {activity.expandable && !activity.reasoning && <button onClick={() => toggleExpand(activity.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+                          {activity.expandable && !activity.reasoning && <button onClick={() => toggleExpand(activity.id)} className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
                               <span>See reasoning</span>
-                              <ChevronRight className={cn("h-3 w-3 transition-transform", expandedActivities.has(activity.id) && "rotate-90")} />
+                              {expandedActivities.has(activity.id) ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
                             </button>}
 
                           {/* Expanded Details */}
