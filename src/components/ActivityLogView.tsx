@@ -1472,7 +1472,7 @@ activityList.sort(compareActivities);
                           
                           {/* Expandable Details */}
                           {activity.expandable && !activity.reasoning && (
-                            <div className="border rounded-lg p-3 bg-card">
+                            <div className="border rounded-lg p-3 bg-card w-3/5">
                               <button 
                                 onClick={() => toggleExpand(activity.id)} 
                                 className="flex items-center justify-between w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
