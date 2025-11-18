@@ -44,7 +44,33 @@ Deno.serve(async (req) => {
       throw new Error('Invalid customer evidence ID for this transaction');
     }
 
-    console.log('Evidence validation passed, inserting review record...');
+    console.log('Evidence validation passed, fetching transaction...');
+
+    // Get transaction details to determine card network
+    const { data: transaction, error: txError } = await supabase
+      .from('transactions')
+      .select('acquirer_name')
+      .eq('id', transaction_id)
+      .single();
+
+    if (txError) {
+      console.error('Failed to fetch transaction:', txError);
+      throw txError;
+    }
+
+    // Determine card network from transaction
+    let cardNetwork = 'visa'; // default lowercase for db
+    if (transaction?.acquirer_name) {
+      const acquirer = transaction.acquirer_name.toLowerCase().trim();
+      if (acquirer.includes('mastercard') || acquirer === 'master card') {
+        cardNetwork = 'mastercard';
+      } else if (acquirer.includes('visa')) {
+        cardNetwork = 'visa';
+      }
+    }
+
+    console.log('Card network determined:', cardNetwork);
+    console.log('Inserting review record...');
 
     // Insert review record
     const { error: reviewError } = await supabase
@@ -85,7 +111,7 @@ Deno.serve(async (req) => {
         action: 'rebuttal_submitted',
         note: review_notes || 'Bank approved customer evidence and submitted rebuttal to card network',
         performed_by: user.id,
-        network: 'visa'
+        network: cardNetwork
       });
 
     if (logError) {

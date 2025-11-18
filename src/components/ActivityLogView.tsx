@@ -718,12 +718,27 @@ activityList.sort(compareActivities);
 
           // 10. Add review result if exists
           if (review) {
+            // Determine card network from transaction
+            let cardNetwork = 'Visa'; // default
+            if (dispute.transaction?.acquirer_name) {
+              const acquirer = dispute.transaction.acquirer_name.trim();
+              // Direct match (case-insensitive)
+              if (acquirer.toLowerCase() === 'mastercard' || acquirer.toLowerCase() === 'master card') {
+                cardNetwork = 'Mastercard';
+              } else if (acquirer.toLowerCase() === 'visa') {
+                cardNetwork = 'Visa';
+              } else {
+                // Fallback: use acquirer_name as-is with capitalization
+                cardNetwork = acquirer;
+              }
+            }
+
             if (review.review_decision === 'approved') {
               // Rebuttal submitted
               activityList.push({
                 id: 'rebuttal-submitted',
                 timestamp: review.reviewed_at,
-                label: 'Chargeback request upheld; response submitted on Visa Resolve Online',
+                label: `Chargeback request upheld; response submitted on ${cardNetwork === 'Mastercard' ? 'Mastercard Connect' : 'Visa Resolve Online'}`,
                 expandable: true,
                 details: review.review_notes || 'Bank approved customer evidence and submitted rebuttal to card network',
                 activityType: 'human_action',
@@ -733,11 +748,11 @@ activityList.sort(compareActivities);
                 ]
               });
 
-              // Fetch visa video for the pill
+              // Fetch card network video for the pill
               const { data: visaVideo } = await supabase
                 .from('chargeback_videos')
                 .select('*')
-                .eq('card_network', 'Visa')
+                .eq('card_network', cardNetwork)
                 .eq('is_active', true)
                 .maybeSingle();
 
@@ -750,7 +765,7 @@ activityList.sort(compareActivities);
               
               if (visaVideo) {
                 acceptedAttachments.unshift({
-                  label: 'www.visaonline.com/chargeback',
+                  label: cardNetwork === 'Mastercard' ? 'www.mastercardconnect.com/chargeback' : 'www.visaonline.com/chargeback',
                   icon: 'video',
                   action: 'video',
                   videoData: visaVideo
@@ -760,7 +775,7 @@ activityList.sort(compareActivities);
               activityList.push({
                 id: 'rebuttal-accepted',
                 timestamp: acceptedTimestamp,
-                label: 'Chargeback request accepted by Visa; Temporary credit earlier processed has been made permanent',
+                label: `Chargeback request accepted by ${cardNetwork}; Temporary credit earlier processed has been made permanent`,
                 expandable: false,
                 activityType: 'done',
                 attachments: acceptedAttachments
@@ -769,18 +784,18 @@ activityList.sort(compareActivities);
               // Chargeback recalled
               const creditAmount = dispute.transaction?.temporary_credit_amount || 0;
               
-              // Fetch visa video for the pill
+              // Fetch card network video for the pill
               const { data: visaVideo } = await supabase
                 .from('chargeback_videos')
                 .select('*')
-                .eq('card_network', 'Visa')
+                .eq('card_network', cardNetwork)
                 .eq('is_active', true)
                 .maybeSingle();
               
               const recalledAttachments: Activity['attachments'] = [];
               if (visaVideo) {
                 recalledAttachments.push({
-                  label: 'www.visaonline.com/chargeback',
+                  label: cardNetwork === 'Mastercard' ? 'www.mastercardconnect.com/chargeback' : 'www.visaonline.com/chargeback',
                   icon: 'video',
                   action: 'video',
                   videoData: visaVideo

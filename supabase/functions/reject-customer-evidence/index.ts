@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // Get transaction details
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
-      .select('temporary_credit_provided, temporary_credit_amount, temporary_credit_currency')
+      .select('temporary_credit_provided, temporary_credit_amount, temporary_credit_currency, acquirer_name')
       .eq('id', transaction_id)
       .single();
 
@@ -60,8 +60,22 @@ Deno.serve(async (req) => {
 
     console.log('Transaction details:', { 
       temporary_credit_provided: transaction?.temporary_credit_provided,
-      temporary_credit_amount: transaction?.temporary_credit_amount
+      temporary_credit_amount: transaction?.temporary_credit_amount,
+      acquirer_name: transaction?.acquirer_name
     });
+
+    // Determine card network from transaction
+    let cardNetwork = 'visa'; // default lowercase for db
+    if (transaction?.acquirer_name) {
+      const acquirer = transaction.acquirer_name.toLowerCase().trim();
+      if (acquirer.includes('mastercard') || acquirer === 'master card') {
+        cardNetwork = 'mastercard';
+      } else if (acquirer.includes('visa')) {
+        cardNetwork = 'visa';
+      }
+    }
+
+    console.log('Card network determined:', cardNetwork);
 
     console.log('Inserting review record...');
 
@@ -129,7 +143,7 @@ Deno.serve(async (req) => {
         action: 'chargeback_recalled',
         note: review_notes || 'Bank rejected customer evidence and recalled chargeback from card network',
         performed_by: user.id,
-        network: 'visa'
+        network: cardNetwork
       });
 
     if (logError) {
