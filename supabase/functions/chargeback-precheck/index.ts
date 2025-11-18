@@ -169,7 +169,8 @@ Answer 3: "${answer3}"
 
 Analyze all three answers together and determine:
 1. Is this a legitimate chargeback situation?
-2. What is the reasoning behind your decision?
+2. What is the specific chargeback category?
+3. What 2 documents should the customer upload?
 
 Set chargeback_possible = TRUE when:
 - Transaction appears unauthorized by the customer
@@ -188,14 +189,49 @@ Set chargeback_possible = FALSE when:
 - Issue is within merchant's return/refund policy timeframe
 - Customer hasn't attempted to contact merchant yet
 
-CRITICAL: The customer_message should ONLY confirm whether the transaction is valid for a chargeback or not. 
-DO NOT mention:
-- Temporary credit
-- Proceeding with chargeback
-- Investigation timeline
-- Any next steps that come after document verification
+Available chargeback categories (only use if chargeback_possible = true):
+1. "fraud" - Fraudulent or unauthorized transactions
+2. "not_received" - Goods or services not received
+3. "duplicate" - Duplicate charges
+4. "incorrect_amount" - Incorrect transaction amount
+5. "defective" - Defective or not as described goods
+6. "billing_error" - Billing errors or processing issues
 
-The message should simply confirm eligibility based on the customer's responses.`;
+CRITICAL REQUIREMENT: You MUST return exactly 2 documents for the specific category detected.
+
+Document examples by category:
+
+For "fraud":
+- "Bank or credit card statement showing the charge"
+- "Transaction receipt or email confirmation"
+
+For "not_received":
+- "Proof of purchase (e.g., invoice, receipt, order confirmation)"
+- "Delivery receipt or tracking information"
+
+For "defective":
+- "Photo of the product showing the issue"
+- "Proof of purchase (e.g., invoice, receipt, order confirmation)"
+
+For "duplicate":
+- "Bank or credit card statement showing both charges"
+- "Transaction receipts for both charges"
+
+For "incorrect_amount":
+- "Proof of agreed amount (e.g., quote, invoice, advertisement)"
+- "Bank or credit card statement showing the incorrect charge"
+
+For "billing_error":
+- "Bank or credit card statement showing the charge"
+- "Correspondence with merchant about the error"
+
+The customer_message should:
+- Confirm eligibility based on their responses
+- Briefly explain what category their issue falls under
+- Let them know what documents they'll need to upload
+- Be friendly and supportive
+
+DO NOT mention temporary credit, investigation timeline, or next steps after document verification.`;
 
       userPrompt = `Based on all three customer responses, determine if a chargeback is possible and provide clear reasoning.`;
 
@@ -204,7 +240,7 @@ The message should simply confirm eligibility based on the customer's responses.
           type: "function",
           function: {
             name: "evaluate_chargeback",
-            description: "Evaluate if chargeback is possible based on customer responses",
+            description: "Evaluate if chargeback is possible and classify the reason",
             parameters: {
               type: "object",
               properties: {
@@ -216,9 +252,32 @@ The message should simply confirm eligibility based on the customer's responses.
                   type: "string",
                   description: "Clear internal explanation for the decision (for bank view only)"
                 },
+                category: {
+                  type: "string",
+                  enum: ["fraud", "not_received", "duplicate", "incorrect_amount", "defective", "billing_error"],
+                  description: "The chargeback category (only if chargeback_possible is true)"
+                },
+                category_label: {
+                  type: "string",
+                  description: "Human-readable category label (only if chargeback_possible is true)"
+                },
+                documents: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", description: "Document name/description" },
+                      uploadTypes: { type: "string", description: "Accepted file types" }
+                    },
+                    required: ["name", "uploadTypes"]
+                  },
+                  description: "Exactly 2 documents required (only if chargeback_possible is true)",
+                  minItems: 2,
+                  maxItems: 2
+                },
                 customer_message: {
                   type: "string",
-                  description: "Simple message to show the customer confirming eligibility status only - DO NOT mention temporary credit, chargeback filing, or investigation timeline"
+                  description: "Message to show the customer - must include eligibility status and document requirements"
                 }
               },
               required: ["chargeback_possible", "reasoning", "customer_message"],

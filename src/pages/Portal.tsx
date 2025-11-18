@@ -1414,22 +1414,42 @@ Let me check if this transaction is eligible for a chargeback...`;
         const sanitizedMessage = (evaluation.customer_message || "").replace(/There is nothing further[^.]*\./i, "").trim();
 
         if (evaluation.chargeback_possible) {
-          // Chargeback is possible - show next steps
-          const nextStepsMessage = `${sanitizedMessage ? sanitizedMessage + "\n\n" : ""}Next, please select a chargeback reason below so we can capture the required details and documents.`;
+          // Store AI classification from evaluation
+          const aiClassification: AIClassification = {
+            category: evaluation.category,
+            categoryLabel: evaluation.category_label,
+            explanation: evaluation.reasoning,
+            documents: evaluation.documents,
+            userMessage: evaluation.customer_message
+          };
+          
+          setAiClassification(aiClassification);
+          
+          // Update dispute with AI-classified reason directly
+          await supabase
+            .from("disputes")
+            .update({
+              reason_id: evaluation.category,
+              reason_label: evaluation.category_label,
+              custom_reason: `${answer1}\n\nFollow-up: ${answer2}\n\nAdditional: ${orderDetails}`,
+              status: "reason_selected"
+            })
+            .eq("id", currentDisputeId);
 
+          // Show AI classification result to customer
           await supabase
             .from("messages")
             .insert({
               conversation_id: currentConversationId,
               role: "assistant",
-              content: nextStepsMessage,
+              content: evaluation.customer_message,
             });
 
-          // Proceed to reason picker
+          // Directly show document upload (skip reason picker)
           setTimeout(() => {
             setQuestionStep(null);
             setCurrentQuestion("");
-            setShowReasonPicker(true);
+            setShowDocumentUpload(true);
           }, 500);
         } else {
           // Chargeback not possible - show ineligibility message
