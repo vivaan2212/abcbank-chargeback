@@ -1414,16 +1414,23 @@ Let me check if this transaction is eligible for a chargeback...`;
         const sanitizedMessage = (evaluation.customer_message || "").replace(/There is nothing further[^.]*\./i, "").trim();
 
         if (evaluation.chargeback_possible) {
-          // Store AI classification from evaluation
-          const aiClassification: AIClassification = {
-            category: evaluation.category,
-            categoryLabel: evaluation.category_label,
-            explanation: evaluation.reasoning,
-            documents: evaluation.documents,
-            userMessage: evaluation.customer_message
-          };
-          
-          setAiClassification(aiClassification);
+        // Store AI classification from evaluation
+        const aiClassification: AIClassification = {
+          category: evaluation.category,
+          categoryLabel: evaluation.category_label,
+          explanation: evaluation.reasoning,
+          documents: evaluation.documents,
+          userMessage: evaluation.customer_message
+        };
+        
+        setAiClassification(aiClassification);
+        
+        // Set selectedReason so DocumentUpload component can render
+        setSelectedReason({
+          id: evaluation.category,
+          label: evaluation.category_label,
+          customReason: `${answer1}\n\nFollow-up: ${answer2}\n\nAdditional: ${orderDetails}`
+        });
           
           // Update dispute with AI-classified reason directly
           await supabase
