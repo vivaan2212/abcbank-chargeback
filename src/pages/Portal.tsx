@@ -135,11 +135,6 @@ const Portal = () => {
     if (!chatId) return;
     
     const uiState = {
-      showTransactions,
-      showReasonPicker,
-      showDocumentUpload,
-      showOrderDetailsInput,
-      showContinueOrEndButtons,
       needsReupload,
       inputMessage,
       orderDetails,
@@ -180,12 +175,7 @@ const Portal = () => {
         return false;
       }
       
-      // Restore UI state
-      if (uiState.showTransactions !== undefined) setShowTransactions(uiState.showTransactions);
-      if (uiState.showReasonPicker !== undefined) setShowReasonPicker(uiState.showReasonPicker);
-      if (uiState.showDocumentUpload !== undefined) setShowDocumentUpload(uiState.showDocumentUpload);
-      if (uiState.showOrderDetailsInput !== undefined) setShowOrderDetailsInput(uiState.showOrderDetailsInput);
-      if (uiState.showContinueOrEndButtons !== undefined) setShowContinueOrEndButtons(uiState.showContinueOrEndButtons);
+      // Restore user input data only (UI visibility controlled by dispute status)
       if (uiState.needsReupload !== undefined) setNeedsReupload(uiState.needsReupload);
       if (uiState.inputMessage) setInputMessage(uiState.inputMessage);
       if (uiState.orderDetails) setOrderDetails(uiState.orderDetails);
@@ -223,11 +213,6 @@ const Portal = () => {
     }
   }, [
     currentConversationId,
-    showTransactions,
-    showReasonPicker,
-    showDocumentUpload,
-    showOrderDetailsInput,
-    showContinueOrEndButtons,
     needsReupload,
     inputMessage,
     orderDetails,
