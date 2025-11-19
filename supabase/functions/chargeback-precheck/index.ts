@@ -181,13 +181,16 @@ Set chargeback_possible = TRUE when:
 - Product received was defective/not as described
 
 Set chargeback_possible = FALSE when:
-- Customer admits receiving goods/service as expected
+- Customer admits receiving goods/service as expected with no issues
 - Merchant has already refunded or replacement is in process
 - Customer hasn't waited sufficient time for delivery/refund window
 - Customer misunderstood an authorized or recurring payment
 - Customer cannot describe a specific problem related to payment
-- Issue is within merchant's return/refund policy timeframe
-- Customer hasn't attempted to contact merchant yet
+- Customer contacted the merchant AFTER the return/refund policy period had expired
+- Customer attempted to return/refund AFTER merchant's stated return deadline passed
+- Merchant cited expired return policy and customer admits contacting them late
+- Customer hasn't attempted to contact merchant yet for resolvable issues
+- Issue could have been resolved within return policy but customer missed the window
 
 Available chargeback categories (only use if chargeback_possible = true):
 1. "fraud" - Fraudulent or unauthorized transactions
