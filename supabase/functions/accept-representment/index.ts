@@ -13,7 +13,46 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify authentication and admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
+    // Check if user has bank_admin role
+    const { data: userRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'bank_admin')
+      .maybeSingle();
+
+    if (roleError || !userRole) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { transaction_id, admin_notes } = await req.json();
 
@@ -85,8 +124,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get current user (admin who is accepting)
-    const { data: { user } } = await supabase.auth.getUser();
+    // Log to representment_audit_log using authenticated user
 
     // Log to chargeback_actions if there's a dispute_id
     const { data: dispute } = await supabase
@@ -126,7 +164,7 @@ Deno.serve(async (req) => {
     await supabase.from('representment_audit_log').insert({
       transaction_id: transaction_id,
       action: 'accept',
-      performed_by: user?.id || null,
+      performed_by: userId,
       admin_notes: admin_notes || null,
       merchant_document_url: transaction.chargeback_representment_static?.[0]?.merchant_document_url || null,
     });
