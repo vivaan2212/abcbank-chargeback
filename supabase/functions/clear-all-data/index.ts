@@ -52,21 +52,6 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Check if user has bank_admin role
-    const { data: userRole, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'bank_admin')
-      .maybeSingle();
-
-    if (roleError || !userRole) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Get counts before deletion
     const { count: messageCount } = await supabaseAdmin
       .from('messages')
