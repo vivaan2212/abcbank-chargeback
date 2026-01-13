@@ -11,6 +11,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface DashboardSidebarProps {
   activeSection?: string;
@@ -42,10 +43,11 @@ const DashboardSidebar = ({ activeSection = "chargebacks", onLogout }: Dashboard
   };
 
   return (
-    <div className="w-56 h-full flex flex-col" style={{ backgroundColor: '#fbfbfb' }}>
+    <div className="w-56 h-full flex flex-col bg-sidebar">
       {/* Logo */}
-      <div className="p-4 pb-2">
+      <div className="p-4 pb-2 flex items-center justify-between">
         <img src={zampLogo} alt="Zamp" className="h-4 w-auto" />
+        <ThemeToggle />
       </div>
       
       {/* Data Section */}

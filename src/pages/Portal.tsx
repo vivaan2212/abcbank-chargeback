@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LogOut, Send, ArrowUp, Menu, X, MessageCircleQuestion } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ChatMessage from "@/components/ChatMessage";
@@ -2163,6 +2164,7 @@ Let me check if this transaction is eligible for a chargeback...`;
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <ThemeToggle />
                       <Button variant="outline" onClick={handleEndSession} disabled={isReadOnly}>
                         End Session
                       </Button>
